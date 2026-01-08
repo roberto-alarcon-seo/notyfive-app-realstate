@@ -1,0 +1,680 @@
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Search, Clock, MessageSquare, Loader2, Ban, Check, CheckCheck, XCircle, Copy, Info, Megaphone, Bot, Archive, Trash2, UserX, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+import { useConversations, useMarkConversationAsRead, useDeleteConversation, useArchiveContact, type Conversation, type Message } from "@/hooks/useConversations";
+import { usePaginatedMessages } from "@/hooks/usePaginatedMessages";
+import { formatDistanceToNow, format, parseISO, startOfDay } from "date-fns";
+import { es } from "date-fns/locale";
+import { MessageComposer } from "@/components/inbox/MessageComposer";
+import { ContactProfilePanel } from "@/components/inbox/ContactProfilePanel";
+import { MessageMediaRenderer } from "@/components/inbox/MessageMediaRenderer";
+import { DateSeparator } from "@/components/inbox/DateSeparator";
+import { toast } from "sonner";
+
+export default function Inbox() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: conversations, isLoading: conversationsLoading } = useConversations();
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterNeedsHuman, setFilterNeedsHuman] = useState(false);
+  const [showContactPanel, setShowContactPanel] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const previousScrollHeightRef = useRef<number>(0);
+  const isLoadingMoreRef = useRef(false);
+
+  // Paginated messages hook
+  const { 
+    messages, 
+    isLoading: messagesLoading, 
+    isLoadingMore, 
+    hasMore, 
+    loadMore 
+  } = usePaginatedMessages(selectedConversation?.id || null);
+  
+  const markAsRead = useMarkConversationAsRead();
+  const deleteConversation = useDeleteConversation();
+  const archiveContact = useArchiveContact();
+  
+  // Dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [archiveContactDialogOpen, setArchiveContactDialogOpen] = useState(false);
+  const [targetConversation, setTargetConversation] = useState<Conversation | null>(null);
+
+  const handleDeleteConversation = (conv: Conversation) => {
+    setTargetConversation(conv);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleArchiveContact = (conv: Conversation) => {
+    setTargetConversation(conv);
+    setArchiveContactDialogOpen(true);
+  };
+
+  const confirmDeleteConversation = () => {
+    if (targetConversation) {
+      deleteConversation.mutate(targetConversation.id, {
+        onSuccess: () => {
+          toast.success('Conversación eliminada');
+          if (selectedConversation?.id === targetConversation.id) {
+            setSelectedConversation(null);
+          }
+        },
+        onError: () => toast.error('Error al eliminar conversación'),
+      });
+    }
+    setDeleteDialogOpen(false);
+    setTargetConversation(null);
+  };
+
+  const confirmArchiveContact = () => {
+    if (targetConversation?.contact_id) {
+      archiveContact.mutate(targetConversation.contact_id, {
+        onSuccess: () => {
+          toast.success('Contacto archivado');
+          if (selectedConversation?.id === targetConversation.id) {
+            setSelectedConversation(null);
+          }
+        },
+        onError: () => toast.error('Error al archivar contacto'),
+      });
+    }
+    setArchiveContactDialogOpen(false);
+    setTargetConversation(null);
+  };
+
+  // Check if user is at bottom of scroll and handle lazy load
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    const threshold = 100;
+    const isBottom = element.scrollHeight - element.scrollTop - element.clientHeight < threshold;
+    setIsAtBottom(isBottom);
+
+    // Lazy load: detect scroll near top
+    const scrollTopThreshold = 50;
+    if (element.scrollTop <= scrollTopThreshold && hasMore && !isLoadingMore && !isLoadingMoreRef.current) {
+      isLoadingMoreRef.current = true;
+      previousScrollHeightRef.current = element.scrollHeight;
+      
+      loadMore().finally(() => {
+        isLoadingMoreRef.current = false;
+      });
+    }
+  }, [hasMore, isLoadingMore, loadMore]);
+
+  // Maintain scroll position after loading more messages
+  useEffect(() => {
+    if (!isLoadingMore && previousScrollHeightRef.current > 0 && scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        const newScrollHeight = viewport.scrollHeight;
+        const scrollDiff = newScrollHeight - previousScrollHeightRef.current;
+        viewport.scrollTop = scrollDiff;
+        previousScrollHeightRef.current = 0;
+      }
+    }
+  }, [isLoadingMore, messages.length]);
+
+  // Scroll to bottom on initial load
+  const initialScrollDoneRef = useRef<string | null>(null);
+  
+  useEffect(() => {
+    // When messages finish loading for a new conversation, scroll to bottom
+    if (!messagesLoading && messages.length > 0 && selectedConversation?.id) {
+      // Only do initial scroll once per conversation
+      if (initialScrollDoneRef.current !== selectedConversation.id) {
+        initialScrollDoneRef.current = selectedConversation.id;
+        // Use a small delay to ensure DOM is updated
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+          setIsAtBottom(true);
+        }, 100);
+      }
+    }
+  }, [messagesLoading, messages.length, selectedConversation?.id]);
+
+  // Auto-scroll for new messages only if at bottom
+  useEffect(() => {
+    if (isAtBottom && messagesEndRef.current && !isLoadingMore && !messagesLoading) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages.length, isAtBottom, isLoadingMore]);
+
+  // Handle conversation selection: query params or auto-select first
+  useEffect(() => {
+    if (!conversations || conversations.length === 0) return;
+    
+    const conversationId = searchParams.get('conversation');
+    const contactId = searchParams.get('contact_id');
+    
+    if (conversationId) {
+      const conv = conversations.find(c => c.id === conversationId);
+      if (conv) {
+        setSelectedConversation(conv);
+      }
+      searchParams.delete('conversation');
+      setSearchParams(searchParams, { replace: true });
+    } else if (contactId) {
+      const conv = conversations.find(c => c.contact_id === contactId);
+      if (conv) {
+        setSelectedConversation(conv);
+      } else {
+        toast.info('Este contacto aún no tiene conversación');
+        // Auto-select first if no matching conversation
+        if (!selectedConversation) {
+          setSelectedConversation(conversations[0]);
+        }
+      }
+      searchParams.delete('contact_id');
+      setSearchParams(searchParams, { replace: true });
+    } else if (!selectedConversation) {
+      // Auto-select first conversation only if no query params
+      setSelectedConversation(conversations[0]);
+    }
+  }, [conversations, searchParams, setSearchParams]);
+
+  // Mark as read when selecting conversation
+  useEffect(() => {
+    if (selectedConversation && selectedConversation.unread_count > 0) {
+      markAsRead.mutate(selectedConversation.id);
+    }
+  }, [selectedConversation?.id]);
+
+  // Sync selectedConversation with realtime updates from conversations query
+  useEffect(() => {
+    if (!selectedConversation || !conversations) return;
+    
+    const updatedConv = conversations.find(c => c.id === selectedConversation.id);
+    if (updatedConv) {
+      // Only update if there are actual changes to avoid unnecessary re-renders
+      const hasChanges = 
+        updatedConv.ai_enabled !== selectedConversation.ai_enabled ||
+        updatedConv.needs_human !== selectedConversation.needs_human ||
+        updatedConv.ai_state !== selectedConversation.ai_state ||
+        updatedConv.ai_pause_reason !== selectedConversation.ai_pause_reason ||
+        updatedConv.last_message_preview !== selectedConversation.last_message_preview ||
+        updatedConv.unread_count !== selectedConversation.unread_count;
+      
+      if (hasChanges) {
+        setSelectedConversation(updatedConv);
+      }
+    }
+  }, [conversations]);
+
+  // Default panel state based on screen size
+  useEffect(() => {
+    const handleResize = () => {
+      setShowContactPanel(window.innerWidth >= 1280);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const filteredConversations = conversations?.filter(conv => {
+    const searchLower = searchQuery.toLowerCase();
+    const contactName = conv.contact?.name?.toLowerCase() || '';
+    const phone = conv.customer_whatsapp?.toLowerCase() || '';
+    const matchesSearch = contactName.includes(searchLower) || phone.includes(searchLower);
+    const needsHuman = conv.needs_human === true || conv.ai_state === 'escalated';
+    const matchesFilter = filterNeedsHuman ? needsHuman : true;
+    return matchesSearch && matchesFilter;
+  }) || [];
+
+  const needsHumanCount = conversations?.filter(c => c.needs_human === true || c.ai_state === 'escalated').length || 0;
+
+  const getTimeAgo = (date: string | null) => {
+    if (!date) return '';
+    try {
+      return formatDistanceToNow(new Date(date), { addSuffix: false, locale: es });
+    } catch {
+      return '';
+    }
+  };
+
+  const getInitials = (name: string | undefined) => {
+    if (!name) return 'WA';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  const handleCopyMessage = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Mensaje copiado');
+  };
+
+  return (
+    <div className="flex h-full">
+      {/* Conversations List */}
+      <div className="w-80 border-r border-border flex flex-col bg-card">
+        {/* Search Header */}
+        <div className="p-4 border-b border-border space-y-3">
+          <h2 className="text-xl font-semibold text-foreground">Conversaciones</h2>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar conversación..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-muted border-none"
+            />
+          </div>
+          {/* Filter for needs human */}
+          <button
+            onClick={() => setFilterNeedsHuman(!filterNeedsHuman)}
+            className={cn(
+              "flex items-center gap-1.5 text-xs px-2 py-1 rounded-full transition-colors",
+              filterNeedsHuman
+                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            )}
+          >
+            <AlertTriangle className="w-3 h-3" />
+            Atención
+            {needsHumanCount > 0 && (
+              <span className={cn(
+                "ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium",
+                filterNeedsHuman ? "bg-amber-500/30" : "bg-amber-500/20 text-amber-400"
+              )}>
+                {needsHumanCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Conversations */}
+        <ScrollArea className="flex-1">
+          {conversationsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
+              <p className="text-muted-foreground">No hay conversaciones</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Las conversaciones aparecerán aquí cuando recibas mensajes
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {filteredConversations.map((conv) => (
+                <ContextMenu key={conv.id}>
+                  <ContextMenuTrigger asChild>
+                    <div
+                      onClick={() => setSelectedConversation(conv)}
+                      className={cn(
+                        "p-4 cursor-pointer transition-colors hover:bg-muted/50",
+                        selectedConversation?.id === conv.id && "bg-muted"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar className="w-12 h-12 shrink-0">
+                          <AvatarFallback className="bg-primary/20 text-primary">
+                            {getInitials(conv.contact?.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <h4 className={cn(
+                                  "text-foreground truncate",
+                                  conv.unread_count > 0 ? "font-semibold" : "font-medium"
+                                )}>
+                                  {conv.contact?.name || conv.customer_whatsapp}
+                                </h4>
+                                {/* Unread dot indicator */}
+                                {conv.unread_count > 0 && (
+                                  <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                                )}
+                                {conv.status === 'blocked' && (
+                                  <Ban className="h-3 w-3 text-destructive shrink-0" />
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground shrink-0">
+                                {getTimeAgo(conv.last_customer_message_at || conv.updated_at)}
+                              </span>
+                            </div>
+                            <p className={cn(
+                              "text-sm truncate mt-1",
+                              conv.unread_count > 0 ? "text-foreground font-medium" : "text-muted-foreground"
+                            )}>
+                              {conv.last_message_preview || 'Sin mensajes'}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                            {conv.unread_count > 0 && (
+                              <span className="min-w-[20px] h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center px-1.5">
+                                {conv.unread_count > 99 ? '99+' : conv.unread_count}
+                              </span>
+                            )}
+                            {conv.needs_human && (
+                              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" title="Requiere atención" />
+                            )}
+                          </div>
+                        </div>
+                      {conv.status === 'blocked' && (
+                        <Badge variant="destructive" className="mt-2 text-xs">
+                          Bloqueado por saldo
+                        </Badge>
+                      )}
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="w-48">
+                    <ContextMenuItem 
+                      onClick={() => handleDeleteConversation(conv)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Eliminar conversación
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={() => handleArchiveContact(conv)}>
+                      <UserX className="mr-2 h-4 w-4" />
+                      Archivar contacto
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {selectedConversation ? (
+          <>
+            {/* Chat Header */}
+            <div className="h-14 border-b border-border flex items-center justify-between px-4 bg-card shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar className="w-9 h-9 shrink-0">
+                  <AvatarFallback className="bg-primary/20 text-primary text-sm">
+                    {getInitials(selectedConversation.contact?.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-foreground truncate">
+                      {selectedConversation.contact?.name || 'WhatsApp Lead'}
+                    </h3>
+                    {selectedConversation.status === 'blocked' && (
+                      <Badge variant="destructive" className="text-xs shrink-0">Bloqueado</Badge>
+                    )}
+                    {selectedConversation.needs_human && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-500/15 text-amber-400 border-amber-500/30 shrink-0">
+                        <AlertTriangle className="h-2.5 w-2.5 mr-1" />
+                        Atención
+                      </Badge>
+                    )}
+                    {!selectedConversation.ai_enabled && !selectedConversation.needs_human && (
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <Bot className="h-3 w-3" />
+                        IA off
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{selectedConversation.customer_whatsapp}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Toggle Contact Panel */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={showContactPanel ? "secondary" : "ghost"} 
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setShowContactPanel(!showContactPanel)}
+                      >
+                        <Info className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {showContactPanel ? 'Ocultar perfil' : 'Ver perfil'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <ScrollArea 
+              className="flex-1 p-6" 
+              ref={scrollAreaRef}
+              onScroll={handleScroll}
+            >
+              {messagesLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : messages && messages.length > 0 ? (
+                <div className="space-y-4 max-w-3xl mx-auto" ref={messagesContainerRef}>
+                  {/* Loading more indicator */}
+                  {isLoadingMore && (
+                    <div className="flex items-center justify-center py-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="ml-2 text-xs text-muted-foreground">Cargando mensajes...</span>
+                    </div>
+                  )}
+                  
+                  {/* Start of conversation indicator */}
+                  {!hasMore && !isLoadingMore && (
+                    <div className="flex items-center justify-center py-3">
+                      <Badge variant="secondary" className="text-xs bg-muted/50 text-muted-foreground">
+                        <MessageSquare className="h-3 w-3 mr-1.5" />
+                        Inicio de la conversación
+                      </Badge>
+                    </div>
+                  )}
+                  {messages.map((msg, index) => {
+                    // Date separator logic
+                    const msgDate = parseISO(msg.created_at);
+                    const msgDayKey = format(startOfDay(msgDate), 'yyyy-MM-dd');
+                    const prevMsg = index > 0 ? messages[index - 1] : null;
+                    const prevDayKey = prevMsg 
+                      ? format(startOfDay(parseISO(prevMsg.created_at)), 'yyyy-MM-dd')
+                      : null;
+                    const showDateSeparator = !prevDayKey || msgDayKey !== prevDayKey;
+                    
+                    return (
+                      <div key={msg.id}>
+                        {showDateSeparator && <DateSeparator date={msgDate} />}
+                        <div
+                          className={cn(
+                            "flex group",
+                            msg.direction === 'inbound' ? "justify-start" : "justify-end"
+                          )}
+                        >
+                      <div
+                        className={cn(
+                          "max-w-[70%] rounded-2xl px-4 py-3 relative",
+                          msg.direction === 'inbound'
+                            ? "bg-message-incoming rounded-bl-sm"
+                            : msg.status === 'failed'
+                              ? "bg-destructive/20 border border-destructive/30 rounded-br-sm"
+                              : "bg-message-outgoing rounded-br-sm"
+                        )}
+                      >
+                        {/* AI badge - top right corner */}
+                        {msg.ai_generated && (
+                          <Badge variant="secondary" className="absolute -top-2 -right-1 text-[10px] px-1.5 py-0 bg-purple-500/20 text-purple-400 border-purple-500/30">
+                            <Bot className="h-2.5 w-2.5 mr-0.5" />
+                            IA
+                          </Badge>
+                        )}
+                        <p className={cn(
+                          "text-sm whitespace-pre-line",
+                          msg.direction === 'outbound' && msg.status !== 'failed' ? "text-white" : "text-foreground"
+                        )}>{msg.body}</p>
+                        
+                        {/* Media rendering */}
+                        {(msg.media_type || (msg.media_urls && msg.media_urls.length > 0)) && (
+                          <MessageMediaRenderer
+                            media={{
+                              type: msg.media_type || null,
+                              url: msg.media_urls?.[0] || null,
+                              mimeType: msg.media_mime_type || null,
+                              filename: msg.media_filename || null,
+                              sizeBytes: msg.media_size_bytes || null,
+                              durationSec: msg.media_duration_sec || null,
+                              locationLat: msg.location_lat || null,
+                              locationLng: msg.location_lng || null,
+                              mediaUrls: msg.media_urls,
+                            }}
+                            className="mt-2"
+                          />
+                        )}
+                        
+                        {/* Campaign badge */}
+                        {msg.source === 'campaign' && msg.campaign && (
+                          <div className={cn(
+                            "flex items-center gap-1 mt-1 text-xs",
+                            msg.direction === 'outbound' ? "text-white/70" : "text-muted-foreground"
+                          )}>
+                            <Megaphone className="h-3 w-3" />
+                            <span>Campaña: {msg.campaign.name}</span>
+                          </div>
+                        )}
+                        <div className={cn(
+                          "flex items-center gap-1.5 mt-1",
+                          msg.direction === 'inbound' ? "justify-start" : "justify-end"
+                        )}>
+                          <span className={cn(
+                            "text-xs",
+                            msg.direction === 'outbound' && msg.status !== 'failed' ? "text-white/70" : "text-foreground/60"
+                          )}>
+                            {new Date(msg.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {msg.direction === 'outbound' && (
+                            <span className="flex items-center text-xs">
+                              {msg.status === 'queued' && (
+                                <Clock className="h-3 w-3 text-white/60" />
+                              )}
+                              {msg.status === 'sent' && (
+                                <Check className="h-3 w-3 text-white/70" />
+                              )}
+                              {msg.status === 'delivered' && (
+                                <CheckCheck className="h-3 w-3 text-white" />
+                              )}
+                              {msg.status === 'read' && (
+                                <CheckCheck className="h-3 w-3 text-white" />
+                              )}
+                              {msg.status === 'failed' && (
+                                <span className="flex items-center gap-1 text-destructive">
+                                  <XCircle className="h-3 w-3" />
+                                  <span>Falló</span>
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Copy button on hover for outbound */}
+                        {msg.direction === 'outbound' && msg.body && (
+                          <button
+                            onClick={() => handleCopyMessage(msg.body || '')}
+                            className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full bg-muted hover:bg-muted/80"
+                          >
+                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <MessageSquare className="h-12 w-12 mb-3" />
+                  <p>No hay mensajes en esta conversación</p>
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Message Composer */}
+            <MessageComposer
+              conversationId={selectedConversation.id}
+              lastCustomerMessageAt={selectedConversation.last_customer_message_at}
+              conversationStatus={selectedConversation.status}
+              contact={selectedConversation.contact ? {
+                id: selectedConversation.contact.id || '',
+                name: selectedConversation.contact.name || 'WhatsApp Lead',
+                phone: selectedConversation.contact.phone || selectedConversation.customer_whatsapp,
+                email: selectedConversation.contact.email,
+                country: selectedConversation.contact.country,
+              } : null}
+              aiEnabled={selectedConversation.ai_enabled}
+            />
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <MessageSquare className="h-16 w-16 mb-4" />
+            <p className="text-lg">Selecciona una conversación</p>
+            <p className="text-sm">para ver los mensajes</p>
+          </div>
+        )}
+      </div>
+
+      {/* Contact Info Panel - Collapsible */}
+      {selectedConversation && showContactPanel && (
+        <div className="w-72 border-l border-border bg-card animate-in slide-in-from-right-5 duration-200">
+          <ContactProfilePanel 
+            conversation={selectedConversation}
+            onClose={() => setShowContactPanel(false)}
+          />
+        </div>
+      )}
+
+      {/* Delete Conversation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente la conversación y todos sus mensajes. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteConversation} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Archive Contact Dialog */}
+      <AlertDialog open={archiveContactDialogOpen} onOpenChange={setArchiveContactDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Archivar contacto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              El contacto "{targetConversation?.contact?.name || 'Sin nombre'}" será archivado y ya no aparecerá en la lista de conversaciones activas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmArchiveContact}>
+              Archivar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
