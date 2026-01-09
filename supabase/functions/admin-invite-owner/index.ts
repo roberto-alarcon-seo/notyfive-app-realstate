@@ -321,7 +321,8 @@ serve(async (req) => {
 
       const activationLink = linkData.properties.action_link;
       // Always use APP_BASE_URL for the logo to ensure it's accessible from email clients
-      const productionUrl = Deno.env.get("APP_BASE_URL") || appBaseUrl;
+      const productionUrlRaw = Deno.env.get("APP_BASE_URL") || appBaseUrl;
+      const productionUrl = productionUrlRaw.replace(/\/+$/, "");
       const logoUrl = `${productionUrl}/email-logo.png`;
 
       // Send email via Resend
@@ -456,7 +457,8 @@ serve(async (req) => {
 
       const activationLink = linkData.properties.action_link;
       // Always use APP_BASE_URL for the logo to ensure it's accessible from email clients
-      const productionUrl = Deno.env.get("APP_BASE_URL") || appBaseUrl;
+      const productionUrlRaw = Deno.env.get("APP_BASE_URL") || appBaseUrl;
+      const productionUrl = productionUrlRaw.replace(/\/+$/, "");
       const logoUrl = `${productionUrl}/email-logo.png`;
 
       // Send email via Resend
