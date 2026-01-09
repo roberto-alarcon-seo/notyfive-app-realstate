@@ -274,11 +274,12 @@ export default function ContactEditor() {
         success = await updateContact(id!, formData);
       } else {
         success = await createContact(formData);
+        // Only redirect on new contact creation to continue editing
+        if (success) {
+          handleBack();
+        }
       }
-
-      if (success) {
-        handleBack();
-      }
+      // For updates, just show toast and stay on the form
     } finally {
       setIsSaving(false);
     }
