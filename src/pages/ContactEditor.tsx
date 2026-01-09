@@ -28,6 +28,7 @@ import ConsentBadge from "@/components/contacts/ConsentBadge";
 import { LeadPriorityCard } from "@/components/contacts/LeadPriorityCard";
 import { RealEstateCreditCard } from "@/components/contacts/RealEstateCreditCard";
 import { RealEstatePreferencesCard } from "@/components/contacts/RealEstatePreferencesCard";
+import { LeadContextPanel } from "@/components/contacts/LeadContextPanel";
 import { cn } from "@/lib/utils";
 
 // Section navigation items
@@ -723,6 +724,21 @@ export default function ContactEditor() {
             )}
           </div>
         </div>
+
+        {/* Persistent Lead Context Panel - Right Side */}
+        <LeadContextPanel
+          data={{
+            lead_score: formData.lead_score ?? 0,
+            lead_temperature: (formData.lead_temperature ?? 'cold') as 'cold' | 'warm' | 'hot',
+            engagement_level: (formData.engagement_level ?? 'low') as 'low' | 'medium' | 'high',
+            opt_in_status: (formData.opt_in_status ?? 'unknown') as 'unknown' | 'opt_in' | 'opt_out',
+            next_action_at: formData.next_action_at || null,
+            last_interaction_at: lastInteractionAt,
+            re_budget_estimated_mxn: formData.re_budget_estimated_mxn,
+            re_credit_preapproved: formData.re_credit_preapproved ?? false,
+            re_credit_type: formData.re_credit_type,
+          }}
+        />
       </div>
     </div>
   );
