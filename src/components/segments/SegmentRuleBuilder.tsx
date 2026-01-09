@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -14,6 +16,8 @@ import {
   SegmentRules,
   OPERATORS_BY_TYPE,
   BASE_CONTACT_FIELDS,
+  UNIVERSAL_FIXED_FIELDS,
+  REAL_ESTATE_FIXED_FIELDS,
 } from "@/types/segments";
 
 interface CustomField {
@@ -37,26 +41,55 @@ interface SegmentRuleBuilderProps {
   customFieldOptions: CustomFieldOption[];
 }
 
+// Field category types for organized display
+interface FieldDef {
+  key: string;
+  label: string;
+  dataType: string;
+  fieldType: "base" | "system" | "custom";
+  options?: string[];
+}
+
 export function SegmentRuleBuilder({
   rules,
   onChange,
   customFields,
   customFieldOptions,
 }: SegmentRuleBuilderProps) {
-  const allFields = [
-    ...BASE_CONTACT_FIELDS.map((f) => ({
-      key: f.key,
-      label: f.label,
-      dataType: f.dataType,
-      fieldType: "base" as const,
-    })),
-    ...customFields.map((f) => ({
-      key: f.key,
-      label: f.name,
-      dataType: f.data_type,
-      fieldType: "custom" as const,
-    })),
-  ];
+  // Organize fields by category
+  const baseFields: FieldDef[] = BASE_CONTACT_FIELDS.map((f) => ({
+    key: f.key,
+    label: f.label,
+    dataType: f.dataType,
+    fieldType: "base" as const,
+    options: (f as any).options,
+  }));
+
+  const universalFields: FieldDef[] = UNIVERSAL_FIXED_FIELDS.map((f) => ({
+    key: f.key,
+    label: f.label,
+    dataType: f.dataType,
+    fieldType: "system" as const,
+    options: (f as any).options,
+  }));
+
+  const realEstateFields: FieldDef[] = REAL_ESTATE_FIXED_FIELDS.map((f) => ({
+    key: f.key,
+    label: f.label,
+    dataType: f.dataType,
+    fieldType: "system" as const,
+    options: (f as any).options,
+  }));
+
+  const customFieldsDef: FieldDef[] = customFields.map((f) => ({
+    key: f.key,
+    label: f.name,
+    dataType: f.data_type,
+    fieldType: "custom" as const,
+  }));
+
+  // All fields combined for lookup
+  const allFields = [...baseFields, ...universalFields, ...realEstateFields, ...customFieldsDef];
 
   const addCondition = () => {
     const newCondition: SegmentCondition = {
@@ -110,10 +143,64 @@ export function SegmentRuleBuilder({
     return OPERATORS_BY_TYPE[condition.dataType] || OPERATORS_BY_TYPE.short_text;
   };
 
-  const getOptionsForSelectField = (fieldKey: string) => {
+  const getOptionsForSelectField = (fieldKey: string): { value: string; label: string }[] => {
+    // First check if it's a system field with predefined options
+    const systemField = allFields.find((f) => f.key === fieldKey && f.options);
+    if (systemField && systemField.options) {
+      return systemField.options.map((opt: string) => ({
+        value: opt,
+        label: formatOptionLabel(opt),
+      }));
+    }
+
+    // Otherwise check custom fields
     const customField = customFields.find((f) => f.key === fieldKey);
     if (!customField) return [];
-    return customFieldOptions.filter((o) => o.field_id === customField.id);
+    return customFieldOptions
+      .filter((o) => o.field_id === customField.id)
+      .map((o) => ({ value: o.value, label: o.label }));
+  };
+
+  const formatOptionLabel = (value: string): string => {
+    // Format system option values to readable labels
+    const labelMap: Record<string, string> = {
+      // Temperature
+      cold: "Frío",
+      warm: "Tibio",
+      hot: "Caliente",
+      // Engagement
+      low: "Bajo",
+      medium: "Medio",
+      high: "Alto",
+      // Opt-in status
+      unknown: "Desconocido",
+      opt_in: "Opt-in",
+      opt_out: "Opt-out",
+      // Contact status
+      active: "Activo",
+      inactive: "Inactivo",
+      archived: "Archivado",
+      // Credit types
+      INFONAVIT: "INFONAVIT",
+      COFINAVIT: "COFINAVIT",
+      BANK: "Bancario",
+      CASH: "Contado",
+      MIXED: "Mixto",
+      // RE Reason
+      BUY: "Comprar",
+      RENT: "Rentar",
+      INVEST: "Invertir",
+      MOVE: "Mudarse",
+      UPGRADE: "Mejorar",
+      DOWNSIZE: "Reducir",
+      OTHER: "Otro",
+      // RE Situation
+      RENTING: "Rentando",
+      OWNING: "Propietario",
+      LIVING_WITH_FAMILY: "Vive con familia",
+      LOOKING_TO_MOVE: "Buscando mudarse",
+    };
+    return labelMap[value] || value;
   };
 
   const renderValueInput = (condition: SegmentCondition) => {
@@ -140,7 +227,7 @@ export function SegmentRuleBuilder({
           </SelectTrigger>
           <SelectContent>
             {options.map((opt) => (
-              <SelectItem key={opt.id} value={opt.value}>
+              <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>
             ))}
@@ -226,29 +313,58 @@ export function SegmentRuleBuilder({
               value={condition.field}
               onValueChange={(val) => handleFieldChange(condition.id, val)}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[220px]">
                 <SelectValue placeholder="Campo" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_header_base" disabled className="text-xs text-muted-foreground font-semibold">
-                  Campos base
-                </SelectItem>
-                {BASE_CONTACT_FIELDS.map((f) => (
-                  <SelectItem key={f.key} value={f.key}>
-                    {f.label}
-                  </SelectItem>
-                ))}
-                {customFields.length > 0 && (
-                  <>
-                    <SelectItem value="_header_custom" disabled className="text-xs text-muted-foreground font-semibold mt-2">
-                      Campos personalizados
+              <SelectContent className="max-h-[400px]">
+                {/* Base fields */}
+                <SelectGroup>
+                  <SelectLabel className="text-xs text-muted-foreground font-semibold">
+                    Campos base
+                  </SelectLabel>
+                  {baseFields.map((f) => (
+                    <SelectItem key={f.key} value={f.key}>
+                      {f.label}
                     </SelectItem>
-                    {customFields.map((f) => (
+                  ))}
+                </SelectGroup>
+
+                {/* Universal/Lead fields */}
+                <SelectGroup>
+                  <SelectLabel className="text-xs text-muted-foreground font-semibold">
+                    Campos de lead
+                  </SelectLabel>
+                  {universalFields.map((f) => (
+                    <SelectItem key={f.key} value={f.key}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+
+                {/* Real Estate fields */}
+                <SelectGroup>
+                  <SelectLabel className="text-xs text-muted-foreground font-semibold">
+                    Real Estate
+                  </SelectLabel>
+                  {realEstateFields.map((f) => (
+                    <SelectItem key={f.key} value={f.key}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+
+                {/* Custom fields */}
+                {customFieldsDef.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-xs text-muted-foreground font-semibold">
+                      Campos personalizados
+                    </SelectLabel>
+                    {customFieldsDef.map((f) => (
                       <SelectItem key={f.key} value={f.key}>
-                        {f.name}
+                        {f.label}
                       </SelectItem>
                     ))}
-                  </>
+                  </SelectGroup>
                 )}
               </SelectContent>
             </Select>

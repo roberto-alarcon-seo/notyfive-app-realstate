@@ -4,7 +4,7 @@ export type SegmentStatus = 'active' | 'archived';
 export interface SegmentCondition {
   id: string;
   field: string;
-  fieldType: 'base' | 'custom';
+  fieldType: 'base' | 'system' | 'custom';
   dataType: string;
   operator: string;
   value: string | number | boolean | string[];
@@ -125,7 +125,10 @@ export const BASE_CONTACT_FIELDS = [
   { key: 'phone', label: 'Teléfono', dataType: 'short_text' },
   { key: 'country', label: 'País', dataType: 'short_text' },
   { key: 'tags', label: 'Tags', dataType: 'tags' },
+  { key: 'status', label: 'Estado', dataType: 'select', options: ['active', 'inactive', 'archived'] },
+  { key: 'notes', label: 'Notas', dataType: 'long_text' },
   { key: 'created_at', label: 'Fecha de creación', dataType: 'datetime' },
+  { key: 'updated_at', label: 'Última actualización', dataType: 'datetime' },
 ];
 
 // Universal fixed fields (for all industries)
@@ -156,4 +159,11 @@ export const REAL_ESTATE_FIXED_FIELDS = [
   { key: 're_accepts_pets', label: 'Acepta mascotas', dataType: 'boolean' },
   { key: 're_reason', label: 'Motivo', dataType: 'select', options: ['BUY', 'RENT', 'INVEST', 'MOVE', 'UPGRADE', 'DOWNSIZE', 'OTHER'] },
   { key: 're_current_situation', label: 'Situación actual', dataType: 'select', options: ['RENTING', 'OWNING', 'LIVING_WITH_FAMILY', 'LOOKING_TO_MOVE', 'OTHER'] },
+];
+
+// All system fields (base + universal + real estate)
+export const ALL_SYSTEM_FIELDS = [
+  ...BASE_CONTACT_FIELDS,
+  ...UNIVERSAL_FIXED_FIELDS,
+  ...REAL_ESTATE_FIXED_FIELDS,
 ];
