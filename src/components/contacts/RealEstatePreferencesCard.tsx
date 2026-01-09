@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Home, X, Plus } from "lucide-react";
+import { X, Plus } from "lucide-react";
 
 export interface RealEstatePreferencesData {
   re_property_types: string[];
@@ -84,186 +83,177 @@ export function RealEstatePreferencesCard({ data, onChange }: RealEstatePreferen
   };
 
   return (
-    <Card className="h-fit">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Home className="h-5 w-5 text-primary" />
-          <CardTitle>Real Estate — Preferencias de búsqueda</CardTitle>
+    <div className="space-y-6">
+      {/* Section: Tipo y distribución */}
+      <div className="space-y-4">
+        <h4 className="text-sm font-medium text-foreground border-b border-border pb-2">Tipo y distribución</h4>
+        
+        {/* Property Types */}
+        <div className="space-y-2">
+          <Label>Tipo de propiedad</Label>
+          <div className="flex flex-wrap gap-2">
+            {PROPERTY_TYPES.map(type => (
+              <Badge
+                key={type}
+                variant={data.re_property_types?.includes(type) ? "default" : "outline"}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => toggleArrayItem('re_property_types', type)}
+              >
+                {type}
+              </Badge>
+            ))}
+          </div>
         </div>
-        <CardDescription>Requisitos y preferencias del inmueble</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Section: Tipo y distribución */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-medium text-muted-foreground">Tipo y distribución</h4>
-          
-          {/* Property Types */}
+
+        {/* Distribution: Recámaras, Baños, Estacionamientos */}
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Tipo de propiedad</Label>
-            <div className="flex flex-wrap gap-2">
-              {PROPERTY_TYPES.map(type => (
-                <Badge
-                  key={type}
-                  variant={data.re_property_types?.includes(type) ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => toggleArrayItem('re_property_types', type)}
-                >
-                  {type}
-                </Badge>
-              ))}
-            </div>
+            <Label htmlFor="re_bedrooms">Recámaras</Label>
+            <Input
+              id="re_bedrooms"
+              type="number"
+              min={0}
+              placeholder="0"
+              value={data.re_bedrooms ?? ''}
+              onChange={(e) => updateField('re_bedrooms', parseNumber(e.target.value))}
+            />
           </div>
-
-          {/* Distribution: Recámaras, Baños, Estacionamientos */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="re_bedrooms">Recámaras</Label>
-              <Input
-                id="re_bedrooms"
-                type="number"
-                min={0}
-                placeholder="0"
-                value={data.re_bedrooms ?? ''}
-                onChange={(e) => updateField('re_bedrooms', parseNumber(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="re_bathrooms">Baños</Label>
-              <Input
-                id="re_bathrooms"
-                type="number"
-                min={0}
-                step={0.5}
-                placeholder="0"
-                value={data.re_bathrooms ?? ''}
-                onChange={(e) => updateField('re_bathrooms', parseNumber(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="re_parking_spots">Estacionamientos</Label>
-              <Input
-                id="re_parking_spots"
-                type="number"
-                min={0}
-                placeholder="0"
-                value={data.re_parking_spots ?? ''}
-                onChange={(e) => updateField('re_parking_spots', parseNumber(e.target.value))}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="re_bathrooms">Baños</Label>
+            <Input
+              id="re_bathrooms"
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="0"
+              value={data.re_bathrooms ?? ''}
+              onChange={(e) => updateField('re_bathrooms', parseNumber(e.target.value))}
+            />
           </div>
-
-          {/* Requires Parking toggle */}
-          <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-            <Label htmlFor="re_requires_parking" className="text-sm">Requiere estacionamiento</Label>
-            <Switch
-              id="re_requires_parking"
-              checked={data.re_requires_parking}
-              onCheckedChange={(v) => updateField('re_requires_parking', v)}
+          <div className="space-y-2">
+            <Label htmlFor="re_parking_spots">Estacionamientos</Label>
+            <Input
+              id="re_parking_spots"
+              type="number"
+              min={0}
+              placeholder="0"
+              value={data.re_parking_spots ?? ''}
+              onChange={(e) => updateField('re_parking_spots', parseNumber(e.target.value))}
             />
           </div>
         </div>
 
-        {/* Section: Zonas y amenidades */}
-        <div className="space-y-4 pt-4 border-t">
-          <h4 className="text-sm font-medium text-muted-foreground">Zonas y amenidades</h4>
-          
-          {/* Zones */}
-          <div className="space-y-2">
-            <Label>Zonas de interés</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Polanco, Roma Norte, Condesa..."
-                value={zoneInput}
-                onChange={(e) => setZoneInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addZone())}
-              />
-              <Button type="button" variant="secondary" size="icon" onClick={addZone}>
-                <Plus className="h-4 w-4" />
-              </Button>
+        {/* Requires Parking toggle */}
+        <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50">
+          <Label htmlFor="re_requires_parking" className="text-sm font-medium">Requiere estacionamiento</Label>
+          <Switch
+            id="re_requires_parking"
+            checked={data.re_requires_parking}
+            onCheckedChange={(v) => updateField('re_requires_parking', v)}
+          />
+        </div>
+      </div>
+
+      {/* Section: Zonas y amenidades */}
+      <div className="space-y-4">
+        <h4 className="text-sm font-medium text-foreground border-b border-border pb-2">Zonas y amenidades</h4>
+        
+        {/* Zones */}
+        <div className="space-y-2">
+          <Label>Zonas de interés</Label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Polanco, Roma Norte, Condesa..."
+              value={zoneInput}
+              onChange={(e) => setZoneInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addZone())}
+            />
+            <Button type="button" variant="secondary" size="icon" onClick={addZone}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          {data.re_zones.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {data.re_zones.map(zone => (
+                <Badge key={zone} variant="secondary" className="px-2 py-1 flex items-center gap-1">
+                  {zone}
+                  <button onClick={() => removeZone(zone)} className="hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
             </div>
-            {data.re_zones.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {data.re_zones.map(zone => (
-                  <Badge key={zone} variant="secondary" className="px-2 py-1 flex items-center gap-1">
-                    {zone}
-                    <button onClick={() => removeZone(zone)} className="hover:text-destructive">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
+          )}
+        </div>
+
+        {/* Amenities */}
+        <div className="space-y-2">
+          <Label>Amenidades</Label>
+          <div className="flex flex-wrap gap-2">
+            {AMENITIES.map(amenity => (
+              <Badge
+                key={amenity}
+                variant={data.re_amenities?.includes(amenity) ? "default" : "outline"}
+                className="cursor-pointer text-xs hover:opacity-80 transition-opacity"
+                onClick={() => toggleArrayItem('re_amenities', amenity)}
+              >
+                {amenity}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Contexto */}
+      <div className="space-y-4">
+        <h4 className="text-sm font-medium text-foreground border-b border-border pb-2">Contexto</h4>
+        
+        {/* Pets toggle */}
+        <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50">
+          <Label htmlFor="re_accepts_pets" className="text-sm font-medium">Acepta mascotas</Label>
+          <Switch
+            id="re_accepts_pets"
+            checked={data.re_accepts_pets}
+            onCheckedChange={(v) => updateField('re_accepts_pets', v)}
+          />
+        </div>
+
+        {/* Reason + Situation */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="re_reason">Motivo</Label>
+            <Select 
+              value={data.re_reason ?? ''} 
+              onValueChange={(v) => updateField('re_reason', v as RealEstatePreferencesData['re_reason'])}
+            >
+              <SelectTrigger id="re_reason">
+                <SelectValue placeholder="Seleccionar..." />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(REASON_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
-              </div>
-            )}
+              </SelectContent>
+            </Select>
           </div>
-
-          {/* Amenities */}
           <div className="space-y-2">
-            <Label>Amenidades</Label>
-            <div className="flex flex-wrap gap-2">
-              {AMENITIES.map(amenity => (
-                <Badge
-                  key={amenity}
-                  variant={data.re_amenities?.includes(amenity) ? "default" : "outline"}
-                  className="cursor-pointer text-xs"
-                  onClick={() => toggleArrayItem('re_amenities', amenity)}
-                >
-                  {amenity}
-                </Badge>
-              ))}
-            </div>
+            <Label htmlFor="re_current_situation">Situación actual</Label>
+            <Select 
+              value={data.re_current_situation ?? ''} 
+              onValueChange={(v) => updateField('re_current_situation', v as RealEstatePreferencesData['re_current_situation'])}
+            >
+              <SelectTrigger id="re_current_situation">
+                <SelectValue placeholder="Seleccionar..." />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(SITUATION_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-
-        {/* Section: Contexto */}
-        <div className="space-y-4 pt-4 border-t">
-          <h4 className="text-sm font-medium text-muted-foreground">Contexto</h4>
-          
-          {/* Pets toggle */}
-          <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-            <Label htmlFor="re_accepts_pets" className="text-sm">Acepta mascotas</Label>
-            <Switch
-              id="re_accepts_pets"
-              checked={data.re_accepts_pets}
-              onCheckedChange={(v) => updateField('re_accepts_pets', v)}
-            />
-          </div>
-
-          {/* Reason + Situation */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="re_reason">Motivo</Label>
-              <Select 
-                value={data.re_reason ?? ''} 
-                onValueChange={(v) => updateField('re_reason', v as RealEstatePreferencesData['re_reason'])}
-              >
-                <SelectTrigger id="re_reason">
-                  <SelectValue placeholder="Seleccionar..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(REASON_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="re_current_situation">Situación actual</Label>
-              <Select 
-                value={data.re_current_situation ?? ''} 
-                onValueChange={(v) => updateField('re_current_situation', v as RealEstatePreferencesData['re_current_situation'])}
-              >
-                <SelectTrigger id="re_current_situation">
-                  <SelectValue placeholder="Seleccionar..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(SITUATION_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
