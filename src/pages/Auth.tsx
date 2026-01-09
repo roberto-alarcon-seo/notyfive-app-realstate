@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, Home, Building2, Key } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import authHero from '@/assets/auth-hero-realestate.jpg';
 import authLogo from '@/assets/auth-logo.png';
 import { z } from 'zod';
@@ -108,9 +108,11 @@ const Auth = () => {
         <div className="relative z-10 flex flex-col justify-between p-8 xl:p-12 w-full">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
+            <img 
+              src={authLogo} 
+              alt="NotyFive Logo" 
+              className="h-12 w-12 object-contain"
+            />
             <span className="text-2xl font-semibold text-white tracking-tight">NotyFive</span>
           </div>
           
@@ -161,9 +163,11 @@ const Auth = () => {
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-primary" />
-            </div>
+            <img 
+              src={authLogo} 
+              alt="NotyFive Logo" 
+              className="h-10 w-10 object-contain"
+            />
             <span className="text-xl font-semibold">NotyFive</span>
           </div>
         </div>
@@ -263,7 +267,7 @@ const Auth = () => {
               {/* Submit */}
               <Button
                 type="submit"
-                className="w-full h-12 rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all font-semibold text-base shadow-lg hover:shadow-xl"
+                className="w-full h-12 rounded-xl gradient-primary hover:opacity-90 transition-all font-semibold text-base shadow-lg hover:shadow-xl"
                 disabled={isLoading}
               >
                 {isLoading ? (
