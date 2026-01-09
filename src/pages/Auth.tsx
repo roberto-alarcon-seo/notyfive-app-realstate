@@ -182,8 +182,13 @@ const Auth = () => {
         {/* Form Container */}
         <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
           <div className="w-full max-w-md animate-fade-in">
-            {/* Header */}
+            {/* Logo & Header */}
             <div className="text-center mb-8 lg:mb-10">
+              <img 
+                src={authLogo} 
+                alt="NotyFive Logo" 
+                className="h-16 w-16 object-contain mx-auto mb-4"
+              />
               <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-3">
                 ¡Bienvenido de vuelta!
               </h1>
