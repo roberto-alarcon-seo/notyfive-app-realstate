@@ -1196,12 +1196,15 @@ export type Database = {
           name: string
           next_action_at: string | null
           notes: string | null
+          operational_status: string
           opt_in_status: string
           phone: string | null
+          pipeline_stage: string
           re_accepts_pets: boolean
           re_amenities: string[] | null
           re_bathrooms: number | null
           re_bedrooms: number | null
+          re_block_reason: string | null
           re_budget_estimated_mxn: number | null
           re_credit_preapproved: boolean
           re_credit_type: string | null
@@ -1212,6 +1215,7 @@ export type Database = {
           re_property_types: string[] | null
           re_reason: string | null
           re_requires_parking: boolean
+          re_visit_outcome: string | null
           re_zones: string[] | null
           source: string | null
           status: Database["public"]["Enums"]["contact_status"]
@@ -1233,12 +1237,15 @@ export type Database = {
           name: string
           next_action_at?: string | null
           notes?: string | null
+          operational_status?: string
           opt_in_status?: string
           phone?: string | null
+          pipeline_stage?: string
           re_accepts_pets?: boolean
           re_amenities?: string[] | null
           re_bathrooms?: number | null
           re_bedrooms?: number | null
+          re_block_reason?: string | null
           re_budget_estimated_mxn?: number | null
           re_credit_preapproved?: boolean
           re_credit_type?: string | null
@@ -1249,6 +1256,7 @@ export type Database = {
           re_property_types?: string[] | null
           re_reason?: string | null
           re_requires_parking?: boolean
+          re_visit_outcome?: string | null
           re_zones?: string[] | null
           source?: string | null
           status?: Database["public"]["Enums"]["contact_status"]
@@ -1270,12 +1278,15 @@ export type Database = {
           name?: string
           next_action_at?: string | null
           notes?: string | null
+          operational_status?: string
           opt_in_status?: string
           phone?: string | null
+          pipeline_stage?: string
           re_accepts_pets?: boolean
           re_amenities?: string[] | null
           re_bathrooms?: number | null
           re_bedrooms?: number | null
+          re_block_reason?: string | null
           re_budget_estimated_mxn?: number | null
           re_credit_preapproved?: boolean
           re_credit_type?: string | null
@@ -1286,6 +1297,7 @@ export type Database = {
           re_property_types?: string[] | null
           re_reason?: string | null
           re_requires_parking?: boolean
+          re_visit_outcome?: string | null
           re_zones?: string[] | null
           source?: string | null
           status?: Database["public"]["Enums"]["contact_status"]

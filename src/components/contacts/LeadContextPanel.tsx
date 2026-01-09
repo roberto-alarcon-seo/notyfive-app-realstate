@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { 
   TrendingUp, 
@@ -9,13 +8,17 @@ import {
   Snowflake,
   CheckCircle2,
   XCircle,
-  Clock,
   DollarSign,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  Layers,
+  AlertTriangle,
+  Eye
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { PIPELINE_STAGES, OPERATIONAL_STATUSES } from "./LeadPriorityCard";
+import { BLOCK_REASONS, VISIT_OUTCOMES } from "./LeadDiagnosticsCard";
 
 interface LeadContextPanelProps {
   data: {
@@ -28,6 +31,10 @@ interface LeadContextPanelProps {
     re_budget_estimated_mxn: number | null;
     re_credit_preapproved: boolean;
     re_credit_type: string | null;
+    pipeline_stage: string;
+    operational_status: string;
+    re_block_reason: string | null;
+    re_visit_outcome: string | null;
   };
 }
 
@@ -94,12 +101,82 @@ export function LeadContextPanel({ data }: LeadContextPanelProps) {
     return type ? labels[type] || type : '—';
   };
 
+  const getPipelineStageLabel = (stage: string) => {
+    return PIPELINE_STAGES.find(s => s.value === stage)?.label || stage;
+  };
+
+  const getOperationalStatusLabel = (status: string) => {
+    return OPERATIONAL_STATUSES.find(s => s.value === status)?.label || status;
+  };
+
+  const getBlockReasonLabel = (reason: string | null) => {
+    if (!reason) return null;
+    return BLOCK_REASONS.find(r => r.value === reason)?.label || reason;
+  };
+
+  const getVisitOutcomeLabel = (outcome: string | null) => {
+    if (!outcome) return null;
+    return VISIT_OUTCOMES.find(o => o.value === outcome)?.label || outcome;
+  };
+
   const temp = getTemperatureDisplay();
   const TempIcon = temp.icon;
 
   return (
     <div className="w-72 shrink-0 border-l border-border bg-muted/20 hidden lg:block">
       <div className="p-4 space-y-4">
+        {/* Pipeline Stage */}
+        <Card className="bg-card/50 border-border/50">
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Layers className="h-3.5 w-3.5" />
+              Pipeline
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <Badge className="bg-primary/20 text-primary border-primary/30 font-medium">
+              {getPipelineStageLabel(data.pipeline_stage)}
+            </Badge>
+            <div className="mt-2">
+              <span className="text-xs text-muted-foreground">Estado: </span>
+              <span className="text-xs font-medium">
+                {getOperationalStatusLabel(data.operational_status)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Block Reason & Visit Outcome */}
+        {(data.re_block_reason || data.re_visit_outcome) && (
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-4 space-y-2">
+              {data.re_block_reason && (
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-400" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Bloqueo</p>
+                    <p className="text-sm font-medium text-amber-400">
+                      {getBlockReasonLabel(data.re_block_reason)}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {data.re_block_reason && data.re_visit_outcome && <Separator className="bg-border/50" />}
+              {data.re_visit_outcome && (
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-blue-400" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Visita</p>
+                    <p className="text-sm font-medium">
+                      {getVisitOutcomeLabel(data.re_visit_outcome)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Lead Score */}
         <Card className="bg-card/50 border-border/50">
           <CardHeader className="pb-2 pt-3 px-4">

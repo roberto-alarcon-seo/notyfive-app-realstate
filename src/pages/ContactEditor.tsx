@@ -135,6 +135,8 @@ export default function ContactEditor() {
     source: '',
     opt_in_status: 'unknown',
     next_action_at: '',
+    pipeline_stage: 'new_lead',
+    operational_status: 'ACTIVE',
     re_budget_estimated_mxn: null,
     re_credit_type: null,
     re_credit_preapproved: false,
@@ -150,6 +152,8 @@ export default function ContactEditor() {
     re_accepts_pets: false,
     re_reason: null,
     re_current_situation: null,
+    re_block_reason: null,
+    re_visit_outcome: null,
   });
   const [tagInput, setTagInput] = useState('');
 
@@ -209,6 +213,8 @@ export default function ContactEditor() {
           source: contact.source || '',
           opt_in_status: contact.opt_in_status ?? 'unknown',
           next_action_at: formatDateTime(contact.next_action_at),
+          pipeline_stage: contact.pipeline_stage ?? 'new_lead',
+          operational_status: contact.operational_status ?? 'ACTIVE',
           re_budget_estimated_mxn: contact.re_budget_estimated_mxn,
           re_credit_type: contact.re_credit_type,
           re_credit_preapproved: contact.re_credit_preapproved ?? false,
@@ -224,6 +230,8 @@ export default function ContactEditor() {
           re_accepts_pets: contact.re_accepts_pets ?? false,
           re_reason: contact.re_reason,
           re_current_situation: contact.re_current_situation,
+          re_block_reason: contact.re_block_reason,
+          re_visit_outcome: contact.re_visit_outcome,
         });
       } else {
         toast.error("Contacto no encontrado");
@@ -528,6 +536,8 @@ export default function ContactEditor() {
                     opt_in_status: formData.opt_in_status ?? 'unknown',
                     next_action_at: formData.next_action_at ?? '',
                     last_interaction_at: lastInteractionAt,
+                    pipeline_stage: formData.pipeline_stage ?? 'new_lead',
+                    operational_status: formData.operational_status ?? 'ACTIVE',
                   }}
                   onChange={(data) => setFormData({
                     ...formData,
@@ -537,6 +547,8 @@ export default function ContactEditor() {
                     source: data.source,
                     opt_in_status: data.opt_in_status,
                     next_action_at: data.next_action_at,
+                    pipeline_stage: data.pipeline_stage,
+                    operational_status: data.operational_status,
                   })}
                 />
               </div>
@@ -737,6 +749,10 @@ export default function ContactEditor() {
             re_budget_estimated_mxn: formData.re_budget_estimated_mxn,
             re_credit_preapproved: formData.re_credit_preapproved ?? false,
             re_credit_type: formData.re_credit_type,
+            pipeline_stage: formData.pipeline_stage ?? 'new_lead',
+            operational_status: formData.operational_status ?? 'ACTIVE',
+            re_block_reason: formData.re_block_reason ?? null,
+            re_visit_outcome: formData.re_visit_outcome ?? null,
           }}
         />
       </div>
