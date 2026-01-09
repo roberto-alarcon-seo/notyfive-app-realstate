@@ -1,6 +1,29 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+
+// Pipeline stages with labels
+export const PIPELINE_STAGES = [
+  { value: 'new_lead', label: 'Nuevo lead' },
+  { value: 'interest_confirmed', label: 'Interés confirmado' },
+  { value: 'financial_validation', label: 'Validación financiera' },
+  { value: 'searching', label: 'En búsqueda activa' },
+  { value: 'visit_done', label: 'Visita realizada' },
+  { value: 'follow_up', label: 'Seguimiento' },
+  { value: 'negotiation', label: 'Oferta / Negociación' },
+  { value: 'closed_won', label: 'Cerrado' },
+  { value: 'closed_lost', label: 'Perdido' },
+];
+
+// Operational statuses
+export const OPERATIONAL_STATUSES = [
+  { value: 'ACTIVE', label: 'Activo' },
+  { value: 'WAITING_CUSTOMER', label: 'En espera del cliente' },
+  { value: 'GHOSTING', label: 'Ghosting (sin respuesta)' },
+  { value: 'DND', label: 'No contactar (DND)' },
+  { value: 'CLOSED', label: 'Cerrado' },
+];
 
 export interface LeadPriorityData {
   lead_score: number;
@@ -10,6 +33,8 @@ export interface LeadPriorityData {
   opt_in_status: 'unknown' | 'opt_in' | 'opt_out';
   next_action_at: string;
   last_interaction_at: string | null;
+  pipeline_stage: string;
+  operational_status: string;
 }
 
 interface LeadPriorityCardProps {
@@ -24,6 +49,43 @@ export function LeadPriorityCard({ data, onChange }: LeadPriorityCardProps) {
 
   return (
     <div className="space-y-4">
+      {/* Pipeline Stage + Operational Status */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="pipeline_stage">Etapa del pipeline</Label>
+          <Select value={data.pipeline_stage} onValueChange={(v) => updateField('pipeline_stage', v)}>
+            <SelectTrigger id="pipeline_stage">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PIPELINE_STAGES.map((stage) => (
+                <SelectItem key={stage.value} value={stage.value}>
+                  {stage.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Estado del lead en el proceso de compra</p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="operational_status">Estado del contacto</Label>
+          <Select value={data.operational_status} onValueChange={(v) => updateField('operational_status', v)}>
+            <SelectTrigger id="operational_status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {OPERATIONAL_STATUSES.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Separator />
+
       {/* Row 1: Lead Score + Temperatura */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">

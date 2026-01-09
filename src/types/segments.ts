@@ -142,6 +142,14 @@ export const UNIVERSAL_FIXED_FIELDS = [
   { key: 'last_interaction_at', label: 'Última interacción', dataType: 'datetime' },
 ];
 
+// Operational fields (Real Estate pipeline)
+export const OPERATIONAL_FIELDS = [
+  { key: 'pipeline_stage', label: 'Etapa del pipeline', dataType: 'select', options: ['new_lead', 'interest_confirmed', 'financial_validation', 'searching', 'visit_done', 'follow_up', 'negotiation', 'closed_won', 'closed_lost'] },
+  { key: 'operational_status', label: 'Estado del contacto', dataType: 'select', options: ['ACTIVE', 'WAITING_CUSTOMER', 'GHOSTING', 'DND', 'CLOSED'] },
+  { key: 're_block_reason', label: 'Motivo de bloqueo', dataType: 'select', options: ['NO_RESPONSE', 'BUDGET_TOO_LOW', 'CREDIT_NOT_APPROVED', 'CREDIT_UNKNOWN_AMOUNT', 'CREDIT_NOT_COMPATIBLE', 'NO_PROPERTIES_MATCH', 'NOT_INTERESTED_AFTER_VISIT', 'POSTPONED', 'OTHER'] },
+  { key: 're_visit_outcome', label: 'Resultado de visita', dataType: 'select', options: ['LIKED', 'DIDNT_LIKE', 'NO_SHOW', 'RESCHEDULE', 'PENDING'] },
+];
+
 // Real Estate fixed fields
 export const REAL_ESTATE_FIXED_FIELDS = [
   { key: 're_budget_estimated_mxn', label: 'Presupuesto (MXN)', dataType: 'number' },
@@ -161,9 +169,10 @@ export const REAL_ESTATE_FIXED_FIELDS = [
   { key: 're_current_situation', label: 'Situación actual', dataType: 'select', options: ['RENTING', 'OWNING', 'LIVING_WITH_FAMILY', 'LOOKING_TO_MOVE', 'OTHER'] },
 ];
 
-// All system fields (base + universal + real estate)
+// All system fields (base + universal + operational + real estate)
 export const ALL_SYSTEM_FIELDS = [
   ...BASE_CONTACT_FIELDS,
   ...UNIVERSAL_FIXED_FIELDS,
+  ...OPERATIONAL_FIELDS,
   ...REAL_ESTATE_FIXED_FIELDS,
 ];

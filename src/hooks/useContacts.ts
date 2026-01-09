@@ -26,6 +26,9 @@ export interface Contact {
   next_action_at: string | null;
   intent_detected: string | null;
   opt_in_status: 'unknown' | 'opt_in' | 'opt_out';
+  // Pipeline & Operational fields
+  pipeline_stage: string;
+  operational_status: string;
   // Real Estate fixed fields
   re_budget_estimated_mxn: number | null;
   re_credit_type: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'MIXED' | null;
@@ -42,6 +45,9 @@ export interface Contact {
   re_accepts_pets: boolean;
   re_reason: 'BUY' | 'RENT' | 'INVEST' | 'MOVE' | 'UPGRADE' | 'DOWNSIZE' | 'OTHER' | null;
   re_current_situation: 'RENTING' | 'OWNING' | 'LIVING_WITH_FAMILY' | 'LOOKING_TO_MOVE' | 'OTHER' | null;
+  // Diagnostic fields
+  re_block_reason: string | null;
+  re_visit_outcome: string | null;
 }
 
 export interface CustomField {
@@ -88,6 +94,9 @@ export interface ContactFormData {
   source?: string;
   opt_in_status?: 'unknown' | 'opt_in' | 'opt_out';
   next_action_at?: string;
+  // Pipeline & Operational fields
+  pipeline_stage?: string;
+  operational_status?: string;
   // Real Estate fixed fields
   re_budget_estimated_mxn?: number | null;
   re_credit_type?: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'MIXED' | null;
@@ -104,6 +113,9 @@ export interface ContactFormData {
   re_accepts_pets?: boolean;
   re_reason?: 'BUY' | 'RENT' | 'INVEST' | 'MOVE' | 'UPGRADE' | 'DOWNSIZE' | 'OTHER' | null;
   re_current_situation?: 'RENTING' | 'OWNING' | 'LIVING_WITH_FAMILY' | 'LOOKING_TO_MOVE' | 'OTHER' | null;
+  // Diagnostic fields
+  re_block_reason?: string | null;
+  re_visit_outcome?: string | null;
 }
 
 export function useContacts() {
@@ -268,6 +280,9 @@ export function useContacts() {
           source: formData.source || null,
           opt_in_status: formData.opt_in_status ?? 'unknown',
           next_action_at: formData.next_action_at || null,
+          // Pipeline & Operational fields
+          pipeline_stage: formData.pipeline_stage ?? 'new_lead',
+          operational_status: formData.operational_status ?? 'ACTIVE',
           // Real Estate fixed fields
           re_budget_estimated_mxn: formData.re_budget_estimated_mxn ?? null,
           re_credit_type: formData.re_credit_type ?? null,
@@ -284,6 +299,9 @@ export function useContacts() {
           re_accepts_pets: formData.re_accepts_pets ?? false,
           re_reason: formData.re_reason ?? null,
           re_current_situation: formData.re_current_situation ?? null,
+          // Diagnostic fields
+          re_block_reason: formData.re_block_reason ?? null,
+          re_visit_outcome: formData.re_visit_outcome ?? null,
         })
         .select()
         .single();
@@ -356,6 +374,9 @@ export function useContacts() {
           source: formData.source || null,
           opt_in_status: formData.opt_in_status ?? 'unknown',
           next_action_at: formData.next_action_at || null,
+          // Pipeline & Operational fields
+          pipeline_stage: formData.pipeline_stage ?? 'new_lead',
+          operational_status: formData.operational_status ?? 'ACTIVE',
           // Real Estate fixed fields
           re_budget_estimated_mxn: formData.re_budget_estimated_mxn ?? null,
           re_credit_type: formData.re_credit_type ?? null,
@@ -372,6 +393,9 @@ export function useContacts() {
           re_accepts_pets: formData.re_accepts_pets ?? false,
           re_reason: formData.re_reason ?? null,
           re_current_situation: formData.re_current_situation ?? null,
+          // Diagnostic fields
+          re_block_reason: formData.re_block_reason ?? null,
+          re_visit_outcome: formData.re_visit_outcome ?? null,
         })
         .eq('id', id);
 
