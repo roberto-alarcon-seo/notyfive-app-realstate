@@ -16,6 +16,32 @@ export interface Contact {
   created_at: string;
   updated_at: string;
   custom_fields?: Record<string, string>;
+  // Universal fixed fields
+  lead_score: number;
+  lead_temperature: 'cold' | 'warm' | 'hot';
+  engagement_level: 'low' | 'medium' | 'high';
+  source: string | null;
+  assigned_agent_id: string | null;
+  last_interaction_at: string | null;
+  next_action_at: string | null;
+  intent_detected: string | null;
+  opt_in_status: 'unknown' | 'opt_in' | 'opt_out';
+  // Real Estate fixed fields
+  re_budget_estimated_mxn: number | null;
+  re_credit_type: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'MIXED' | null;
+  re_credit_preapproved: boolean;
+  re_down_payment_mxn: number | null;
+  re_monthly_income_mxn: number | null;
+  re_property_types: string[] | null;
+  re_bedrooms: number | null;
+  re_bathrooms: number | null;
+  re_parking_spots: number | null;
+  re_requires_parking: boolean;
+  re_zones: string[] | null;
+  re_amenities: string[] | null;
+  re_accepts_pets: boolean;
+  re_reason: 'BUY' | 'RENT' | 'INVEST' | 'MOVE' | 'UPGRADE' | 'DOWNSIZE' | 'OTHER' | null;
+  re_current_situation: 'RENTING' | 'OWNING' | 'LIVING_WITH_FAMILY' | 'LOOKING_TO_MOVE' | 'OTHER' | null;
 }
 
 export interface CustomField {
@@ -55,6 +81,29 @@ export interface ContactFormData {
   tags?: string[];
   notes?: string;
   custom_fields?: Record<string, string>;
+  // Universal fixed fields
+  lead_score?: number;
+  lead_temperature?: 'cold' | 'warm' | 'hot';
+  engagement_level?: 'low' | 'medium' | 'high';
+  source?: string;
+  opt_in_status?: 'unknown' | 'opt_in' | 'opt_out';
+  next_action_at?: string;
+  // Real Estate fixed fields
+  re_budget_estimated_mxn?: number | null;
+  re_credit_type?: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'MIXED' | null;
+  re_credit_preapproved?: boolean;
+  re_down_payment_mxn?: number | null;
+  re_monthly_income_mxn?: number | null;
+  re_property_types?: string[];
+  re_bedrooms?: number | null;
+  re_bathrooms?: number | null;
+  re_parking_spots?: number | null;
+  re_requires_parking?: boolean;
+  re_zones?: string[];
+  re_amenities?: string[];
+  re_accepts_pets?: boolean;
+  re_reason?: 'BUY' | 'RENT' | 'INVEST' | 'MOVE' | 'UPGRADE' | 'DOWNSIZE' | 'OTHER' | null;
+  re_current_situation?: 'RENTING' | 'OWNING' | 'LIVING_WITH_FAMILY' | 'LOOKING_TO_MOVE' | 'OTHER' | null;
 }
 
 export function useContacts() {
@@ -212,6 +261,29 @@ export function useContacts() {
           tags: formData.tags || [],
           notes: formData.notes || null,
           status: 'active',
+          // Universal fixed fields
+          lead_score: formData.lead_score ?? 0,
+          lead_temperature: formData.lead_temperature ?? 'cold',
+          engagement_level: formData.engagement_level ?? 'low',
+          source: formData.source || null,
+          opt_in_status: formData.opt_in_status ?? 'unknown',
+          next_action_at: formData.next_action_at || null,
+          // Real Estate fixed fields
+          re_budget_estimated_mxn: formData.re_budget_estimated_mxn ?? null,
+          re_credit_type: formData.re_credit_type ?? null,
+          re_credit_preapproved: formData.re_credit_preapproved ?? false,
+          re_down_payment_mxn: formData.re_down_payment_mxn ?? null,
+          re_monthly_income_mxn: formData.re_monthly_income_mxn ?? null,
+          re_property_types: formData.re_property_types ?? null,
+          re_bedrooms: formData.re_bedrooms ?? null,
+          re_bathrooms: formData.re_bathrooms ?? null,
+          re_parking_spots: formData.re_parking_spots ?? null,
+          re_requires_parking: formData.re_requires_parking ?? false,
+          re_zones: formData.re_zones ?? null,
+          re_amenities: formData.re_amenities ?? null,
+          re_accepts_pets: formData.re_accepts_pets ?? false,
+          re_reason: formData.re_reason ?? null,
+          re_current_situation: formData.re_current_situation ?? null,
         })
         .select()
         .single();
@@ -277,6 +349,29 @@ export function useContacts() {
           country: formData.country || null,
           tags: formData.tags || [],
           notes: formData.notes || null,
+          // Universal fixed fields
+          lead_score: formData.lead_score ?? 0,
+          lead_temperature: formData.lead_temperature ?? 'cold',
+          engagement_level: formData.engagement_level ?? 'low',
+          source: formData.source || null,
+          opt_in_status: formData.opt_in_status ?? 'unknown',
+          next_action_at: formData.next_action_at || null,
+          // Real Estate fixed fields
+          re_budget_estimated_mxn: formData.re_budget_estimated_mxn ?? null,
+          re_credit_type: formData.re_credit_type ?? null,
+          re_credit_preapproved: formData.re_credit_preapproved ?? false,
+          re_down_payment_mxn: formData.re_down_payment_mxn ?? null,
+          re_monthly_income_mxn: formData.re_monthly_income_mxn ?? null,
+          re_property_types: formData.re_property_types ?? null,
+          re_bedrooms: formData.re_bedrooms ?? null,
+          re_bathrooms: formData.re_bathrooms ?? null,
+          re_parking_spots: formData.re_parking_spots ?? null,
+          re_requires_parking: formData.re_requires_parking ?? false,
+          re_zones: formData.re_zones ?? null,
+          re_amenities: formData.re_amenities ?? null,
+          re_accepts_pets: formData.re_accepts_pets ?? false,
+          re_reason: formData.re_reason ?? null,
+          re_current_situation: formData.re_current_situation ?? null,
         })
         .eq('id', id);
 

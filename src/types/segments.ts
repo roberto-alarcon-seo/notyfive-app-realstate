@@ -110,6 +110,14 @@ export const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[
   ],
 };
 
+// Operators for array fields
+export const OPERATORS_ARRAY: { value: string; label: string }[] = [
+  { value: 'contains_any', label: 'Contiene alguno' },
+  { value: 'contains_all', label: 'Contiene todos' },
+  { value: 'is_empty', label: 'Está vacío' },
+  { value: 'is_not_empty', label: 'No está vacío' },
+];
+
 // Base contact fields
 export const BASE_CONTACT_FIELDS = [
   { key: 'name', label: 'Nombre', dataType: 'short_text' },
@@ -118,4 +126,34 @@ export const BASE_CONTACT_FIELDS = [
   { key: 'country', label: 'País', dataType: 'short_text' },
   { key: 'tags', label: 'Tags', dataType: 'tags' },
   { key: 'created_at', label: 'Fecha de creación', dataType: 'datetime' },
+];
+
+// Universal fixed fields (for all industries)
+export const UNIVERSAL_FIXED_FIELDS = [
+  { key: 'lead_score', label: 'Lead Score', dataType: 'number' },
+  { key: 'lead_temperature', label: 'Temperatura', dataType: 'select', options: ['cold', 'warm', 'hot'] },
+  { key: 'engagement_level', label: 'Engagement', dataType: 'select', options: ['low', 'medium', 'high'] },
+  { key: 'source', label: 'Fuente', dataType: 'short_text' },
+  { key: 'opt_in_status', label: 'Estado Opt-in', dataType: 'select', options: ['unknown', 'opt_in', 'opt_out'] },
+  { key: 'next_action_at', label: 'Próxima acción', dataType: 'datetime' },
+  { key: 'last_interaction_at', label: 'Última interacción', dataType: 'datetime' },
+];
+
+// Real Estate fixed fields
+export const REAL_ESTATE_FIXED_FIELDS = [
+  { key: 're_budget_estimated_mxn', label: 'Presupuesto (MXN)', dataType: 'number' },
+  { key: 're_credit_type', label: 'Tipo de crédito', dataType: 'select', options: ['INFONAVIT', 'COFINAVIT', 'BANK', 'CASH', 'MIXED'] },
+  { key: 're_credit_preapproved', label: 'Crédito preaprobado', dataType: 'boolean' },
+  { key: 're_down_payment_mxn', label: 'Enganche (MXN)', dataType: 'number' },
+  { key: 're_monthly_income_mxn', label: 'Ingreso mensual (MXN)', dataType: 'number' },
+  { key: 're_property_types', label: 'Tipo de propiedad', dataType: 'array' },
+  { key: 're_bedrooms', label: 'Recámaras', dataType: 'number' },
+  { key: 're_bathrooms', label: 'Baños', dataType: 'number' },
+  { key: 're_parking_spots', label: 'Estacionamientos', dataType: 'number' },
+  { key: 're_requires_parking', label: 'Requiere estacionamiento', dataType: 'boolean' },
+  { key: 're_zones', label: 'Zonas de interés', dataType: 'array' },
+  { key: 're_amenities', label: 'Amenidades', dataType: 'array' },
+  { key: 're_accepts_pets', label: 'Acepta mascotas', dataType: 'boolean' },
+  { key: 're_reason', label: 'Motivo', dataType: 'select', options: ['BUY', 'RENT', 'INVEST', 'MOVE', 'UPGRADE', 'DOWNSIZE', 'OTHER'] },
+  { key: 're_current_situation', label: 'Situación actual', dataType: 'select', options: ['RENTING', 'OWNING', 'LIVING_WITH_FAMILY', 'LOOKING_TO_MOVE', 'OTHER'] },
 ];

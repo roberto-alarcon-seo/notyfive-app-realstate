@@ -1183,45 +1183,124 @@ export type Database = {
       }
       contacts: {
         Row: {
+          assigned_agent_id: string | null
           country: string | null
           created_at: string
           email: string | null
+          engagement_level: string
           id: string
+          intent_detected: string | null
+          last_interaction_at: string | null
+          lead_score: number
+          lead_temperature: string
           name: string
+          next_action_at: string | null
           notes: string | null
+          opt_in_status: string
           phone: string | null
+          re_accepts_pets: boolean
+          re_amenities: string[] | null
+          re_bathrooms: number | null
+          re_bedrooms: number | null
+          re_budget_estimated_mxn: number | null
+          re_credit_preapproved: boolean
+          re_credit_type: string | null
+          re_current_situation: string | null
+          re_down_payment_mxn: number | null
+          re_monthly_income_mxn: number | null
+          re_parking_spots: number | null
+          re_property_types: string[] | null
+          re_reason: string | null
+          re_requires_parking: boolean
+          re_zones: string[] | null
+          source: string | null
           status: Database["public"]["Enums"]["contact_status"]
           tags: string[] | null
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          assigned_agent_id?: string | null
           country?: string | null
           created_at?: string
           email?: string | null
+          engagement_level?: string
           id?: string
+          intent_detected?: string | null
+          last_interaction_at?: string | null
+          lead_score?: number
+          lead_temperature?: string
           name: string
+          next_action_at?: string | null
           notes?: string | null
+          opt_in_status?: string
           phone?: string | null
+          re_accepts_pets?: boolean
+          re_amenities?: string[] | null
+          re_bathrooms?: number | null
+          re_bedrooms?: number | null
+          re_budget_estimated_mxn?: number | null
+          re_credit_preapproved?: boolean
+          re_credit_type?: string | null
+          re_current_situation?: string | null
+          re_down_payment_mxn?: number | null
+          re_monthly_income_mxn?: number | null
+          re_parking_spots?: number | null
+          re_property_types?: string[] | null
+          re_reason?: string | null
+          re_requires_parking?: boolean
+          re_zones?: string[] | null
+          source?: string | null
           status?: Database["public"]["Enums"]["contact_status"]
           tags?: string[] | null
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          assigned_agent_id?: string | null
           country?: string | null
           created_at?: string
           email?: string | null
+          engagement_level?: string
           id?: string
+          intent_detected?: string | null
+          last_interaction_at?: string | null
+          lead_score?: number
+          lead_temperature?: string
           name?: string
+          next_action_at?: string | null
           notes?: string | null
+          opt_in_status?: string
           phone?: string | null
+          re_accepts_pets?: boolean
+          re_amenities?: string[] | null
+          re_bathrooms?: number | null
+          re_bedrooms?: number | null
+          re_budget_estimated_mxn?: number | null
+          re_credit_preapproved?: boolean
+          re_credit_type?: string | null
+          re_current_situation?: string | null
+          re_down_payment_mxn?: number | null
+          re_monthly_income_mxn?: number | null
+          re_parking_spots?: number | null
+          re_property_types?: string[] | null
+          re_reason?: string | null
+          re_requires_parking?: boolean
+          re_zones?: string[] | null
+          source?: string | null
           status?: Database["public"]["Enums"]["contact_status"]
           tags?: string[] | null
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contacts_assigned_agent_fk"
+            columns: ["assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contacts_tenant_id_fkey"
             columns: ["tenant_id"]

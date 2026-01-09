@@ -21,6 +21,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ContactActivityTimeline } from "@/components/contacts/ContactActivityTimeline";
 import ConsentBadge from "@/components/contacts/ConsentBadge";
+import { LeadPriorityCard, LeadPriorityData } from "@/components/contacts/LeadPriorityCard";
+import { RealEstateCreditCard, RealEstateCreditData } from "@/components/contacts/RealEstateCreditCard";
+import { RealEstatePreferencesCard, RealEstatePreferencesData } from "@/components/contacts/RealEstatePreferencesCard";
 
 // Reusable component for rendering custom field inputs
 function CustomFieldInput({ 
@@ -109,6 +112,29 @@ export default function ContactEditor() {
     tags: [],
     notes: '',
     custom_fields: {},
+    // Universal fixed fields
+    lead_score: 0,
+    lead_temperature: 'cold',
+    engagement_level: 'low',
+    source: '',
+    opt_in_status: 'unknown',
+    next_action_at: '',
+    // Real Estate fixed fields
+    re_budget_estimated_mxn: null,
+    re_credit_type: null,
+    re_credit_preapproved: false,
+    re_down_payment_mxn: null,
+    re_monthly_income_mxn: null,
+    re_property_types: [],
+    re_bedrooms: null,
+    re_bathrooms: null,
+    re_parking_spots: null,
+    re_requires_parking: false,
+    re_zones: [],
+    re_amenities: [],
+    re_accepts_pets: false,
+    re_reason: null,
+    re_current_situation: null,
   });
   const [tagInput, setTagInput] = useState('');
 
@@ -149,6 +175,12 @@ export default function ContactEditor() {
     if (isEditing && contacts.length > 0) {
       const contact = contacts.find(c => c.id === id);
       if (contact) {
+        // Format datetime for input
+        const formatDateTime = (dt: string | null) => {
+          if (!dt) return '';
+          return new Date(dt).toISOString().slice(0, 16);
+        };
+
         setFormData({
           name: contact.name,
           email: contact.email || '',
@@ -157,6 +189,29 @@ export default function ContactEditor() {
           tags: contact.tags || [],
           notes: contact.notes || '',
           custom_fields: contact.custom_fields || {},
+          // Universal fixed fields
+          lead_score: contact.lead_score ?? 0,
+          lead_temperature: contact.lead_temperature ?? 'cold',
+          engagement_level: contact.engagement_level ?? 'low',
+          source: contact.source || '',
+          opt_in_status: contact.opt_in_status ?? 'unknown',
+          next_action_at: formatDateTime(contact.next_action_at),
+          // Real Estate fixed fields
+          re_budget_estimated_mxn: contact.re_budget_estimated_mxn,
+          re_credit_type: contact.re_credit_type,
+          re_credit_preapproved: contact.re_credit_preapproved ?? false,
+          re_down_payment_mxn: contact.re_down_payment_mxn,
+          re_monthly_income_mxn: contact.re_monthly_income_mxn,
+          re_property_types: contact.re_property_types || [],
+          re_bedrooms: contact.re_bedrooms,
+          re_bathrooms: contact.re_bathrooms,
+          re_parking_spots: contact.re_parking_spots,
+          re_requires_parking: contact.re_requires_parking ?? false,
+          re_zones: contact.re_zones || [],
+          re_amenities: contact.re_amenities || [],
+          re_accepts_pets: contact.re_accepts_pets ?? false,
+          re_reason: contact.re_reason,
+          re_current_situation: contact.re_current_situation,
         });
       } else {
         toast.error("Contacto no encontrado");
@@ -164,6 +219,10 @@ export default function ContactEditor() {
       }
     }
   }, [id, contacts, isEditing, navigate]);
+
+  // Get last_interaction_at from the contact being edited
+  const currentContact = isEditing ? contacts.find(c => c.id === id) : null;
+  const lastInteractionAt = currentContact?.last_interaction_at || null;
 
   const addTag = () => {
     if (tagInput.trim() && !formData.tags?.includes(tagInput.trim())) {
@@ -289,103 +348,176 @@ export default function ContactEditor() {
 
             <TabsContent value="datos" className="mt-0">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* General Information */}
-                <Card className="h-fit">
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <User className="h-5 w-5 text-primary" />
-                      <CardTitle>Información general</CardTitle>
-                    </div>
-                    <CardDescription>Datos básicos del contacto</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nombre *</Label>
-                      <Input
-                        id="name"
-                        placeholder="Nombre completo"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* LEFT COLUMN - Operational Cards */}
+                <div className="space-y-6">
+                  {/* General Information */}
+                  <Card className="h-fit">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <User className="h-5 w-5 text-primary" />
+                        <CardTitle>Información general</CardTitle>
+                      </div>
+                      <CardDescription>Datos básicos del contacto</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="name">Nombre *</Label>
                         <Input
-                          id="email"
-                          type="email"
-                          placeholder="correo@ejemplo.com"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          id="name"
+                          placeholder="Nombre completo"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Teléfono</Label>
-                        <Input
-                          id="phone"
-                          placeholder="+52 55 1234 5678"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        />
-                      </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="country">País</Label>
-                      <Input
-                        id="country"
-                        placeholder="País"
-                        value={formData.country}
-                        onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Etiquetas</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Nueva etiqueta"
-                          value={tagInput}
-                          onChange={(e) => setTagInput(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                        />
-                        <Button type="button" variant="secondary" onClick={addTag}>
-                          Añadir
-                        </Button>
-                      </div>
-                      {formData.tags && formData.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {formData.tags.map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className="px-3 py-1 flex items-center gap-1.5"
-                            >
-                              {tag}
-                              <button onClick={() => removeTag(tag)} className="hover:text-destructive">
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="correo@ejemplo.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          />
                         </div>
-                      )}
-                    </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Teléfono</Label>
+                          <Input
+                            id="phone"
+                            placeholder="+52 55 1234 5678"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          />
+                        </div>
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Notas</Label>
-                      <Textarea
-                        id="notes"
-                        placeholder="Notas adicionales sobre el contacto..."
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        rows={4}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="space-y-2">
+                        <Label htmlFor="country">País</Label>
+                        <Input
+                          id="country"
+                          placeholder="País"
+                          value={formData.country}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                        />
+                      </div>
 
-                {/* Custom Fields with Category Tabs */}
+                      <div className="space-y-2">
+                        <Label>Etiquetas</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Nueva etiqueta"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                          />
+                          <Button type="button" variant="secondary" onClick={addTag}>
+                            Añadir
+                          </Button>
+                        </div>
+                        {formData.tags && formData.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {formData.tags.map((tag) => (
+                              <Badge
+                                key={tag}
+                                variant="secondary"
+                                className="px-3 py-1 flex items-center gap-1.5"
+                              >
+                                {tag}
+                                <button onClick={() => removeTag(tag)} className="hover:text-destructive">
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="notes">Notas</Label>
+                        <Textarea
+                          id="notes"
+                          placeholder="Notas adicionales sobre el contacto..."
+                          value={formData.notes}
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                          rows={4}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Lead Priority Card */}
+                  <LeadPriorityCard
+                    data={{
+                      lead_score: formData.lead_score ?? 0,
+                      lead_temperature: formData.lead_temperature ?? 'cold',
+                      engagement_level: formData.engagement_level ?? 'low',
+                      source: formData.source ?? '',
+                      opt_in_status: formData.opt_in_status ?? 'unknown',
+                      next_action_at: formData.next_action_at ?? '',
+                      last_interaction_at: lastInteractionAt,
+                    }}
+                    onChange={(data) => setFormData({
+                      ...formData,
+                      lead_score: data.lead_score,
+                      lead_temperature: data.lead_temperature,
+                      engagement_level: data.engagement_level,
+                      source: data.source,
+                      opt_in_status: data.opt_in_status,
+                      next_action_at: data.next_action_at,
+                    })}
+                  />
+
+                  {/* Real Estate Credit Card */}
+                  <RealEstateCreditCard
+                    data={{
+                      re_budget_estimated_mxn: formData.re_budget_estimated_mxn ?? null,
+                      re_credit_type: formData.re_credit_type ?? null,
+                      re_credit_preapproved: formData.re_credit_preapproved ?? false,
+                      re_down_payment_mxn: formData.re_down_payment_mxn ?? null,
+                      re_monthly_income_mxn: formData.re_monthly_income_mxn ?? null,
+                    }}
+                    onChange={(data) => setFormData({
+                      ...formData,
+                      re_budget_estimated_mxn: data.re_budget_estimated_mxn,
+                      re_credit_type: data.re_credit_type,
+                      re_credit_preapproved: data.re_credit_preapproved,
+                      re_down_payment_mxn: data.re_down_payment_mxn,
+                      re_monthly_income_mxn: data.re_monthly_income_mxn,
+                    })}
+                  />
+
+                  {/* Real Estate Preferences Card */}
+                  <RealEstatePreferencesCard
+                    data={{
+                      re_property_types: formData.re_property_types ?? [],
+                      re_bedrooms: formData.re_bedrooms ?? null,
+                      re_bathrooms: formData.re_bathrooms ?? null,
+                      re_parking_spots: formData.re_parking_spots ?? null,
+                      re_requires_parking: formData.re_requires_parking ?? false,
+                      re_zones: formData.re_zones ?? [],
+                      re_amenities: formData.re_amenities ?? [],
+                      re_accepts_pets: formData.re_accepts_pets ?? false,
+                      re_reason: formData.re_reason ?? null,
+                      re_current_situation: formData.re_current_situation ?? null,
+                    }}
+                    onChange={(data) => setFormData({
+                      ...formData,
+                      re_property_types: data.re_property_types,
+                      re_bedrooms: data.re_bedrooms,
+                      re_bathrooms: data.re_bathrooms,
+                      re_parking_spots: data.re_parking_spots,
+                      re_requires_parking: data.re_requires_parking,
+                      re_zones: data.re_zones,
+                      re_amenities: data.re_amenities,
+                      re_accepts_pets: data.re_accepts_pets,
+                      re_reason: data.re_reason,
+                      re_current_situation: data.re_current_situation,
+                    })}
+                  />
+                </div>
+
+                {/* RIGHT COLUMN - Custom Fields */}
                 <Card className="h-fit">
                   <CardHeader>
                     <div className="flex items-center gap-2">
@@ -397,7 +529,9 @@ export default function ContactEditor() {
                         </Badge>
                       )}
                     </div>
-                    <CardDescription>Información adicional del contacto</CardDescription>
+                    <CardDescription>
+                      Información adicional del contacto. Los campos personalizados son opcionales y no afectan segmentaciones por defecto.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {customFields.length === 0 ? (
@@ -405,9 +539,11 @@ export default function ContactEditor() {
                         <Settings2 className="h-10 w-10 mx-auto mb-3 opacity-50" />
                         <p>No hay campos personalizados</p>
                         <p className="text-sm mt-1">Puedes crearlos desde Configuración</p>
+                        <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/settings/contact-fields')}>
+                          Crear campo
+                        </Button>
                       </div>
                     ) : categoryNames.length === 0 ? (
-                      // No categories - show all fields flat
                       <div className="space-y-4">
                         {customFields.map((field) => (
                           <CustomFieldInput 
@@ -423,7 +559,6 @@ export default function ContactEditor() {
                         ))}
                       </div>
                     ) : (
-                      // Has categories - show in tabs
                       <Tabs defaultValue={categoryNames[0] || 'general'} className="w-full">
                         <TabsList className="w-full flex flex-wrap h-auto gap-1 mb-4">
                           {categoryNames.map(cat => (
@@ -482,7 +617,6 @@ export default function ContactEditor() {
                     )}
                   </CardContent>
                 </Card>
-
               </div>
             </TabsContent>
 
