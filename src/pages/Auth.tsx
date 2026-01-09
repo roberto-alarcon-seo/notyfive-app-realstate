@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Home, Building2, Key } from 'lucide-react';
+import authHero from '@/assets/auth-hero-realestate.jpg';
 import authLogo from '@/assets/auth-logo.png';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
@@ -90,146 +91,253 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Gradient background effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Bottom gradient glow */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-t from-primary/30 via-primary/10 to-transparent blur-3xl" />
-        {/* Left accent */}
-        <div className="absolute bottom-0 left-0 w-[400px] h-[300px] bg-gradient-to-tr from-violet-600/20 via-transparent to-transparent blur-2xl" />
-        {/* Right accent */}
-        <div className="absolute bottom-0 right-0 w-[400px] h-[300px] bg-gradient-to-tl from-indigo-600/20 via-transparent to-transparent blur-2xl" />
-        {/* Subtle top-down gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-transparent" />
+    <div className="min-h-screen flex">
+      {/* Left Panel - Hero Image */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden">
+        {/* Background Image */}
+        <img 
+          src={authHero} 
+          alt="Propiedad de lujo" 
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" />
+        
+        {/* Content Overlay */}
+        <div className="relative z-10 flex flex-col justify-between p-8 xl:p-12 w-full">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-semibold text-white tracking-tight">NotyFive</span>
+          </div>
+          
+          {/* Bottom Content */}
+          <div className="space-y-6">
+            {/* Tagline */}
+            <div className="space-y-3">
+              <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
+                Encuentra Tu
+                <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-rose-400">
+                  Hogar Ideal
+                </span>
+              </h1>
+              <p className="text-lg text-white/80 max-w-md">
+                Gestiona tus propiedades, clientes y ventas desde una sola plataforma — rápido, fácil y confiable.
+              </p>
+            </div>
+            
+            {/* Stats */}
+            <div className="flex gap-8 pt-4">
+              <div className="space-y-1">
+                <div className="text-3xl font-bold text-white">2,500+</div>
+                <div className="text-sm text-white/60">Propiedades</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-3xl font-bold text-white">1,200+</div>
+                <div className="text-sm text-white/60">Clientes Felices</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-3xl font-bold text-white">98%</div>
+                <div className="text-sm text-white/60">Satisfacción</div>
+              </div>
+            </div>
+
+            {/* Carousel Dots */}
+            <div className="flex gap-2 pt-2">
+              <div className="w-8 h-2 rounded-full bg-white" />
+              <div className="w-2 h-2 rounded-full bg-white/40" />
+              <div className="w-2 h-2 rounded-full bg-white/40" />
+            </div>
+          </div>
+        </div>
       </div>
-      
-      <div className="w-full max-w-md animate-fade-in relative z-10">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <img 
-            src={authLogo} 
-            alt="NotyFive Logo" 
-            className="h-24 w-24 object-contain" 
-          />
+
+      {/* Right Panel - Login Form */}
+      <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col bg-background">
+        {/* Mobile Header */}
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-xl font-semibold">NotyFive</span>
+          </div>
         </div>
 
-        {/* Card */}
-        <div className="bg-card rounded-2xl p-8 border border-border shadow-xl">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold text-foreground mb-2">
-              Inicia sesión en NotyFive
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Accede a tu cuenta para gestionar tus campañas y mensajes.
+        {/* Desktop Sign In Button */}
+        <div className="hidden lg:flex justify-end p-6">
+          <Button variant="outline" className="rounded-full px-6" disabled>
+            Iniciar Sesión
+          </Button>
+        </div>
+
+        {/* Form Container */}
+        <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+          <div className="w-full max-w-md animate-fade-in">
+            {/* Header */}
+            <div className="text-center mb-8 lg:mb-10">
+              <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-3">
+                ¡Bienvenido de vuelta!
+              </h1>
+              <p className="text-muted-foreground">
+                Inicia sesión en tu cuenta
+              </p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Email */}
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                  Tu Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 bg-secondary/50 border-border hover:border-primary/50 focus:border-primary transition-colors rounded-xl"
+                  disabled={isLoading}
+                />
+                {errors.email && (
+                  <p className="text-xs text-destructive">{errors.email}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium text-foreground">
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 bg-secondary/50 border-border hover:border-primary/50 focus:border-primary transition-colors rounded-xl pr-12"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-lg hover:bg-secondary"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-xs text-destructive">{errors.password}</p>
+                )}
+              </div>
+
+              {/* Remember me & Forgot password */}
+              <div className="flex items-center justify-between py-1">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="remember"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
+                    disabled={isLoading}
+                    className="rounded"
+                  />
+                  <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+                    Recordarme
+                  </label>
+                </div>
+                <Link
+                  to="/auth/forgot-password"
+                  className="text-sm text-primary hover:text-primary/80 transition-colors font-medium"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+
+              {/* Submit */}
+              <Button
+                type="submit"
+                className="w-full h-12 rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all font-semibold text-base shadow-lg hover:shadow-xl"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Iniciando sesión...
+                  </>
+                ) : (
+                  'Iniciar Sesión'
+                )}
+              </Button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-4 text-muted-foreground">
+                  Acceso Rápido
+                </span>
+              </div>
+            </div>
+
+            {/* OAuth Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 rounded-xl border-border hover:bg-secondary/50 transition-all"
+                onClick={() => toast.info('Próximamente disponible')}
+              >
+                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Google
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 rounded-xl border-border hover:bg-secondary/50 transition-all"
+                onClick={() => toast.info('Próximamente disponible')}
+              >
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                Facebook
+              </Button>
+            </div>
+
+            {/* Footer */}
+            <p className="mt-8 text-center text-sm text-muted-foreground">
+              ¿No tienes cuenta?{' '}
+              <button
+                type="button"
+                className="text-primary hover:text-primary/80 transition-colors font-semibold"
+                onClick={() => toast.info('Contacta a tu administrador para obtener acceso')}
+              >
+                Regístrate
+              </button>
             </p>
           </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-foreground">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-11 bg-secondary border-border focus:border-primary focus:ring-primary"
-                disabled={isLoading}
-              />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-foreground">
-                Contraseña
-              </label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 bg-secondary border-border focus:border-primary focus:ring-primary pr-10"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password}</p>
-              )}
-            </div>
-
-            {/* Remember me & Forgot password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked === true)}
-                  disabled={isLoading}
-                />
-                <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
-                  Recordarme
-                </label>
-              </div>
-              <Link
-                to="/auth/forgot-password"
-                className="text-sm text-primary hover:text-primary/80 transition-colors"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </div>
-
-            {/* Submit */}
-            <Button
-              type="submit"
-              className="w-full h-11 gradient-primary hover:opacity-90 transition-opacity font-medium"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Iniciando sesión...
-                </>
-              ) : (
-                'Iniciar sesión'
-              )}
-            </Button>
-          </form>
-
-          {/* Footer */}
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta?{' '}
-            <button
-              type="button"
-              className="text-primary hover:text-primary/80 transition-colors font-medium"
-              onClick={() => toast.info('Contacta a tu administrador para obtener acceso')}
-            >
-              Contacta a tu administrador
-            </button>
-          </p>
         </div>
 
-        {/* Branding */}
-        <p className="mt-8 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} NotyFive. Todos los derechos reservados.
-        </p>
+        {/* Footer Branding */}
+        <div className="p-6 text-center">
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} NotyFive. Todos los derechos reservados.
+          </p>
+        </div>
       </div>
     </div>
   );
