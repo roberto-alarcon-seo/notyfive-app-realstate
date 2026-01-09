@@ -30,10 +30,23 @@ serve(async (req) => {
     );
 
     if (existingAdmin) {
+      // Update password if user exists
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        existingAdmin.id,
+        { password: "C0c02024" }
+      );
+      
+      if (updateError) {
+        return new Response(
+          JSON.stringify({ success: false, error: updateError.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "Super admin already exists",
+          message: "Super admin password updated",
           userId: existingAdmin.id 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -43,7 +56,7 @@ serve(async (req) => {
     // Create super admin user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: "roberto@responde.mx",
-      password: "P4dr1n0s",
+      password: "C0c02024",
       email_confirm: true,
       user_metadata: {
         name: "Roberto (Super Admin)",
