@@ -150,7 +150,7 @@ serve(async (req) => {
 
     // Decode auth token
     const authToken = atob(integration.auth_token_encrypted);
-    const fromNumber = integration.phone_number || conversation.twilio_whatsapp_number;
+    let fromNumber = integration.phone_number || conversation.twilio_whatsapp_number;
 
     if (!fromNumber) {
       return new Response(
@@ -158,6 +158,16 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Normalize phone number - remove whatsapp: prefix if already present
+    fromNumber = fromNumber.replace(/^whatsapp:/, '');
+    
+    // Ensure it starts with +
+    if (!fromNumber.startsWith('+')) {
+      fromNumber = '+' + fromNumber;
+    }
+    
+    console.log(`📱 Sending from: whatsapp:${fromNumber} to: whatsapp:${conversation.customer_whatsapp}`);
 
     // 7) Insert message with status queued (include media fields)
     const { data: newMessage, error: msgError } = await supabase
@@ -260,7 +270,19 @@ serve(async (req) => {
       console.log('📞 Twilio response:', JSON.stringify(twilioData, null, 2));
 
       if (!twilioResponse.ok) {
-        throw new Error(twilioData.message || 'Twilio send failed');
+        // Handle specific Twilio error codes
+        const errorCode = twilioData.code;
+        let userMessage = twilioData.message || 'Twilio send failed';
+        
+        if (errorCode === 63007) {
+          userMessage = `El número ${fromNumber} no está configurado como WhatsApp Sender en Twilio. Verifica que hayas completado el registro de WhatsApp Business en tu cuenta de Twilio.`;
+        } else if (errorCode === 21211) {
+          userMessage = 'Número de teléfono inválido';
+        } else if (errorCode === 21408) {
+          userMessage = 'Permisos insuficientes en Twilio';
+        }
+        
+        throw new Error(userMessage);
       }
 
       twilioMessageSid = twilioData.sid;
