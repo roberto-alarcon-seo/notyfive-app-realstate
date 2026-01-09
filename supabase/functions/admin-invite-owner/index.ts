@@ -320,8 +320,9 @@ serve(async (req) => {
       }
 
       const activationLink = linkData.properties.action_link;
-      // Always use appBaseUrl for the logo, not the Supabase auth domain
-      const logoUrl = `${appBaseUrl}/email-logo.png`;
+      // Always use APP_BASE_URL for the logo to ensure it's accessible from email clients
+      const productionUrl = Deno.env.get("APP_BASE_URL") || appBaseUrl;
+      const logoUrl = `${productionUrl}/email-logo.png`;
 
       // Send email via Resend
       const emailResult = await sendInviteEmail(ownerEmail, ownerName, activationLink, logoUrl);
@@ -454,8 +455,9 @@ serve(async (req) => {
       }
 
       const activationLink = linkData.properties.action_link;
-      // Always use appBaseUrl for the logo, not the Supabase auth domain
-      const logoUrl = `${appBaseUrl}/email-logo.png`;
+      // Always use APP_BASE_URL for the logo to ensure it's accessible from email clients
+      const productionUrl = Deno.env.get("APP_BASE_URL") || appBaseUrl;
+      const logoUrl = `${productionUrl}/email-logo.png`;
 
       // Send email via Resend
       const emailResult = await sendInviteEmail(profile.email, profile.name || "Usuario", activationLink, logoUrl);
