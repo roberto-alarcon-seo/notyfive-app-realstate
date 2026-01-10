@@ -1,3 +1,4 @@
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -123,8 +124,9 @@ export function LeadContextPanel({ data }: LeadContextPanelProps) {
   const TempIcon = temp.icon;
 
   return (
-    <div className="w-72 shrink-0 border-l border-border bg-muted/20 hidden lg:block">
-      <div className="p-4 space-y-4">
+    <div className="w-72 shrink-0 border-l border-border bg-muted/20 hidden lg:flex lg:flex-col overflow-hidden">
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-4">
         {/* Pipeline Stage */}
         <Card className="bg-card/50 border-border/50">
           <CardHeader className="pb-2 pt-3 px-4">
@@ -304,7 +306,8 @@ export function LeadContextPanel({ data }: LeadContextPanelProps) {
             <Badge variant="secondary">Desconocido</Badge>
           )}
         </div>
-      </div>
+        </div>
+      </ScrollArea>
     </div>
   );
 }
