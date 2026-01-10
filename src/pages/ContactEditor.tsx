@@ -246,6 +246,7 @@ export default function ContactEditor() {
 
   const currentContact = isEditing ? contacts.find(c => c.id === id) : null;
   const lastInteractionAt = currentContact?.last_interaction_at || null;
+  const originalPipelineStage = currentContact?.pipeline_stage || 'new_lead';
 
   const addTag = () => {
     if (tagInput.trim() && !formData.tags?.includes(tagInput.trim())) {
@@ -284,7 +285,8 @@ export default function ContactEditor() {
     try {
       let success = false;
       if (isEditing) {
-        success = await updateContact(id!, formData);
+        // Pass original pipeline stage for conversion tracking
+        success = await updateContact(id!, formData, originalPipelineStage);
       } else {
         success = await createContact(formData);
         // Only redirect on new contact creation to continue editing

@@ -8,6 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePipelineStageChange } from "@/hooks/usePipelineStageChange";
 
 // Pipeline stages with labels and short labels
 const PIPELINE_STAGES = [
@@ -37,6 +38,7 @@ export function PipelineStepper({
 }: PipelineStepperProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [localStage, setLocalStage] = useState(currentStage);
+  const { handlePipelineStageChange } = usePipelineStageChange();
 
   const currentIndex = PIPELINE_STAGES.findIndex(s => s.value === localStage);
   
@@ -57,6 +59,7 @@ export function PipelineStepper({
   const handleStageClick = async (stageValue: string) => {
     if (isUpdating || stageValue === localStage) return;
 
+    const oldStage = localStage;
     setIsUpdating(true);
     try {
       const { error } = await supabase
@@ -68,6 +71,10 @@ export function PipelineStepper({
 
       setLocalStage(stageValue);
       onStageChange?.(stageValue);
+      
+      // Trigger conversion tracking and Meta events
+      await handlePipelineStageChange(contactId, oldStage, stageValue);
+      
       toast.success(`Etapa actualizada: ${PIPELINE_STAGES.find(s => s.value === stageValue)?.label}`);
     } catch (error) {
       console.error('Error updating pipeline stage:', error);

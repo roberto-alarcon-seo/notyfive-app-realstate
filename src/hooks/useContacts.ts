@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffectiveTenantId } from '@/hooks/useEffectiveTenantId';
 import { toast } from '@/hooks/use-toast';
+import { usePipelineStageChange } from '@/hooks/usePipelineStageChange';
 
 export interface Contact {
   id: string;
@@ -124,6 +125,7 @@ export interface ContactFormData {
 
 export function useContacts() {
   const tenantId = useEffectiveTenantId();
+  const { handlePipelineStageChange } = usePipelineStageChange();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customFieldOptions, setCustomFieldOptions] = useState<Record<string, CustomFieldOption[]>>({});
@@ -362,7 +364,7 @@ export function useContacts() {
     }
   };
 
-  const updateContact = async (id: string, formData: ContactFormData): Promise<boolean> => {
+  const updateContact = async (id: string, formData: ContactFormData, oldPipelineStage?: string): Promise<boolean> => {
     try {
       const { error: updateError } = await supabase
         .from('contacts')
@@ -408,6 +410,12 @@ export function useContacts() {
         .eq('id', id);
 
       if (updateError) throw updateError;
+
+      // Trigger conversion tracking if pipeline stage changed
+      const newPipelineStage = formData.pipeline_stage ?? 'new_lead';
+      if (oldPipelineStage && oldPipelineStage !== newPipelineStage) {
+        await handlePipelineStageChange(id, oldPipelineStage, newPipelineStage);
+      }
 
       // Update custom field values
       if (formData.custom_fields) {
