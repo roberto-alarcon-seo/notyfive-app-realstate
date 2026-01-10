@@ -10,14 +10,11 @@ import {
   CalendarClock,
   CalendarDays,
   Settings,
-  LogOut,
   Kanban,
   Home,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 
 const menuItems = [
@@ -40,13 +37,7 @@ const bottomItems = [
 
 export function IconSidebar() {
   const totalUnread = useTotalUnreadCount();
-  const { signOut } = useAuth();
-  const navigate = useNavigate();
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
   return (
     <aside className="flex flex-col h-screen w-16 bg-sidebar-background border-r border-sidebar-border">
       {/* Logo */}
@@ -103,20 +94,6 @@ export function IconSidebar() {
             </TooltipContent>
           </Tooltip>
         ))}
-        
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <button 
-              onClick={handleSignOut}
-              className="w-12 h-12 flex items-center justify-center rounded-xl text-sidebar-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="bg-card border-border">
-            Cerrar sesión
-          </TooltipContent>
-        </Tooltip>
       </div>
     </aside>
   );
