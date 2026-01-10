@@ -30,6 +30,7 @@ import { RealEstateCreditCard } from "@/components/contacts/RealEstateCreditCard
 import { RealEstatePreferencesCard } from "@/components/contacts/RealEstatePreferencesCard";
 import { LeadContextPanel } from "@/components/contacts/LeadContextPanel";
 import { LeadDiagnosticsCard } from "@/components/contacts/LeadDiagnosticsCard";
+import { PropertyInterestCard } from "@/components/contacts/PropertyInterestCard";
 import { cn } from "@/lib/utils";
 
 // Section navigation items
@@ -153,6 +154,7 @@ export default function ContactEditor() {
     re_accepts_pets: false,
     re_reason: null,
     re_current_situation: null,
+    re_property_interest_id: null,
     re_block_reason: null,
     re_visit_outcome: null,
   });
@@ -231,6 +233,7 @@ export default function ContactEditor() {
           re_accepts_pets: contact.re_accepts_pets ?? false,
           re_reason: contact.re_reason,
           re_current_situation: contact.re_current_situation,
+          re_property_interest_id: contact.re_property_interest_id ?? null,
           re_block_reason: contact.re_block_reason,
           re_visit_outcome: contact.re_visit_outcome,
         });
@@ -607,6 +610,16 @@ export default function ContactEditor() {
                   <h2 className="text-lg font-semibold mb-1">Preferencias de búsqueda</h2>
                   <p className="text-sm text-muted-foreground">Requisitos y preferencias del inmueble</p>
                 </div>
+
+                {/* Property Interest Card */}
+                <PropertyInterestCard
+                  propertyId={formData.re_property_interest_id ?? null}
+                  pipelineStage={formData.pipeline_stage ?? 'new_lead'}
+                  onChange={(propertyId) => setFormData({
+                    ...formData,
+                    re_property_interest_id: propertyId,
+                  })}
+                />
                 
                 <RealEstatePreferencesCard
                   data={{

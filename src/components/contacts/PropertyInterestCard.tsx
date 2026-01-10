@@ -1,0 +1,124 @@
+import { Building, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useProperties } from "@/hooks/useProperties";
+
+interface PropertyInterestCardProps {
+  propertyId: string | null;
+  pipelineStage: string;
+  onChange: (propertyId: string | null) => void;
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  new_lead: "Nuevo Lead",
+  contacted: "Contactado",
+  qualified: "Calificado",
+  proposal: "Propuesta",
+  negotiation: "Negociación",
+  closed_won: "Cerrado Ganado",
+  closed_lost: "Cerrado Perdido",
+};
+
+export function PropertyInterestCard({ propertyId, pipelineStage, onChange }: PropertyInterestCardProps) {
+  const navigate = useNavigate();
+  const { data: properties, isLoading } = useProperties();
+
+  const selectedProperty = properties?.find(p => p.id === propertyId);
+
+  const formatPrice = (price: number, currency: string) => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: currency === 'USD' ? 'USD' : 'MXN',
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Building className="h-4 w-4" />
+          Inmueble de interés
+        </CardTitle>
+        <CardDescription>
+          Propiedad en la que está interesado este contacto
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Select 
+            value={propertyId || "none"} 
+            onValueChange={(val) => onChange(val === "none" ? null : val)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar propiedad" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sin propiedad asignada</SelectItem>
+              {isLoading ? (
+                <SelectItem value="loading" disabled>Cargando...</SelectItem>
+              ) : (
+                properties?.filter(p => p.is_active).map((property) => (
+                  <SelectItem key={property.id} value={property.id}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{property.property_code}</span>
+                      <span className="text-muted-foreground">- {property.title}</span>
+                    </div>
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedProperty && (
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="font-semibold">{selectedProperty.title}</p>
+                <p className="text-sm text-muted-foreground">{selectedProperty.property_code}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(`/properties/${selectedProperty.id}`)}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">{selectedProperty.zone}</Badge>
+              <Badge variant="secondary">
+                {formatPrice(selectedProperty.price, selectedProperty.currency)}
+              </Badge>
+              <Badge 
+                variant={selectedProperty.status === 'available' ? 'default' : 'secondary'}
+              >
+                {selectedProperty.status === 'available' ? 'Disponible' : 
+                 selectedProperty.status === 'reserved' ? 'Reservado' : 
+                 selectedProperty.status === 'sold' ? 'Vendido' : selectedProperty.status}
+              </Badge>
+            </div>
+
+            <div className="pt-2 border-t">
+              <p className="text-xs text-muted-foreground">Etapa actual del contacto:</p>
+              <Badge variant="secondary" className="mt-1">
+                {STAGE_LABELS[pipelineStage] || pipelineStage}
+              </Badge>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
