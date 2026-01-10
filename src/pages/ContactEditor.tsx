@@ -29,6 +29,7 @@ import { LeadPriorityCard } from "@/components/contacts/LeadPriorityCard";
 import { RealEstateCreditCard } from "@/components/contacts/RealEstateCreditCard";
 import { RealEstatePreferencesCard } from "@/components/contacts/RealEstatePreferencesCard";
 import { LeadContextPanel } from "@/components/contacts/LeadContextPanel";
+import { LeadDiagnosticsCard } from "@/components/contacts/LeadDiagnosticsCard";
 import { cn } from "@/lib/utils";
 
 // Section navigation items
@@ -551,6 +552,23 @@ export default function ContactEditor() {
                     operational_status: data.operational_status,
                   })}
                 />
+
+                {/* Lead Diagnostics - Block reason & Visit outcome */}
+                <div className="pt-4 border-t border-border">
+                  <h3 className="text-base font-medium mb-4">Diagnóstico del lead</h3>
+                  <LeadDiagnosticsCard
+                    data={{
+                      pipeline_stage: formData.pipeline_stage ?? 'new_lead',
+                      re_block_reason: formData.re_block_reason ?? null,
+                      re_visit_outcome: formData.re_visit_outcome ?? null,
+                    }}
+                    onChange={(data) => setFormData({
+                      ...formData,
+                      re_block_reason: data.re_block_reason,
+                      re_visit_outcome: data.re_visit_outcome,
+                    })}
+                  />
+                </div>
               </div>
             )}
 
