@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   Kanban,
+  Building2,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
@@ -26,6 +27,7 @@ const menuItems = [
   { icon: CalendarClock, label: "Seguimientos", path: "/followups", showBadge: false },
   { icon: CalendarDays, label: "Eventos", path: "/events", showBadge: false },
   { icon: Users, label: "Contactos", path: "/contacts", showBadge: false },
+  { icon: Building2, label: "Propiedades", path: "/properties", showBadge: false },
   { icon: Filter, label: "Segmentos", path: "/segments", showBadge: false },
   { icon: FileText, label: "Plantillas", path: "/templates", showBadge: false },
   { icon: Send, label: "Campañas", path: "/campaigns", showBadge: false },
