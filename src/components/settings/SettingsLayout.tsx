@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Building2, Users, Key, CreditCard, Bell, MessageSquare, 
-  Settings as SettingsIcon, ListPlus, Bot, BookOpen, Code2, ShieldCheck, Home
+  Settings as SettingsIcon, ListPlus, Bot, BookOpen, Code2, ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -56,14 +56,6 @@ const menuItems: MenuItem[] = [
     title: "Base de Conocimiento",
     description: "Respuestas automáticas",
     group: "Inteligencia Artificial",
-  },
-  {
-    id: "properties",
-    path: "/settings/properties",
-    icon: Home,
-    title: "Propiedades",
-    description: "Inventario inmobiliario",
-    group: "Gestión",
   },
   {
     id: "users",

@@ -143,7 +143,7 @@ export default function PropertyTable({ properties, isLoading }: PropertyTablePr
               <TableRow
                 key={property.id}
                 className="cursor-pointer hover:bg-muted/50"
-                onClick={() => navigate(`/settings/properties/${property.id}`)}
+                onClick={() => navigate(`/properties/${property.id}`)}
               >
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   {property.cover_image ? (
@@ -205,7 +205,7 @@ export default function PropertyTable({ properties, isLoading }: PropertyTablePr
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => navigate(`/settings/properties/${property.id}`)}
+                        onClick={() => navigate(`/properties/${property.id}`)}
                       >
                         <Edit className="mr-2 h-4 w-4" />
                         Editar

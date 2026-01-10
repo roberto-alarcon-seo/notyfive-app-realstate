@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Building2, Trash2, Save, ArrowLeft, Loader2, Home } from "lucide-react";
-import { SettingsLayout } from "@/components/settings/SettingsLayout";
+import { Building2, Trash2, Save, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -17,8 +16,7 @@ import {
 import { useProperty, usePropertyMutations, Property } from "@/hooks/useProperties";
 import PropertyInfoTab from "@/components/properties/PropertyInfoTab";
 import PropertyMultimediaTab from "@/components/properties/PropertyMultimediaTab";
-import PropertyAvailabilityTab from "@/components/properties/PropertyAvailabilityTab";
-import PropertyTemplateTab from "@/components/properties/PropertyTemplateTab";
+import PropertyFaqEditor from "@/components/properties/PropertyFaqEditor";
 import PropertyInterestedContacts from "@/components/properties/PropertyInterestedContacts";
 import { useEffectiveTenantId } from "@/hooks/useEffectiveTenantId";
 
@@ -88,7 +86,7 @@ export default function PropertyEditor() {
           ...formData,
           tenant_id: tenantId!,
         });
-        navigate("/settings/properties");
+        navigate("/properties");
       } else {
         await updateProperty.mutateAsync({
           id: id!,
@@ -102,7 +100,7 @@ export default function PropertyEditor() {
 
   const handleDelete = async () => {
     await deleteProperty.mutateAsync(id!);
-    navigate("/settings/properties");
+    navigate("/properties");
   };
 
   const updateField = <K extends keyof Property>(field: K, value: Property[K]) => {
@@ -111,35 +109,33 @@ export default function PropertyEditor() {
 
   if (isLoading && !isNew) {
     return (
-      <SettingsLayout
-        title="Cargando..."
-        description="Por favor espera"
-        icon={Home}
-      >
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </SettingsLayout>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
-    <SettingsLayout
-      title={isNew ? "Nueva propiedad" : formData.title || "Editar propiedad"}
-      description={isNew ? "Crea una nueva propiedad en tu inventario" : formData.property_code || "Edita los detalles de la propiedad"}
-      icon={Home}
-    >
+    <>
       <div className="space-y-6">
-        {/* Header Actions */}
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate("/settings/properties")}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Volver al listado
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/properties")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <Building2 className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-2xl font-bold">
+                  {isNew ? "Nueva propiedad" : formData.title || "Editar propiedad"}
+                </h1>
+                {!isNew && (
+                  <p className="text-muted-foreground">{formData.property_code}</p>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="flex gap-2">
             {!isNew && (
               <Button
@@ -165,11 +161,10 @@ export default function PropertyEditor() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className={isNew ? "lg:col-span-4" : "lg:col-span-3"}>
             <Tabs defaultValue="info" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="info">Información</TabsTrigger>
                 <TabsTrigger value="multimedia">Multimedia</TabsTrigger>
-                <TabsTrigger value="availability">Disponibilidad</TabsTrigger>
-                <TabsTrigger value="template">Plantilla</TabsTrigger>
+                <TabsTrigger value="faq" disabled={isNew}>Preguntas frecuentes</TabsTrigger>
               </TabsList>
 
               <TabsContent value="info">
@@ -184,18 +179,10 @@ export default function PropertyEditor() {
                 <PropertyMultimediaTab propertyId={isNew ? undefined : id} />
               </TabsContent>
 
-              <TabsContent value="availability">
-                <PropertyAvailabilityTab
-                  formData={formData}
-                  updateField={updateField}
-                />
-              </TabsContent>
-
-              <TabsContent value="template">
-                <PropertyTemplateTab
-                  formData={formData}
-                  updateField={updateField}
-                />
+              <TabsContent value="faq">
+                {!isNew && id && (
+                  <PropertyFaqEditor propertyId={id} />
+                )}
               </TabsContent>
             </Tabs>
           </div>
@@ -229,6 +216,6 @@ export default function PropertyEditor() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SettingsLayout>
+    </>
   );
 }
