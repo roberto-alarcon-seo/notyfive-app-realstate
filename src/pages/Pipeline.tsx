@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePipelineStageChange } from "@/hooks/usePipelineStageChange";
 
 // Pipeline stages configuration
 const PIPELINE_STAGES = [
@@ -242,6 +243,7 @@ export default function Pipeline() {
   const navigate = useNavigate();
   const tenantId = useEffectiveTenantId();
   const queryClient = useQueryClient();
+  const { handlePipelineStageChange } = usePipelineStageChange();
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -405,12 +407,19 @@ export default function Pipeline() {
 
   const handleMoveToStage = async (contactId: string, newStage: string) => {
     try {
+      // Get the current stage before update
+      const contact = contacts.find(c => c.id === contactId);
+      const oldStage = contact?.pipeline_stage || 'new_lead';
+      
       const { error } = await supabase
         .from('contacts')
         .update({ pipeline_stage: newStage })
         .eq('id', contactId);
 
       if (error) throw error;
+      
+      // Trigger conversion tracking and Meta events
+      await handlePipelineStageChange(contactId, oldStage, newStage);
       
       toast.success('Etapa actualizada');
       refetch();
