@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap } from "lucide-react";
+import { Zap, Users, MessageSquare, Clock, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 import { ExportReportButton } from "@/components/dashboard/ExportReportButton";
@@ -9,16 +9,13 @@ import { subDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 
-// New Real Estate Dashboard Components
-import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
-import { RealEstatePipelineFunnel } from "@/components/dashboard/RealEstatePipelineFunnel";
-import { ConversionsCard } from "@/components/dashboard/ConversionsCard";
-import { PropertiesOverviewCard } from "@/components/dashboard/PropertiesOverviewCard";
-import { FollowupsCard } from "@/components/dashboard/FollowupsCard";
-import { EventsCard } from "@/components/dashboard/EventsCard";
-import { LeadQualityCard } from "@/components/dashboard/LeadQualityCard";
-import { MessagingCard } from "@/components/dashboard/MessagingCard";
-import { TrendsChart } from "@/components/dashboard/TrendsChart";
+// Dashboard Components
+import { KPICard } from "@/components/dashboard/KPICard";
+import { CriticalAlertsCard } from "@/components/dashboard/CriticalAlertsCard";
+import { ActivityChart } from "@/components/dashboard/ActivityChart";
+import { AIPerformanceCard } from "@/components/dashboard/AIPerformanceCard";
+import { TopPropertiesCard } from "@/components/dashboard/TopPropertiesCard";
+import { RecentActivityCard } from "@/components/dashboard/RecentActivityCard";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -37,7 +34,7 @@ export default function Dashboard() {
 
   return (
     <div className="h-full overflow-auto bg-background">
-      <div ref={dashboardRef} className="p-4 lg:p-6 max-w-[1600px] mx-auto space-y-4">
+      <div ref={dashboardRef} className="p-4 lg:p-6 max-w-[1600px] mx-auto space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -89,52 +86,66 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Alerts */}
-        {data?.alerts && (
-          <AlertsPanel alerts={data.alerts} isLoading={isLoading} />
-        )}
-
-        {/* Main Grid - Pipeline Funnel + Trends */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <RealEstatePipelineFunnel 
-            pipeline={data?.pipeline || []}
-            pipelineTotal={data?.pipelineTotal || 0}
-            isLoading={isLoading}
+        {/* 4 KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard
+            title="Total de Leads"
+            value={data?.leadQuality.totalLeads || 0}
+            icon={<Users className="w-5 h-5" />}
+            loading={isLoading}
           />
-          <TrendsChart 
+          <KPICard
+            title="Mensajes IA (periodo)"
+            value={data?.messaging.aiResponses || 0}
+            icon={<MessageSquare className="w-5 h-5" />}
+            loading={isLoading}
+          />
+          <KPICard
+            title="Seguimientos Pendientes"
+            value={data?.followups.totalScheduled || 0}
+            icon={<Clock className="w-5 h-5" />}
+            loading={isLoading}
+          />
+          <KPICard
+            title="Seguimientos Completados"
+            value={data?.followups.completedThisPeriod || 0}
+            icon={<CheckCircle className="w-5 h-5" />}
+            loading={isLoading}
+          />
+        </div>
+
+        {/* Critical Alerts */}
+        <CriticalAlertsCard
+          overdueFollowups={data?.followups.overdueCount || 0}
+          ghostingLeads={data?.leadQuality.ghostingCount || 0}
+          leadsWithoutProperty={data?.leadsWithoutProperty || 0}
+          isLoading={isLoading}
+        />
+
+        {/* Activity Chart + AI Performance */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ActivityChart
             dailyTrends={data?.dailyTrends || []}
             isLoading={isLoading}
           />
-        </div>
-
-        {/* Second Row - Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <ConversionsCard 
-            conversions={data?.conversions || { totalConverted: 0, convertedThisPeriod: 0, conversionRate: 0, avgDaysToConversion: 0, conversionsByStage: {} }}
-            isLoading={isLoading}
-          />
-          <PropertiesOverviewCard 
-            properties={data?.properties || { totalActive: 0, totalAvailable: 0, totalReserved: 0, totalSold: 0, avgPrice: 0, propertiesWithInterest: 0, topZones: [] }}
-            isLoading={isLoading}
-          />
-          <FollowupsCard 
-            followups={data?.followups || { totalScheduled: 0, overdueCount: 0, dueTodayCount: 0, dueTomorrowCount: 0, completedThisPeriod: 0, completionRate: 0 }}
-            isLoading={isLoading}
-          />
-          <EventsCard 
-            events={data?.events || { totalScheduled: 0, confirmedCount: 0, completedCount: 0, noShowCount: 0, canceledCount: 0, todayEvents: 0, upcomingEvents: 0, showRate: 0 }}
+          <AIPerformanceCard
+            totalMessages={(data?.messaging.totalSent || 0) + (data?.messaging.totalReceived || 0)}
+            aiMessages={data?.messaging.aiResponses || 0}
+            humanMessages={data?.messaging.humanResponses || 0}
+            responseRate={data?.messaging.responseRate || 0}
             isLoading={isLoading}
           />
         </div>
 
-        {/* Third Row - Lead Quality & Messaging */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <LeadQualityCard 
-            leadQuality={data?.leadQuality || { totalLeads: 0, withCredit: 0, withBudget: 0, qualifiedCount: 0, ghostingCount: 0, activeCount: 0, avgBudget: 0, temperatureBreakdown: { hot: 0, warm: 0, cold: 0 } }}
+        {/* Top Properties + Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <TopPropertiesCard
+            properties={data?.topProperties || []}
+            maxInterest={data?.maxPropertyInterest || 0}
             isLoading={isLoading}
           />
-          <MessagingCard 
-            messaging={data?.messaging || { totalSent: 0, totalReceived: 0, aiResponses: 0, humanResponses: 0, responseRate: 0, creditsRemaining: 0, creditsUsedThisPeriod: 0, estimatedDaysLeft: 999 }}
+          <RecentActivityCard
+            activities={data?.recentActivity || []}
             isLoading={isLoading}
           />
         </div>

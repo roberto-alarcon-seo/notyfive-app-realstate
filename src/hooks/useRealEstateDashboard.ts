@@ -97,6 +97,21 @@ export interface DailyTrendMetric {
   messages: number;
 }
 
+export interface PropertyInterest {
+  id: string;
+  title: string;
+  zone: string;
+  interestedCount: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type: 'ai_message' | 'new_lead' | 'followup' | 'visit' | 'conversion';
+  description: string;
+  timestamp: string;
+  contactName?: string;
+}
+
 export interface RealEstateDashboardData {
   // Pipeline metrics
   pipeline: PipelineMetric[];
@@ -131,6 +146,16 @@ export interface RealEstateDashboardData {
   
   // Daily trends for charts
   dailyTrends: DailyTrendMetric[];
+  
+  // Top properties by interest
+  topProperties: PropertyInterest[];
+  maxPropertyInterest: number;
+  
+  // Recent activity
+  recentActivity: RecentActivity[];
+  
+  // Leads without property
+  leadsWithoutProperty: number;
   
   // Quick stats
   alerts: {
@@ -185,6 +210,7 @@ export function useRealEstateDashboard(dateRange?: DateRangeInput) {
           .from("contacts")
           .select(`
             id, 
+            name,
             pipeline_stage, 
             operational_status, 
             lead_temperature,
@@ -204,7 +230,7 @@ export function useRealEstateDashboard(dateRange?: DateRangeInput) {
         // Properties
         supabase
           .from("properties")
-          .select("id, status, zone, price, is_active")
+          .select("id, title, status, zone, price, is_active")
           .eq("tenant_id", tenantId),
         
         // Followups
@@ -222,7 +248,7 @@ export function useRealEstateDashboard(dateRange?: DateRangeInput) {
         // Messages in period
         supabase
           .from("messages")
-          .select("id, direction, ai_generated, source, status, created_at")
+          .select("id, direction, ai_generated, source, status, created_at, contact_id")
           .eq("tenant_id", tenantId)
           .gte("created_at", startDate.toISOString())
           .lte("created_at", endDate.toISOString()),
@@ -523,6 +549,68 @@ export function useRealEstateDashboard(dateRange?: DateRangeInput) {
         },
         
         dailyTrends,
+        
+        // === TOP PROPERTIES BY INTEREST ===
+        topProperties: (() => {
+          const propertyInterestMap: Record<string, number> = {};
+          contacts.forEach(c => {
+            if (c.re_property_interest_id) {
+              propertyInterestMap[c.re_property_interest_id] = 
+                (propertyInterestMap[c.re_property_interest_id] || 0) + 1;
+            }
+          });
+          
+          return Object.entries(propertyInterestMap)
+            .map(([propId, count]) => {
+              const prop = properties.find(p => p.id === propId);
+              return {
+                id: propId,
+                title: prop?.title || 'Propiedad',
+                zone: prop?.zone || '',
+                interestedCount: count,
+              };
+            })
+            .sort((a, b) => b.interestedCount - a.interestedCount)
+            .slice(0, 10);
+        })(),
+        
+        maxPropertyInterest: (() => {
+          const propertyInterestMap: Record<string, number> = {};
+          contacts.forEach(c => {
+            if (c.re_property_interest_id) {
+              propertyInterestMap[c.re_property_interest_id] = 
+                (propertyInterestMap[c.re_property_interest_id] || 0) + 1;
+            }
+          });
+          const counts = Object.values(propertyInterestMap);
+          return counts.length > 0 ? Math.max(...counts) : 0;
+        })(),
+        
+        // === RECENT ACTIVITY ===
+        recentActivity: (() => {
+          const recentAI = messages
+            .filter(m => m.ai_generated && m.direction === 'outbound')
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 10)
+            .map(m => {
+              const contact = contacts.find(c => c.id === m.contact_id);
+              return {
+                id: m.id,
+                type: 'ai_message' as const,
+                description: `Mensaje IA enviado`,
+                timestamp: m.created_at,
+                contactName: contact?.name || 'Lead',
+              };
+            });
+          return recentAI;
+        })(),
+        
+        // === LEADS WITHOUT PROPERTY ===
+        leadsWithoutProperty: contacts.filter(c => 
+          !c.re_property_interest_id && 
+          c.status === 'active' &&
+          !['closed_won', 'closed_lost'].includes(c.pipeline_stage)
+        ).length,
         
         alerts: {
           overdueFollowups: overdueFollowups.length,
