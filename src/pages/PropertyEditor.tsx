@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Building2, Trash2, Save, ArrowLeft, Loader2 } from "lucide-react";
+import { Building2, Trash2, Save, ArrowLeft, Loader2, Home } from "lucide-react";
+import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -110,33 +111,35 @@ export default function PropertyEditor() {
 
   if (isLoading && !isNew) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <SettingsLayout
+        title="Cargando..."
+        description="Por favor espera"
+        icon={Home}
+      >
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </SettingsLayout>
     );
   }
 
   return (
-    <>
+    <SettingsLayout
+      title={isNew ? "Nueva propiedad" : formData.title || "Editar propiedad"}
+      description={isNew ? "Crea una nueva propiedad en tu inventario" : formData.property_code || "Edita los detalles de la propiedad"}
+      icon={Home}
+    >
       <div className="space-y-6">
-        {/* Header */}
+        {/* Header Actions */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/settings/properties")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-3">
-              <Building2 className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-2xl font-bold">
-                  {isNew ? "Nueva propiedad" : formData.title || "Editar propiedad"}
-                </h1>
-                {!isNew && (
-                  <p className="text-muted-foreground">{formData.property_code}</p>
-                )}
-              </div>
-            </div>
-          </div>
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate("/settings/properties")}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver al listado
+          </Button>
           <div className="flex gap-2">
             {!isNew && (
               <Button
@@ -160,7 +163,7 @@ export default function PropertyEditor() {
 
         {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3">
+          <div className={isNew ? "lg:col-span-4" : "lg:col-span-3"}>
             <Tabs defaultValue="info" className="space-y-6">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="info">Información</TabsTrigger>
@@ -226,6 +229,6 @@ export default function PropertyEditor() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </SettingsLayout>
   );
 }
