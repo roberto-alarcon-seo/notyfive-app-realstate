@@ -32,6 +32,8 @@ import { ScheduleFollowupModal } from "./ScheduleFollowupModal";
 import { FollowupCard } from "./FollowupCard";
 import { MarkAttendedModal } from "./MarkAttendedModal";
 import { CompleteFollowupModal } from "./CompleteFollowupModal";
+import { PipelineStepper } from "./PipelineStepper";
+import { useQuery } from "@tanstack/react-query";
 
 interface ContactProfilePanelProps {
   conversation: Conversation;
@@ -55,6 +57,21 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
 
   const contactId = conversation.contact?.id || null;
   const { data: campaignDeliveries = [], isLoading: isLoadingCampaigns, refetch: refetchDeliveries } = useCampaignDeliveriesForContact(contactId);
+  
+  // Fetch contact's pipeline stage
+  const { data: contactData } = useQuery({
+    queryKey: ['contact-pipeline', contactId],
+    queryFn: async () => {
+      if (!contactId) return null;
+      const { data } = await supabase
+        .from('contacts')
+        .select('pipeline_stage')
+        .eq('id', contactId)
+        .single();
+      return data;
+    },
+    enabled: !!contactId,
+  });
   
   // Get global AI settings to check if AI is enabled at tenant level
   const { data: aiSettings, isLoading: isLoadingAISettings } = useAISettings();
@@ -432,6 +449,18 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
         </div>
 
         <Separator />
+
+        {/* Pipeline Stepper */}
+        {contactId && contactData?.pipeline_stage && (
+          <>
+            <PipelineStepper
+              contactId={contactId}
+              currentStage={contactData.pipeline_stage}
+              compact={false}
+            />
+            <Separator />
+          </>
+        )}
 
         {/* Needs Human Alert Section */}
         {conversation.needs_human && (
