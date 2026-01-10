@@ -1212,6 +1212,10 @@ export type Database = {
           re_down_payment_mxn: number | null
           re_monthly_income_mxn: number | null
           re_parking_spots: number | null
+          re_properties_viewed_ids: string[] | null
+          re_property_followup_status: string | null
+          re_property_interest_id: string | null
+          re_property_not_interested_reason: string | null
           re_property_types: string[] | null
           re_reason: string | null
           re_requires_parking: boolean
@@ -1253,6 +1257,10 @@ export type Database = {
           re_down_payment_mxn?: number | null
           re_monthly_income_mxn?: number | null
           re_parking_spots?: number | null
+          re_properties_viewed_ids?: string[] | null
+          re_property_followup_status?: string | null
+          re_property_interest_id?: string | null
+          re_property_not_interested_reason?: string | null
           re_property_types?: string[] | null
           re_reason?: string | null
           re_requires_parking?: boolean
@@ -1294,6 +1302,10 @@ export type Database = {
           re_down_payment_mxn?: number | null
           re_monthly_income_mxn?: number | null
           re_parking_spots?: number | null
+          re_properties_viewed_ids?: string[] | null
+          re_property_followup_status?: string | null
+          re_property_interest_id?: string | null
+          re_property_not_interested_reason?: string | null
           re_property_types?: string[] | null
           re_reason?: string | null
           re_requires_parking?: boolean
@@ -1311,6 +1323,13 @@ export type Database = {
             columns: ["assigned_agent_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_re_property_interest_id_fkey"
+            columns: ["re_property_interest_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
           {
@@ -1895,6 +1914,244 @@ export type Database = {
           },
           {
             foreignKeyName: "profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      properties: {
+        Row: {
+          accepted_credits: string[] | null
+          address: string | null
+          ai_prompt: string | null
+          assigned_user_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          internal_notes: string | null
+          is_active: boolean
+          maintenance_fee: number | null
+          operation_type: string
+          price: number
+          property_code: string
+          property_type: string | null
+          status: string
+          template_id: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+          visit_availability: string | null
+          youtube_url: string | null
+          zone: string
+        }
+        Insert: {
+          accepted_credits?: string[] | null
+          address?: string | null
+          ai_prompt?: string | null
+          assigned_user_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          internal_notes?: string | null
+          is_active?: boolean
+          maintenance_fee?: number | null
+          operation_type?: string
+          price?: number
+          property_code: string
+          property_type?: string | null
+          status?: string
+          template_id?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+          visit_availability?: string | null
+          youtube_url?: string | null
+          zone: string
+        }
+        Update: {
+          accepted_credits?: string[] | null
+          address?: string | null
+          ai_prompt?: string | null
+          assigned_user_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          internal_notes?: string | null
+          is_active?: boolean
+          maintenance_fee?: number | null
+          operation_type?: string
+          price?: number
+          property_code?: string
+          property_type?: string | null
+          status?: string
+          template_id?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          visit_availability?: string | null
+          youtube_url?: string | null
+          zone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "properties_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_documents: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string | null
+          file_type: string | null
+          file_url: string
+          id: string
+          property_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path?: string | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          property_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          property_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_faq: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          property_id: string
+          question: string
+          sort_order: number
+          tenant_id: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          property_id: string
+          question: string
+          sort_order?: number
+          tenant_id: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          property_id?: string
+          question?: string
+          sort_order?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_faq_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_faq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_images: {
+        Row: {
+          created_at: string
+          file_path: string | null
+          file_url: string
+          id: string
+          is_cover: boolean
+          property_id: string
+          sort_order: number
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path?: string | null
+          file_url: string
+          id?: string
+          is_cover?: boolean
+          property_id: string
+          sort_order?: number
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string | null
+          file_url?: string
+          id?: string
+          is_cover?: boolean
+          property_id?: string
+          sort_order?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_images_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_images_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
