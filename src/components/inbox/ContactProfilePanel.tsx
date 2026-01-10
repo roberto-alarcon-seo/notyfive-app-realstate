@@ -5,7 +5,7 @@ import {
   Activity, Megaphone, StickyNote, Check, CheckCheck,
   ArrowDownLeft, ArrowUpRight, Bot, Ban, AlertCircle,
   Loader2, XCircle, Pencil, AlertTriangle, CheckCircle2,
-  CalendarClock, RefreshCw
+  CalendarClock, RefreshCw, Building, DollarSign
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -58,19 +58,40 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
   const contactId = conversation.contact?.id || null;
   const { data: campaignDeliveries = [], isLoading: isLoadingCampaigns, refetch: refetchDeliveries } = useCampaignDeliveriesForContact(contactId);
   
-  // Fetch contact's pipeline stage
+  // Fetch contact's pipeline stage and real estate info
   const { data: contactData } = useQuery({
     queryKey: ['contact-pipeline', contactId],
     queryFn: async () => {
       if (!contactId) return null;
       const { data } = await supabase
         .from('contacts')
-        .select('pipeline_stage')
+        .select(`
+          pipeline_stage,
+          re_credit_type,
+          re_credit_preapproved,
+          re_property_interest_id,
+          re_budget_estimated_mxn
+        `)
         .eq('id', contactId)
         .single();
       return data;
     },
     enabled: !!contactId,
+  });
+
+  // Fetch property of interest if exists
+  const { data: propertyOfInterest } = useQuery({
+    queryKey: ['property-of-interest', contactData?.re_property_interest_id],
+    queryFn: async () => {
+      if (!contactData?.re_property_interest_id) return null;
+      const { data } = await supabase
+        .from('properties')
+        .select('id, title, property_code, zone')
+        .eq('id', contactData.re_property_interest_id)
+        .single();
+      return data;
+    },
+    enabled: !!contactData?.re_property_interest_id,
   });
   
   // Get global AI settings to check if AI is enabled at tenant level
@@ -629,6 +650,73 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
         </div>
 
         <Separator />
+
+        {/* Real Estate Context Section */}
+        {(propertyOfInterest || contactData?.re_credit_type || contactData?.re_budget_estimated_mxn) && (
+          <>
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Building className="h-4 w-4 text-muted-foreground" />
+                Contexto inmobiliario
+              </h4>
+              <div className="space-y-2 text-sm">
+                {propertyOfInterest && (
+                  <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <Building className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-xs text-muted-foreground">Inmueble de interés</span>
+                    </div>
+                    <p className="font-medium text-foreground text-sm">{propertyOfInterest.title}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        {propertyOfInterest.property_code}
+                      </Badge>
+                      <span>{propertyOfInterest.zone}</span>
+                    </div>
+                  </div>
+                )}
+                {contactData?.re_credit_type && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <DollarSign className="h-3.5 w-3.5" />
+                      Tipo de crédito
+                    </span>
+                    <Badge variant="secondary" className="font-medium">
+                      {contactData.re_credit_type === 'INFONAVIT' ? 'Infonavit' :
+                       contactData.re_credit_type === 'COFINAVIT' ? 'Cofinavit' :
+                       contactData.re_credit_type === 'BANK' ? 'Bancario' :
+                       contactData.re_credit_type === 'CASH' ? 'Contado' :
+                       contactData.re_credit_type === 'MIXED' ? 'Mixto' :
+                       contactData.re_credit_type}
+                    </Badge>
+                  </div>
+                )}
+                {contactData?.re_credit_preapproved && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Crédito preaprobado</span>
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Sí
+                    </Badge>
+                  </div>
+                )}
+                {contactData?.re_budget_estimated_mxn && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Presupuesto</span>
+                    <span className="font-semibold text-primary">
+                      {new Intl.NumberFormat('es-MX', {
+                        style: 'currency',
+                        currency: 'MXN',
+                        maximumFractionDigits: 0,
+                      }).format(contactData.re_budget_estimated_mxn)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
 
         {/* Activity Timeline */}
         <div className="space-y-3">
