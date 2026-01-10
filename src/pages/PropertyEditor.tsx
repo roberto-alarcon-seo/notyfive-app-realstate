@@ -87,7 +87,7 @@ export default function PropertyEditor() {
           ...formData,
           tenant_id: tenantId!,
         });
-        navigate("/properties");
+        navigate("/settings/properties");
       } else {
         await updateProperty.mutateAsync({
           id: id!,
@@ -101,7 +101,7 @@ export default function PropertyEditor() {
 
   const handleDelete = async () => {
     await deleteProperty.mutateAsync(id!);
-    navigate("/properties");
+    navigate("/settings/properties");
   };
 
   const updateField = <K extends keyof Property>(field: K, value: Property[K]) => {
@@ -122,7 +122,7 @@ export default function PropertyEditor() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/properties")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/settings/properties")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex items-center gap-3">

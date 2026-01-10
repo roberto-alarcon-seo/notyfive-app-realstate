@@ -107,9 +107,6 @@ const App = () => (
               <Route path="/events" element={<ProtectedRoute><MainLayout><Events /></MainLayout></ProtectedRoute>} />
               {/* Pipeline Kanban route */}
               <Route path="/pipeline" element={<ProtectedRoute><MainLayout><Pipeline /></MainLayout></ProtectedRoute>} />
-              {/* Properties routes */}
-              <Route path="/properties" element={<ProtectedRoute><MainLayout><Properties /></MainLayout></ProtectedRoute>} />
-              <Route path="/properties/:id" element={<ProtectedRoute><MainLayout><PropertyEditor /></MainLayout></ProtectedRoute>} />
               {/* Automations routes */}
               <Route path="/automations" element={<ProtectedRoute><MainLayout><Automations /></MainLayout></ProtectedRoute>} />
               <Route path="/automations/new" element={<ProtectedRoute><MainLayout><AutomationEditor /></MainLayout></ProtectedRoute>} />
@@ -130,6 +127,9 @@ const App = () => (
               <Route path="/settings/knowledge-base/:id" element={<ProtectedRoute><MainLayout><KnowledgeBaseEditor /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/developer" element={<ProtectedRoute><MainLayout><SettingsDeveloper /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/security" element={<ProtectedRoute><MainLayout><SettingsSecurity /></MainLayout></ProtectedRoute>} />
+              {/* Properties routes (under settings) */}
+              <Route path="/settings/properties" element={<ProtectedRoute><MainLayout><Properties /></MainLayout></ProtectedRoute>} />
+              <Route path="/settings/properties/:id" element={<ProtectedRoute><MainLayout><PropertyEditor /></MainLayout></ProtectedRoute>} />
               {/* Developer docs (public-style page, no sidebar) */}
               <Route path="/developers/api" element={<ProtectedRoute><ApiDocs /></ProtectedRoute>} />
               {/* Redirect old integration routes */}
