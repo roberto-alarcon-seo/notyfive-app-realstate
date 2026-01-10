@@ -39,8 +39,10 @@ function extractYoutubeId(url: string): string | null {
 export default function PropertyMultimediaTab({ propertyId }: PropertyMultimediaTabProps) {
   const { data: images, isLoading: loadingImages } = usePropertyImages(propertyId);
   const { data: documents, isLoading: loadingDocs } = usePropertyDocuments(propertyId);
-  const imageMutations = propertyId ? usePropertyImageMutations(propertyId) : null;
-  const docMutations = propertyId ? usePropertyDocumentMutations(propertyId) : null;
+  
+  // Always call hooks unconditionally
+  const imageMutations = usePropertyImageMutations(propertyId || "placeholder");
+  const docMutations = usePropertyDocumentMutations(propertyId || "placeholder");
 
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [imageUrlInput, setImageUrlInput] = useState("");
@@ -61,7 +63,7 @@ export default function PropertyMultimediaTab({ propertyId }: PropertyMultimedia
   }
 
   const handleAddImageUrl = async () => {
-    if (!imageUrlInput.trim() || !imageMutations) return;
+    if (!imageUrlInput.trim()) return;
 
     await imageMutations.addImage.mutateAsync({
       file_url: imageUrlInput,
@@ -73,7 +75,6 @@ export default function PropertyMultimediaTab({ propertyId }: PropertyMultimedia
   };
 
   const handleUploadImages = async (files: FileList) => {
-    if (!imageMutations) return;
     setUploadingImage(true);
 
     try {
@@ -106,7 +107,6 @@ export default function PropertyMultimediaTab({ propertyId }: PropertyMultimedia
   };
 
   const handleUploadDocs = async (files: FileList) => {
-    if (!docMutations) return;
     setUploadingDoc(true);
 
     try {
@@ -258,7 +258,7 @@ export default function PropertyMultimediaTab({ propertyId }: PropertyMultimedia
                       <Button
                         size="icon"
                         variant="secondary"
-                        onClick={() => imageMutations?.setCover.mutate(img.id)}
+                        onClick={() => imageMutations.setCover.mutate(img.id)}
                       >
                         <Star className="h-4 w-4" />
                       </Button>
@@ -266,7 +266,7 @@ export default function PropertyMultimediaTab({ propertyId }: PropertyMultimedia
                     <Button
                       size="icon"
                       variant="destructive"
-                      onClick={() => imageMutations?.deleteImage.mutate(img.id)}
+                      onClick={() => imageMutations.deleteImage.mutate(img.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -344,7 +344,7 @@ export default function PropertyMultimediaTab({ propertyId }: PropertyMultimedia
                     size="icon"
                     variant="ghost"
                     className="text-destructive"
-                    onClick={() => docMutations?.deleteDocument.mutate(doc.id)}
+                    onClick={() => docMutations.deleteDocument.mutate(doc.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
