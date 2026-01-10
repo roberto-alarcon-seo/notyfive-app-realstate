@@ -10,15 +10,17 @@ interface ConversionFunnelChartProps {
   isLoading?: boolean;
 }
 
+// Explicit hex colors for SVG compatibility
 const STAGE_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  'hsl(var(--primary))',
-  'hsl(142, 76%, 36%)',
-  'hsl(var(--destructive))',
+  '#8b5cf6', // Purple - Nuevo Lead
+  '#06b6d4', // Cyan - Interés Confirmado
+  '#f59e0b', // Amber - Validación Financiera
+  '#ec4899', // Pink - Búsqueda Activa
+  '#3b82f6', // Blue - Visita Realizada
+  '#a855f7', // Violet - Seguimiento
+  '#10b981', // Emerald - Negociación
+  '#22c55e', // Green - Ganado
+  '#ef4444', // Red - Perdido
 ];
 
 export function ConversionFunnelChart({ pipeline, pipelineTotal, isLoading }: ConversionFunnelChartProps) {
