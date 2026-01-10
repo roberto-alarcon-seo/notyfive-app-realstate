@@ -152,29 +152,24 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
   return (
     <div className="h-full flex bg-background">
       {/* Sidebar Menu */}
-      <div className="w-72 border-r border-sidebar-border bg-sidebar-background flex flex-col">
+      <div className="w-56 border-r border-sidebar-border bg-sidebar-background flex flex-col">
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <SettingsIcon className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-sidebar-accent-foreground">Configuración</h2>
-              <p className="text-xs text-sidebar-foreground">Ajustes del sistema</p>
-            </div>
+        <div className="px-4 py-3 border-b border-sidebar-border">
+          <div className="flex items-center gap-2">
+            <SettingsIcon className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-sm text-sidebar-accent-foreground">Configuración</h2>
           </div>
         </div>
 
         {/* Menu Items */}
         <ScrollArea className="flex-1">
-          <div className="p-3 space-y-6">
+          <div className="p-2 space-y-4">
             {Object.entries(groupedItems).map(([group, items]) => (
               <div key={group}>
-                <p className="px-3 mb-2 text-xs font-medium text-sidebar-foreground uppercase tracking-wider">
+                <p className="px-2 mb-1 text-[10px] font-medium text-sidebar-foreground/60 uppercase tracking-wider">
                   {group}
                 </p>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {items.map((item) => {
                     const ItemIcon = item.icon;
                     const active = isActive(item.path);
@@ -184,30 +179,22 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
                         key={item.id}
                         onClick={() => navigate(item.path)}
                         className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all",
+                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-all text-sm",
                           active 
                             ? "bg-primary text-primary-foreground" 
                             : "hover:bg-sidebar-accent text-sidebar-accent-foreground"
                         )}
                       >
                         <ItemIcon className={cn(
-                          "h-5 w-5 shrink-0",
+                          "h-4 w-4 shrink-0",
                           active ? "text-primary-foreground" : "text-sidebar-foreground"
                         )} />
-                        <div className="min-w-0 flex-1">
-                          <p className={cn(
-                            "font-medium text-sm truncate",
-                            active ? "text-primary-foreground" : "text-sidebar-accent-foreground"
-                          )}>
-                            {item.title}
-                          </p>
-                          <p className={cn(
-                            "text-xs truncate",
-                            active ? "text-primary-foreground/70" : "text-sidebar-foreground"
-                          )}>
-                            {item.description}
-                          </p>
-                        </div>
+                        <span className={cn(
+                          "truncate",
+                          active ? "text-primary-foreground" : "text-sidebar-accent-foreground"
+                        )}>
+                          {item.title}
+                        </span>
                       </button>
                     );
                   })}
