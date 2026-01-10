@@ -48,6 +48,7 @@ import ApiDocs from "./pages/developers/ApiDocs";
 import Followups from "./pages/Followups";
 import Support from "./pages/Support";
 import SettingsSecurity from "./pages/settings/SettingsSecurity";
+import SettingsConversions from "./pages/settings/SettingsConversions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -127,6 +128,7 @@ const App = () => (
               <Route path="/settings/knowledge-base/:id" element={<ProtectedRoute><MainLayout><KnowledgeBaseEditor /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/developer" element={<ProtectedRoute><MainLayout><SettingsDeveloper /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/security" element={<ProtectedRoute><MainLayout><SettingsSecurity /></MainLayout></ProtectedRoute>} />
+              <Route path="/settings/conversions" element={<ProtectedRoute><MainLayout><SettingsConversions /></MainLayout></ProtectedRoute>} />
               {/* Properties routes */}
               <Route path="/properties" element={<ProtectedRoute><MainLayout><Properties /></MainLayout></ProtectedRoute>} />
               <Route path="/properties/:id" element={<ProtectedRoute><MainLayout><PropertyEditor /></MainLayout></ProtectedRoute>} />

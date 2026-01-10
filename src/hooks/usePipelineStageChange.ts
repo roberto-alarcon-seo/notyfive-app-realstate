@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Json } from "@/integrations/supabase/types";
 import { trackPipelineEvent, getMetaCookies } from "@/lib/meta/pixelLoader";
 
 // Pipeline stages in order (for detecting reversal)
@@ -311,7 +312,7 @@ async function logConversionEvent(
       pipeline_stage: pipelineStage,
       event_name: eventName,
       status,
-      payload: payload || {},
+      payload: (payload || {}) as Json,
       error_message: errorMessage || null,
     }]);
 

@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Building2, Users, Key, CreditCard, Bell, MessageSquare, 
-  Settings as SettingsIcon, ListPlus, Bot, BookOpen, Code2, ShieldCheck
+  Settings as SettingsIcon, ListPlus, Bot, BookOpen, Code2, ShieldCheck, BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,6 +39,14 @@ const menuItems: MenuItem[] = [
     icon: ShieldCheck,
     title: "Consentimiento",
     description: "Opt-out, DND y bloqueos",
+    group: "General",
+  },
+  {
+    id: "conversions",
+    path: "/settings/conversions",
+    icon: BarChart3,
+    title: "Conversiones",
+    description: "Define tu conversión principal",
     group: "General",
   },
   {
