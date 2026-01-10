@@ -17,10 +17,17 @@ interface ActivityChartProps {
   isLoading?: boolean;
 }
 
+// Define colors explicitly for SVG compatibility
+const CHART_COLORS = {
+  mensajes: '#8b5cf6',    // Purple
+  leads: '#22c55e',       // Green
+  seguimientos: '#f59e0b', // Amber
+};
+
 export function ActivityChart({ dailyTrends, isLoading }: ActivityChartProps) {
   if (isLoading) {
     return (
-      <Card className="col-span-1">
+      <Card className="col-span-1 bg-card border-border">
         <CardHeader className="pb-3">
           <Skeleton className="h-5 w-48" />
         </CardHeader>
@@ -40,9 +47,9 @@ export function ActivityChart({ dailyTrends, isLoading }: ActivityChartProps) {
   }));
 
   return (
-    <Card className="col-span-1">
+    <Card className="col-span-1 bg-card border-border">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">
+        <CardTitle className="text-base font-semibold text-foreground">
           Actividad de los Últimos {dailyTrends.length} Días
         </CardTitle>
       </CardHeader>
@@ -55,80 +62,82 @@ export function ActivityChart({ dailyTrends, isLoading }: ActivityChartProps) {
             >
               <defs>
                 <linearGradient id="colorMensajes" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0}/>
+                  <stop offset="5%" stopColor={CHART_COLORS.mensajes} stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor={CHART_COLORS.mensajes} stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
+                  <stop offset="5%" stopColor={CHART_COLORS.leads} stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor={CHART_COLORS.leads} stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorSeguimientos" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--chart-3))" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="hsl(var(--chart-3))" stopOpacity={0}/>
+                  <stop offset="5%" stopColor={CHART_COLORS.seguimientos} stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor={CHART_COLORS.seguimientos} stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid 
                 strokeDasharray="3 3" 
-                stroke="hsl(var(--border))" 
+                stroke="rgba(255,255,255,0.1)" 
                 vertical={false}
-                opacity={0.5}
               />
               <XAxis 
                 dataKey="label" 
-                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
                 tickLine={false}
                 axisLine={false}
                 interval="preserveStartEnd"
               />
               <YAxis 
-                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
                 tickLine={false}
                 axisLine={false}
                 width={30}
+                allowDecimals={false}
               />
               <Tooltip 
                 contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
+                  backgroundColor: '#1f2937',
+                  border: '1px solid #374151',
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
-                labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
+                labelStyle={{ color: '#f9fafb', fontWeight: 600 }}
+                itemStyle={{ color: '#e5e7eb' }}
               />
               <Legend 
                 wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
                 iconType="circle"
                 iconSize={8}
+                formatter={(value) => <span style={{ color: '#e5e7eb' }}>{value}</span>}
               />
               <Area
                 type="monotone"
                 dataKey="mensajesIA"
                 name="Mensajes IA"
-                stroke="hsl(var(--chart-1))"
+                stroke={CHART_COLORS.mensajes}
                 strokeWidth={2}
                 fill="url(#colorMensajes)"
                 dot={false}
-                activeDot={{ r: 4, fill: 'hsl(var(--chart-1))' }}
+                activeDot={{ r: 4, fill: CHART_COLORS.mensajes }}
               />
               <Area
                 type="monotone"
                 dataKey="nuevosLeads"
                 name="Nuevos Leads"
-                stroke="hsl(var(--chart-2))"
+                stroke={CHART_COLORS.leads}
                 strokeWidth={2}
                 fill="url(#colorLeads)"
                 dot={false}
-                activeDot={{ r: 4, fill: 'hsl(var(--chart-2))' }}
+                activeDot={{ r: 4, fill: CHART_COLORS.leads }}
               />
               <Area
                 type="monotone"
                 dataKey="seguimientos"
                 name="Seguimientos"
-                stroke="hsl(var(--chart-3))"
+                stroke={CHART_COLORS.seguimientos}
                 strokeWidth={2}
                 fill="url(#colorSeguimientos)"
                 dot={false}
-                activeDot={{ r: 4, fill: 'hsl(var(--chart-3))' }}
+                activeDot={{ r: 4, fill: CHART_COLORS.seguimientos }}
               />
             </AreaChart>
           </ResponsiveContainer>
