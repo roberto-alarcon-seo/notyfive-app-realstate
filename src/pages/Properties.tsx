@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Plus, Search, Filter, X, Home } from "lucide-react";
-import { SettingsLayout } from "@/components/settings/SettingsLayout";
+import { Building2, Plus, Search, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -58,19 +57,21 @@ export default function Properties() {
   };
 
   return (
-    <SettingsLayout 
-      title="Propiedades" 
-      description="Gestiona tu inventario de propiedades"
-      icon={Home}
-    >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-end">
-          <Button onClick={() => navigate("/settings/properties/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva propiedad
-          </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Building2 className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Propiedades</h1>
+            <p className="text-muted-foreground">Gestiona tu inventario de propiedades</p>
+          </div>
         </div>
+        <Button onClick={() => navigate("/properties/new")}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nueva propiedad
+        </Button>
+      </div>
 
         {/* Search & Filters */}
         <div className="space-y-4">
@@ -278,9 +279,8 @@ export default function Properties() {
           </Collapsible>
         </div>
 
-        {/* Table */}
-        <PropertyTable properties={properties || []} isLoading={isLoading} />
-      </div>
-    </SettingsLayout>
+      {/* Table */}
+      <PropertyTable properties={properties || []} isLoading={isLoading} />
+    </div>
   );
 }
