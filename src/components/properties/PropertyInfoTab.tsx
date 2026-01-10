@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { Property } from "@/hooks/useProperties";
 import { useEffectiveTenantId } from "@/hooks/useEffectiveTenantId";
-import PropertyFaqEditor from "./PropertyFaqEditor";
 
 interface PropertyInfoTabProps {
   formData: Partial<Property>;
@@ -333,9 +332,6 @@ export default function PropertyInfoTab({
           </CardContent>
         </Card>
       </div>
-
-      {/* FAQ Section */}
-      {propertyId && <PropertyFaqEditor propertyId={propertyId} />}
     </div>
   );
 }
