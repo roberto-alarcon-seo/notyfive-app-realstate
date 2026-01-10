@@ -614,7 +614,6 @@ export default function ContactEditor() {
                 {/* Property Interest Card */}
                 <PropertyInterestCard
                   propertyId={formData.re_property_interest_id ?? null}
-                  pipelineStage={formData.pipeline_stage ?? 'new_lead'}
                   onChange={(propertyId) => setFormData({
                     ...formData,
                     re_property_interest_id: propertyId,
