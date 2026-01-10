@@ -117,7 +117,7 @@ export default function PropertyEditor() {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -204,6 +204,8 @@ export default function PropertyEditor() {
             </div>
           )}
         </div>
+      </div>
+
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
