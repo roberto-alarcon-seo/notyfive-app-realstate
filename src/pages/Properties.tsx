@@ -57,7 +57,8 @@ export default function Properties() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-auto bg-background">
+      <div className="p-4 lg:p-6 max-w-[1600px] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -279,8 +280,9 @@ export default function Properties() {
           </Collapsible>
         </div>
 
-      {/* Table */}
-      <PropertyTable properties={properties || []} isLoading={isLoading} />
+        {/* Table */}
+        <PropertyTable properties={properties || []} isLoading={isLoading} />
+      </div>
     </div>
   );
 }
