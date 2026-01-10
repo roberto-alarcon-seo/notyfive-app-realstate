@@ -45,6 +45,8 @@ export interface Contact {
   re_accepts_pets: boolean;
   re_reason: 'BUY' | 'RENT' | 'INVEST' | 'MOVE' | 'UPGRADE' | 'DOWNSIZE' | 'OTHER' | null;
   re_current_situation: 'RENTING' | 'OWNING' | 'LIVING_WITH_FAMILY' | 'LOOKING_TO_MOVE' | 'OTHER' | null;
+  // Property interest
+  re_property_interest_id: string | null;
   // Diagnostic fields
   re_block_reason: string | null;
   re_visit_outcome: string | null;
@@ -113,6 +115,8 @@ export interface ContactFormData {
   re_accepts_pets?: boolean;
   re_reason?: 'BUY' | 'RENT' | 'INVEST' | 'MOVE' | 'UPGRADE' | 'DOWNSIZE' | 'OTHER' | null;
   re_current_situation?: 'RENTING' | 'OWNING' | 'LIVING_WITH_FAMILY' | 'LOOKING_TO_MOVE' | 'OTHER' | null;
+  // Property interest
+  re_property_interest_id?: string | null;
   // Diagnostic fields
   re_block_reason?: string | null;
   re_visit_outcome?: string | null;
@@ -299,6 +303,8 @@ export function useContacts() {
           re_accepts_pets: formData.re_accepts_pets ?? false,
           re_reason: formData.re_reason ?? null,
           re_current_situation: formData.re_current_situation ?? null,
+          // Property interest
+          re_property_interest_id: formData.re_property_interest_id ?? null,
           // Diagnostic fields
           re_block_reason: formData.re_block_reason ?? null,
           re_visit_outcome: formData.re_visit_outcome ?? null,
@@ -393,6 +399,8 @@ export function useContacts() {
           re_accepts_pets: formData.re_accepts_pets ?? false,
           re_reason: formData.re_reason ?? null,
           re_current_situation: formData.re_current_situation ?? null,
+          // Property interest
+          re_property_interest_id: formData.re_property_interest_id ?? null,
           // Diagnostic fields
           re_block_reason: formData.re_block_reason ?? null,
           re_visit_outcome: formData.re_visit_outcome ?? null,
