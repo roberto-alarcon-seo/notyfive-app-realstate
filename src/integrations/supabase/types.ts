@@ -1190,6 +1190,9 @@ export type Database = {
           engagement_level: string
           id: string
           intent_detected: string | null
+          internal_conversion_count: number
+          internal_converted_at: string | null
+          internal_converted_stage: string | null
           last_interaction_at: string | null
           lead_score: number
           lead_temperature: string
@@ -1235,6 +1238,9 @@ export type Database = {
           engagement_level?: string
           id?: string
           intent_detected?: string | null
+          internal_conversion_count?: number
+          internal_converted_at?: string | null
+          internal_converted_stage?: string | null
           last_interaction_at?: string | null
           lead_score?: number
           lead_temperature?: string
@@ -1280,6 +1286,9 @@ export type Database = {
           engagement_level?: string
           id?: string
           intent_detected?: string | null
+          internal_conversion_count?: number
+          internal_converted_at?: string | null
+          internal_converted_stage?: string | null
           last_interaction_at?: string | null
           lead_score?: number
           lead_temperature?: string
@@ -1564,6 +1573,60 @@ export type Database = {
           },
         ]
       }
+      conversion_event_logs: {
+        Row: {
+          contact_id: string
+          created_at: string
+          error_message: string | null
+          event_name: string
+          id: string
+          payload: Json | null
+          pipeline_stage: string | null
+          source: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          error_message?: string | null
+          event_name: string
+          id?: string
+          payload?: Json | null
+          pipeline_stage?: string | null
+          source: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          error_message?: string | null
+          event_name?: string
+          id?: string
+          payload?: Json | null
+          pipeline_stage?: string | null
+          source?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversion_event_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversion_event_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_audit_logs: {
         Row: {
           action: string
@@ -1797,6 +1860,56 @@ export type Database = {
           },
           {
             foreignKeyName: "messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_event_mappings: {
+        Row: {
+          created_at: string
+          event_value: number | null
+          id: string
+          is_active: boolean
+          meta_event_name: string
+          meta_event_type: string
+          pipeline_stage: string
+          send_capi: boolean
+          send_pixel: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_value?: number | null
+          id?: string
+          is_active?: boolean
+          meta_event_name: string
+          meta_event_type: string
+          pipeline_stage: string
+          send_capi?: boolean
+          send_pixel?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_value?: number | null
+          id?: string
+          is_active?: boolean
+          meta_event_name?: string
+          meta_event_type?: string
+          pipeline_stage?: string
+          send_capi?: boolean
+          send_pixel?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_event_mappings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2934,6 +3047,59 @@ export type Database = {
             foreignKeyName: "tenant_integrations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_settings: {
+        Row: {
+          created_at: string
+          internal_conversion_allow_reversal: boolean
+          internal_conversion_first_time_only: boolean
+          internal_conversion_stage: string
+          meta_capi_access_token: string | null
+          meta_enabled: boolean
+          meta_pixel_id: string | null
+          meta_send_capi: boolean
+          meta_send_pixel: boolean
+          meta_test_event_code: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          internal_conversion_allow_reversal?: boolean
+          internal_conversion_first_time_only?: boolean
+          internal_conversion_stage?: string
+          meta_capi_access_token?: string | null
+          meta_enabled?: boolean
+          meta_pixel_id?: string | null
+          meta_send_capi?: boolean
+          meta_send_pixel?: boolean
+          meta_test_event_code?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          internal_conversion_allow_reversal?: boolean
+          internal_conversion_first_time_only?: boolean
+          internal_conversion_stage?: string
+          meta_capi_access_token?: string | null
+          meta_enabled?: boolean
+          meta_pixel_id?: string | null
+          meta_send_capi?: boolean
+          meta_send_pixel?: boolean
+          meta_test_event_code?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
