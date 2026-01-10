@@ -16,6 +16,10 @@ import { ActivityChart } from "@/components/dashboard/ActivityChart";
 import { AIPerformanceCard } from "@/components/dashboard/AIPerformanceCard";
 import { TopPropertiesCard } from "@/components/dashboard/TopPropertiesCard";
 import { RecentActivityCard } from "@/components/dashboard/RecentActivityCard";
+import { ConversionFunnelChart } from "@/components/dashboard/ConversionFunnelChart";
+import { LeadTemperatureChart } from "@/components/dashboard/LeadTemperatureChart";
+import { ConversionTimeCard } from "@/components/dashboard/ConversionTimeCard";
+import { PropertyStatusChart } from "@/components/dashboard/PropertyStatusChart";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -121,6 +125,45 @@ export default function Dashboard() {
           leadsWithoutProperty={data?.leadsWithoutProperty || 0}
           isLoading={isLoading}
         />
+
+        {/* Conversion Funnel + Lead Temperature */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ConversionFunnelChart
+            pipeline={data?.pipeline || []}
+            pipelineTotal={data?.pipelineTotal || 0}
+            isLoading={isLoading}
+          />
+          <LeadTemperatureChart
+            hot={data?.leadQuality.temperatureBreakdown.hot || 0}
+            warm={data?.leadQuality.temperatureBreakdown.warm || 0}
+            cold={data?.leadQuality.temperatureBreakdown.cold || 0}
+            total={data?.leadQuality.totalLeads || 0}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Conversion Time + Properties Status */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ConversionTimeCard
+            avgDaysToConversion={data?.conversions.avgDaysToConversion || 0}
+            totalConverted={data?.conversions.totalConverted || 0}
+            conversionRate={data?.conversions.conversionRate || 0}
+            convertedThisPeriod={data?.conversions.convertedThisPeriod || 0}
+            isLoading={isLoading}
+          />
+          <PropertyStatusChart
+            properties={data?.properties || {
+              totalActive: 0,
+              totalAvailable: 0,
+              totalReserved: 0,
+              totalSold: 0,
+              avgPrice: 0,
+              propertiesWithInterest: 0,
+              topZones: [],
+            }}
+            isLoading={isLoading}
+          />
+        </div>
 
         {/* Activity Chart + AI Performance */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
