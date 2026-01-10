@@ -14,21 +14,10 @@ import { useProperties } from "@/hooks/useProperties";
 
 interface PropertyInterestCardProps {
   propertyId: string | null;
-  pipelineStage: string;
   onChange: (propertyId: string | null) => void;
 }
 
-const STAGE_LABELS: Record<string, string> = {
-  new_lead: "Nuevo Lead",
-  contacted: "Contactado",
-  qualified: "Calificado",
-  proposal: "Propuesta",
-  negotiation: "Negociación",
-  closed_won: "Cerrado Ganado",
-  closed_lost: "Cerrado Perdido",
-};
-
-export function PropertyInterestCard({ propertyId, pipelineStage, onChange }: PropertyInterestCardProps) {
+export function PropertyInterestCard({ propertyId, onChange }: PropertyInterestCardProps) {
   const navigate = useNavigate();
   const { data: properties, isLoading } = useProperties();
 
@@ -107,13 +96,6 @@ export function PropertyInterestCard({ propertyId, pipelineStage, onChange }: Pr
                 {selectedProperty.status === 'available' ? 'Disponible' : 
                  selectedProperty.status === 'reserved' ? 'Reservado' : 
                  selectedProperty.status === 'sold' ? 'Vendido' : selectedProperty.status}
-              </Badge>
-            </div>
-
-            <div className="pt-2 border-t">
-              <p className="text-xs text-muted-foreground">Etapa actual del contacto:</p>
-              <Badge variant="secondary" className="mt-1">
-                {STAGE_LABELS[pipelineStage] || pipelineStage}
               </Badge>
             </div>
           </div>
