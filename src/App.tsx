@@ -24,6 +24,7 @@ import Automations from "./pages/Automations";
 import AutomationEditor from "./pages/AutomationEditor";
 import Events from "./pages/Events";
 import AutomationRuns from "./pages/AutomationRuns";
+import Pipeline from "./pages/Pipeline";
 import SettingsCompany from "./pages/settings/SettingsCompany";
 import SettingsWhatsAppStatus from "./pages/settings/SettingsWhatsAppStatus";
 import SettingsUsersPage from "./pages/settings/SettingsUsersPage";
@@ -102,6 +103,8 @@ const App = () => (
               <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
               {/* Events route */}
               <Route path="/events" element={<ProtectedRoute><MainLayout><Events /></MainLayout></ProtectedRoute>} />
+              {/* Pipeline Kanban route */}
+              <Route path="/pipeline" element={<ProtectedRoute><MainLayout><Pipeline /></MainLayout></ProtectedRoute>} />
               {/* Automations routes */}
               <Route path="/automations" element={<ProtectedRoute><MainLayout><Automations /></MainLayout></ProtectedRoute>} />
               <Route path="/automations/new" element={<ProtectedRoute><MainLayout><AutomationEditor /></MainLayout></ProtectedRoute>} />
