@@ -249,24 +249,29 @@ export default function PropertyMultimediaTab({ propertyId }: PropertyMultimedia
                     className="w-full h-full object-cover"
                   />
                   {img.is_cover && (
-                    <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded">
+                    <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-current" />
                       Portada
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     {!img.is_cover && (
                       <Button
-                        size="icon"
+                        size="sm"
                         variant="secondary"
                         onClick={() => imageMutations.setCover.mutate(img.id)}
+                        title="Establecer como imagen principal"
+                        className="gap-1"
                       >
                         <Star className="h-4 w-4" />
+                        Portada
                       </Button>
                     )}
                     <Button
                       size="icon"
                       variant="destructive"
                       onClick={() => imageMutations.deleteImage.mutate(img.id)}
+                      title="Eliminar imagen"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
