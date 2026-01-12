@@ -395,9 +395,25 @@ export function usePropertyImageMutations(propertyId: string) {
 
   const addImage = useMutation({
     mutationFn: async (image: Partial<PropertyImage>) => {
+      // Check if there are existing images with is_cover = true
+      const { data: existingCover } = await supabase
+        .from("property_images")
+        .select("id")
+        .eq("property_id", propertyId)
+        .eq("is_cover", true)
+        .limit(1);
+
+      // If no cover exists, set this image as cover
+      const shouldBeCover = !existingCover || existingCover.length === 0;
+
       const { data, error } = await supabase
         .from("property_images")
-        .insert({ ...image, property_id: propertyId, tenant_id: tenantId! } as any)
+        .insert({ 
+          ...image, 
+          property_id: propertyId, 
+          tenant_id: tenantId!,
+          is_cover: shouldBeCover 
+        } as any)
         .select()
         .single();
 
