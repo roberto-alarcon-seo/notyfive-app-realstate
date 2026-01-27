@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import authHero from '@/assets/auth-hero-realestate.jpg';
-import authLogo from '@/assets/auth-logo.png';
+import authLogo from '@/assets/brokia-logo.png';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -110,10 +110,10 @@ const Auth = () => {
           <div className="flex items-center gap-3">
             <img 
               src={authLogo} 
-              alt="NotyFive Logo" 
+              alt="Brokia24 Logo" 
               className="h-12 w-12 object-contain"
             />
-            <span className="text-2xl font-semibold text-white tracking-tight">NotyFive</span>
+            <span className="text-2xl font-semibold text-white tracking-tight">Brokia24</span>
           </div>
           
           {/* Bottom Content */}
@@ -165,10 +165,10 @@ const Auth = () => {
           <div className="flex items-center gap-2">
             <img 
               src={authLogo} 
-              alt="NotyFive Logo" 
+              alt="Brokia24 Logo" 
               className="h-10 w-10 object-contain"
             />
-            <span className="text-xl font-semibold">NotyFive</span>
+            <span className="text-xl font-semibold">Brokia24</span>
           </div>
         </div>
 
@@ -186,7 +186,7 @@ const Auth = () => {
             <div className="text-center mb-8 lg:mb-10">
               <img 
                 src={authLogo} 
-                alt="NotyFive Logo" 
+                alt="Brokia24 Logo" 
                 className="h-16 w-16 object-contain mx-auto mb-4"
               />
               <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-3">
@@ -291,7 +291,7 @@ const Auth = () => {
         {/* Footer Branding */}
         <div className="p-6 text-center">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} NotyFive. Todos los derechos reservados.
+            © {new Date().getFullYear()} Brokia24. Todos los derechos reservados.
           </p>
         </div>
       </div>

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/brokia-logo.png";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", showBadge: false },
@@ -44,7 +44,7 @@ export function IconSidebar() {
       <div className="flex items-center justify-center h-16 border-b border-sidebar-border">
         <img 
           src={logo} 
-          alt="NotyFive Logo" 
+          alt="Brokia24 Logo" 
           className="h-10 w-10 object-contain" 
         />
       </div>
