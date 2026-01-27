@@ -6,7 +6,180 @@
 
 @layer base {
   :root {
-    /* Dark theme (default) - Brokia */
+    /* Default to dark theme */
+    --background: 0 0% 6%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 271 81% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 16%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    --border: 0 0% 17%;
+    --input: 0 0% 17%;
+    --ring: 271 81% 56%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar - Dark */
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 220 9% 46%;
+    --sidebar-primary: 271 81% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 17%;
+    --sidebar-ring: 271 81% 56%;
+
+    /* Messages */
+    --message-outgoing: 271 81% 56%;
+    --message-incoming: 0 0% 16%;
+    --online: 142 76% 36%;
+
+    /* Extras */
+    --gradient-primary: linear-gradient(135deg, hsl(271 81% 56%), hsl(271 81% 66%));
+    --shadow-elegant: 0 10px 30px -10px hsl(271 81% 56% / 0.3);
+    --shadow-glow: 0 0 40px hsl(271 81% 56% / 0.2);
+  }
+
+  /* ===== DARK THEME ===== */
+  .dark {
+    --background: 0 0% 6%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 271 81% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 16%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    --border: 0 0% 17%;
+    --input: 0 0% 17%;
+    --ring: 271 81% 56%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 220 9% 46%;
+    --sidebar-primary: 271 81% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 17%;
+    --sidebar-ring: 271 81% 56%;
+
+    /* Messages */
+    --message-outgoing: 271 81% 56%;
+    --message-incoming: 0 0% 16%;
+    --online: 142 76% 36%;
+
+    /* Extras */
+    --gradient-primary: linear-gradient(135deg, hsl(271 81% 56%), hsl(271 81% 66%));
+    --shadow-elegant: 0 10px 30px -10px hsl(271 81% 56% / 0.3);
+    --shadow-glow: 0 0 40px hsl(271 81% 56% / 0.2);
+  }
+
+  /* ===== LIGHT THEME ===== */
+  .light {
+    --background: 220 14% 96%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 271 81% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 9% 40%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    --border: 220 13% 87%;
+    --input: 0 0% 100%;
+    --ring: 271 81% 56%;
+
+    /* Sidebar stays dark in light mode */
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 220 9% 46%;
+    --sidebar-primary: 271 81% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 17%;
+    --sidebar-ring: 271 81% 56%;
+
+    /* Messages */
+    --message-outgoing: 271 81% 56%;
+    --message-incoming: 220 14% 92%;
+    --online: 142 76% 36%;
+
+    /* Extras */
+    --gradient-primary: linear-gradient(135deg, hsl(271 81% 56%), hsl(271 81% 66%));
+    --shadow-elegant: 0 10px 30px -10px hsl(271 81% 56% / 0.3);
+    --shadow-glow: 0 0 40px hsl(271 81% 56% / 0.2);
+  }
+
+  /* ===== BLUE THEME (Brokia Original) ===== */
+  .blue {
     --background: 220 23% 14%;
     --foreground: 0 0% 100%;
 
@@ -41,9 +214,7 @@
     --input: 220 15% 25%;
     --ring: 280 70% 60%;
 
-    --radius: 0.75rem;
-
-    /* Sidebar - Dark */
+    /* Sidebar */
     --sidebar-background: 220 20% 16%;
     --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 280 70% 60%;
@@ -63,61 +234,6 @@
     --shadow-elegant: 0 10px 30px -10px hsl(280 70% 60% / 0.3);
     --shadow-glow: 0 0 40px hsl(280 70% 60% / 0.2);
   }
-
-  .light {
-    --background: 220 14% 96%;
-    --foreground: 222 47% 11%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: 280 70% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 222 47% 11%;
-
-    --muted: 220 14% 92%;
-    --muted-foreground: 220 9% 40%;
-
-    --accent: 280 70% 60%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 85% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --success: 142 76% 45%;
-    --success-foreground: 0 0% 100%;
-
-    --warning: 25 95% 60%;
-    --warning-foreground: 0 0% 100%;
-
-    --border: 220 13% 87%;
-    --input: 0 0% 100%;
-    --ring: 280 70% 60%;
-
-    /* Keep sidebar dark in light mode for consistency */
-    --sidebar-background: 220 20% 16%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 280 70% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 18% 22%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 15% 30%;
-    --sidebar-ring: 280 70% 60%;
-
-    --message-outgoing: 280 70% 60%;
-    --message-incoming: 220 14% 92%;
-    --online: 142 76% 45%;
-  }
-
-  .dark {
-    --background: 220 23% 14%;
-    --foreground: 0 0% 100%;
-  }
 }
 
 @layer base {
@@ -126,7 +242,7 @@
   }
 
   html {
-    /* theme class (dark/light) is set by JS */
+    /* theme class (dark/light/blue) is set by JS */
   }
 
   body {
@@ -158,7 +274,7 @@
   }
 
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(280 70% 60%) 0%, hsl(280 70% 70%) 100%);
+    background: var(--gradient-primary);
   }
 
   .gradient-accent {
@@ -167,7 +283,7 @@
 
   .text-gradient {
     @apply bg-clip-text text-transparent;
-    background: linear-gradient(135deg, hsl(280 70% 60%) 0%, hsl(280 70% 70%) 100%);
+    background: var(--gradient-primary);
   }
 
   .shadow-glow {
