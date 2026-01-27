@@ -157,7 +157,13 @@
     --input: 0 0% 100%;
     --ring: 271 81% 56%;
 
-    /* Sidebar - Light theme (white/light background) */
+    /* Main Sidebar - stays dark in light mode */
+    --main-sidebar-background: 0 0% 8%;
+    --main-sidebar-foreground: 220 9% 46%;
+    --main-sidebar-accent: 0 0% 14%;
+    --main-sidebar-border: 0 0% 17%;
+
+    /* Secondary Sidebar - Light theme (white/light background) */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 9% 40%;
     --sidebar-primary: 271 81% 56%;

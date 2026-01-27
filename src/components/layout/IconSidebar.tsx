@@ -39,9 +39,9 @@ export function IconSidebar() {
   const totalUnread = useTotalUnreadCount();
 
   return (
-    <aside className="flex flex-col h-screen w-16 bg-sidebar-background border-r border-sidebar-border">
+    <aside className="flex flex-col h-screen w-16 bg-[#141414] border-r border-[#2b2b2b]">
       {/* Logo */}
-      <div className="flex items-center justify-center h-16 border-b border-sidebar-border">
+      <div className="flex items-center justify-center h-16 border-b border-[#2b2b2b]">
         <img 
           src={logo} 
           alt="Brokia24 Logo" 
@@ -57,8 +57,8 @@ export function IconSidebar() {
               <NavLink
                 to={item.path}
                 end={item.path === "/"}
-                className="w-12 h-12 flex items-center justify-center rounded-xl text-sidebar-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200 relative"
-                activeClassName="bg-sidebar-accent text-primary shadow-glow-sm"
+                className="w-12 h-12 flex items-center justify-center rounded-xl text-[#6b7280] hover:text-primary hover:bg-primary/10 transition-all duration-200 relative"
+                activeClassName="bg-[#242424] text-primary shadow-glow-sm"
               >
                 <item.icon className="w-5 h-5" />
                 {/* Unread badge for Inbox */}
@@ -77,14 +77,14 @@ export function IconSidebar() {
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="flex flex-col items-center py-4 gap-1 border-t border-sidebar-border">
+      <div className="flex flex-col items-center py-4 gap-1 border-t border-[#2b2b2b]">
         {bottomItems.map((item) => (
           <Tooltip key={item.path} delayDuration={0}>
             <TooltipTrigger asChild>
               <NavLink
                 to={item.path}
-                className="w-12 h-12 flex items-center justify-center rounded-xl text-sidebar-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200"
-                activeClassName="bg-sidebar-accent text-primary"
+                className="w-12 h-12 flex items-center justify-center rounded-xl text-[#6b7280] hover:text-primary hover:bg-primary/10 transition-all duration-200"
+                activeClassName="bg-[#242424] text-primary"
               >
                 <item.icon className="w-5 h-5" />
               </NavLink>
