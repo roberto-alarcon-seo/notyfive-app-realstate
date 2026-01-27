@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings2, Sun, Moon } from "lucide-react";
+import { Settings2, Sun, Moon, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type Theme = "dark" | "light";
+type Theme = "dark" | "light" | "blue";
 
 // Zonas horarias de América (ciudades principales)
 const AMERICA_TIMEZONES = [
@@ -122,6 +122,12 @@ export const isMexicanTimezone = (timezone: string): boolean => {
   return mexicanTimezones.includes(timezone);
 };
 
+const THEME_OPTIONS: { value: Theme; label: string; description: string; icon: typeof Moon }[] = [
+  { value: "dark", label: "Oscuro", description: "Fondo negro puro", icon: Moon },
+  { value: "light", label: "Claro", description: "Fondos blancos", icon: Sun },
+  { value: "blue", label: "Azul", description: "Fondo azul oscuro", icon: Palette },
+];
+
 export default function SettingsCompany() {
   const { tenant } = useAuth();
   const [companyName, setCompanyName] = useState(tenant?.name || "Mi Empresa");
@@ -131,20 +137,20 @@ export default function SettingsCompany() {
 
   // Load theme from localStorage on mount
   useEffect(() => {
-    const savedTheme = (localStorage.getItem("notyfive-theme") as Theme | null) ?? "dark";
+    const savedTheme = (localStorage.getItem("brokia-theme") as Theme | null) ?? "dark";
     setTheme(savedTheme);
 
     // Apply theme class consistently (never keep both at once)
-    document.documentElement.classList.remove("dark", "light");
-    document.body.classList.remove("dark", "light");
+    document.documentElement.classList.remove("dark", "light", "blue");
+    document.body.classList.remove("dark", "light", "blue");
     document.documentElement.classList.add(savedTheme);
   }, []);
 
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
-    localStorage.setItem("notyfive-theme", newTheme);
-    document.documentElement.classList.remove("dark", "light");
-    document.body.classList.remove("dark", "light");
+    localStorage.setItem("brokia-theme", newTheme);
+    document.documentElement.classList.remove("dark", "light", "blue");
+    document.body.classList.remove("dark", "light", "blue");
     document.documentElement.classList.add(newTheme);
   };
 
@@ -211,92 +217,82 @@ export default function SettingsCompany() {
               Selecciona el tema de color para la interfaz
             </p>
             
-            <div className="grid grid-cols-2 gap-4">
-              {/* Dark Theme Option */}
-              <button
-                onClick={() => handleThemeChange("dark")}
-                className={cn(
-                  "relative rounded-xl border-2 p-4 transition-all duration-200 text-left",
-                  theme === "dark"
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-primary/50"
-                )}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center">
-                    <Moon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">Oscuro</p>
-                    <p className="text-xs text-muted-foreground">Tema actual</p>
-                  </div>
-                </div>
-
-                {/* Preview */}
-                <div className="rounded-lg overflow-hidden border border-border bg-background">
-                  <div className="p-2">
-                    <div className="flex gap-1 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-destructive" />
-                      <div className="w-2 h-2 rounded-full bg-warning" />
-                      <div className="w-2 h-2 rounded-full bg-success" />
+            <div className="grid grid-cols-3 gap-4">
+              {THEME_OPTIONS.map((option) => {
+                const Icon = option.icon;
+                const isSelected = theme === option.value;
+                
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleThemeChange(option.value)}
+                    className={cn(
+                      "relative rounded-xl border-2 p-4 transition-all duration-200 text-left",
+                      isSelected
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">{option.description}</p>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <div className="h-2 bg-muted rounded w-3/4" />
-                      <div className="h-2 bg-primary rounded w-1/2" />
-                      <div className="h-2 bg-muted rounded w-2/3" />
+
+                    {/* Preview */}
+                    <div 
+                      className={cn(
+                        "rounded-lg overflow-hidden border",
+                        option.value === "dark" && "bg-[#0f0f0f] border-[#2b2b2b]",
+                        option.value === "light" && "bg-[#f3f4f6] border-[#d1d5db]",
+                        option.value === "blue" && "bg-[#1b2029] border-[#414a5c]"
+                      )}
+                    >
+                      <div className="p-2">
+                        <div className="flex gap-1 mb-2">
+                          <div className="w-2 h-2 rounded-full bg-[#ef4444]" />
+                          <div className="w-2 h-2 rounded-full bg-[#f59e0b]" />
+                          <div className="w-2 h-2 rounded-full bg-[#22c55e]" />
+                        </div>
+                        <div className="space-y-1">
+                          <div 
+                            className={cn(
+                              "h-2 rounded w-3/4",
+                              option.value === "dark" && "bg-[#292929]",
+                              option.value === "light" && "bg-[#e5e7eb]",
+                              option.value === "blue" && "bg-[#363d4d]"
+                            )} 
+                          />
+                          <div 
+                            className={cn(
+                              "h-2 rounded w-1/2",
+                              option.value === "blue" ? "bg-[#a855f7]" : "bg-[#8b5cf6]"
+                            )} 
+                          />
+                          <div 
+                            className={cn(
+                              "h-2 rounded w-2/3",
+                              option.value === "dark" && "bg-[#292929]",
+                              option.value === "light" && "bg-[#e5e7eb]",
+                              option.value === "blue" && "bg-[#363d4d]"
+                            )} 
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {theme === "dark" && (
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-white" />
-                  </div>
-                )}
-              </button>
-
-              {/* Light Theme Option */}
-              <button
-                onClick={() => handleThemeChange("light")}
-                className={cn(
-                  "relative rounded-xl border-2 p-4 transition-all duration-200 text-left",
-                  theme === "light"
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-primary/50"
-                )}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center">
-                    <Sun className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">Claro</p>
-                    <p className="text-xs text-muted-foreground">Fondos blancos</p>
-                  </div>
-                </div>
-
-                {/* Preview */}
-                <div className="rounded-lg overflow-hidden border border-border bg-card">
-                  <div className="p-2">
-                    <div className="flex gap-1 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-destructive" />
-                      <div className="w-2 h-2 rounded-full bg-warning" />
-                      <div className="w-2 h-2 rounded-full bg-success" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="h-2 bg-muted rounded w-3/4" />
-                      <div className="h-2 bg-primary rounded w-1/2" />
-                      <div className="h-2 bg-muted rounded w-2/3" />
-                    </div>
-                  </div>
-                </div>
-
-                {theme === "light" && (
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-white" />
-                  </div>
-                )}
-              </button>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
