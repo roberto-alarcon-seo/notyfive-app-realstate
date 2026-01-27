@@ -124,8 +124,8 @@ export const isMexicanTimezone = (timezone: string): boolean => {
 
 const THEME_OPTIONS: { value: Theme; label: string; description: string; icon: typeof Moon }[] = [
   { value: "dark", label: "Oscuro", description: "Fondo negro puro", icon: Moon },
-  { value: "light", label: "Claro", description: "Fondos blancos", icon: Sun },
   { value: "blue", label: "Azul", description: "Fondo azul oscuro", icon: Palette },
+  { value: "light", label: "Claro", description: "Fondos blancos", icon: Sun },
 ];
 
 export default function SettingsCompany() {
