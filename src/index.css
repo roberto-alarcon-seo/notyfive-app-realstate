@@ -16,7 +16,7 @@
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 271 81% 56%;
+    --primary: 279 65% 49%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 16%;
@@ -39,29 +39,29 @@
 
     --border: 0 0% 17%;
     --input: 0 0% 17%;
-    --ring: 271 81% 56%;
+    --ring: 279 65% 49%;
 
     --radius: 0.75rem;
 
     /* Sidebar - Dark */
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 220 9% 46%;
-    --sidebar-primary: 271 81% 56%;
+    --sidebar-primary: 279 65% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 14%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 17%;
-    --sidebar-ring: 271 81% 56%;
+    --sidebar-ring: 279 65% 49%;
 
     /* Messages */
-    --message-outgoing: 271 81% 56%;
+    --message-outgoing: 279 65% 49%;
     --message-incoming: 0 0% 16%;
     --online: 142 76% 36%;
 
     /* Extras */
-    --gradient-primary: linear-gradient(135deg, hsl(271 81% 56%), hsl(271 81% 66%));
-    --shadow-elegant: 0 10px 30px -10px hsl(271 81% 56% / 0.3);
-    --shadow-glow: 0 0 40px hsl(271 81% 56% / 0.2);
+    --gradient-primary: linear-gradient(135deg, hsl(279 65% 49%), hsl(279 65% 59%));
+    --shadow-elegant: 0 10px 30px -10px hsl(279 65% 49% / 0.3);
+    --shadow-glow: 0 0 40px hsl(279 65% 49% / 0.2);
   }
 
   /* ===== DARK THEME ===== */
@@ -75,7 +75,7 @@
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 271 81% 56%;
+    --primary: 279 65% 49%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 16%;
@@ -98,27 +98,27 @@
 
     --border: 0 0% 17%;
     --input: 0 0% 17%;
-    --ring: 271 81% 56%;
+    --ring: 279 65% 49%;
 
     /* Sidebar */
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 220 9% 46%;
-    --sidebar-primary: 271 81% 56%;
+    --sidebar-primary: 279 65% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 14%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 17%;
-    --sidebar-ring: 271 81% 56%;
+    --sidebar-ring: 279 65% 49%;
 
     /* Messages */
-    --message-outgoing: 271 81% 56%;
+    --message-outgoing: 279 65% 49%;
     --message-incoming: 0 0% 16%;
     --online: 142 76% 36%;
 
     /* Extras */
-    --gradient-primary: linear-gradient(135deg, hsl(271 81% 56%), hsl(271 81% 66%));
-    --shadow-elegant: 0 10px 30px -10px hsl(271 81% 56% / 0.3);
-    --shadow-glow: 0 0 40px hsl(271 81% 56% / 0.2);
+    --gradient-primary: linear-gradient(135deg, hsl(279 65% 49%), hsl(279 65% 59%));
+    --shadow-elegant: 0 10px 30px -10px hsl(279 65% 49% / 0.3);
+    --shadow-glow: 0 0 40px hsl(279 65% 49% / 0.2);
   }
 
   /* ===== LIGHT THEME ===== */
@@ -132,7 +132,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 271 81% 56%;
+    --primary: 279 65% 49%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 92%;
@@ -155,7 +155,7 @@
 
     --border: 220 13% 87%;
     --input: 0 0% 100%;
-    --ring: 271 81% 56%;
+    --ring: 279 65% 49%;
 
     /* Main Sidebar - stays dark in light mode */
     --main-sidebar-background: 0 0% 8%;
@@ -166,22 +166,22 @@
     /* Secondary Sidebar - Light theme (white/light background) */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 9% 40%;
-    --sidebar-primary: 271 81% 56%;
+    --sidebar-primary: 279 65% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 271 81% 56%;
+    --sidebar-ring: 279 65% 49%;
 
     /* Messages */
-    --message-outgoing: 271 81% 56%;
+    --message-outgoing: 279 65% 49%;
     --message-incoming: 220 14% 92%;
     --online: 142 76% 36%;
 
     /* Extras */
-    --gradient-primary: linear-gradient(135deg, hsl(271 81% 56%), hsl(271 81% 66%));
-    --shadow-elegant: 0 10px 30px -10px hsl(271 81% 56% / 0.3);
-    --shadow-glow: 0 0 40px hsl(271 81% 56% / 0.2);
+    --gradient-primary: linear-gradient(135deg, hsl(279 65% 49%), hsl(279 65% 59%));
+    --shadow-elegant: 0 10px 30px -10px hsl(279 65% 49% / 0.3);
+    --shadow-glow: 0 0 40px hsl(279 65% 49% / 0.2);
   }
 
   /* ===== BLUE THEME (Brokia Original) ===== */
@@ -195,7 +195,7 @@
     --popover: 220 20% 18%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 280 70% 60%;
+    --primary: 279 65% 49%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 18% 22%;
@@ -204,7 +204,7 @@
     --muted: 220 15% 25%;
     --muted-foreground: 0 0% 65%;
 
-    --accent: 280 70% 60%;
+    --accent: 279 65% 49%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 85% 60%;
@@ -218,27 +218,27 @@
 
     --border: 220 15% 30%;
     --input: 220 15% 25%;
-    --ring: 280 70% 60%;
+    --ring: 279 65% 49%;
 
     /* Sidebar */
     --sidebar-background: 220 20% 16%;
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 280 70% 60%;
+    --sidebar-primary: 279 65% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 18% 22%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 220 15% 30%;
-    --sidebar-ring: 280 70% 60%;
+    --sidebar-ring: 279 65% 49%;
 
     /* Messages */
-    --message-outgoing: 280 70% 60%;
+    --message-outgoing: 279 65% 49%;
     --message-incoming: 220 18% 22%;
     --online: 142 76% 45%;
 
     /* Extras */
-    --gradient-primary: linear-gradient(135deg, hsl(280 70% 60%), hsl(280 70% 70%));
-    --shadow-elegant: 0 10px 30px -10px hsl(280 70% 60% / 0.3);
-    --shadow-glow: 0 0 40px hsl(280 70% 60% / 0.2);
+    --gradient-primary: linear-gradient(135deg, hsl(279 65% 49%), hsl(279 65% 59%));
+    --shadow-elegant: 0 10px 30px -10px hsl(279 65% 49% / 0.3);
+    --shadow-glow: 0 0 40px hsl(279 65% 49% / 0.2);
   }
 }
 
