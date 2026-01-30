@@ -276,11 +276,42 @@ export function usePropertyMutations() {
 
   const deleteProperty = useMutation({
     mutationFn: async (id: string) => {
+      // First, clear property references from contacts
+      const { error: contactsError } = await supabase
+        .from("contacts")
+        .update({ re_property_interest_id: null })
+        .eq("re_property_interest_id", id);
+      
+      if (contactsError) throw contactsError;
+
+      // Remove property from viewed properties arrays
+      const { data: contactsWithViewed } = await supabase
+        .from("contacts")
+        .select("id, re_properties_viewed_ids")
+        .contains("re_properties_viewed_ids", [id]);
+
+      if (contactsWithViewed && contactsWithViewed.length > 0) {
+        for (const contact of contactsWithViewed) {
+          const updatedIds = (contact.re_properties_viewed_ids || []).filter((pid: string) => pid !== id);
+          await supabase
+            .from("contacts")
+            .update({ re_properties_viewed_ids: updatedIds })
+            .eq("id", contact.id);
+        }
+      }
+
+      // Delete related data (images, documents, faq)
+      await supabase.from("property_images").delete().eq("property_id", id);
+      await supabase.from("property_documents").delete().eq("property_id", id);
+      await supabase.from("property_faq").delete().eq("property_id", id);
+
+      // Finally delete the property
       const { error } = await supabase.from("properties").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["properties"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
       toast.success("Propiedad eliminada exitosamente");
     },
     onError: (error: Error) => {
