@@ -103,7 +103,7 @@ export default function Contacts() {
   const [bulkTagInput, setBulkTagInput] = useState("");
   const [selectedSegmentId, setSelectedSegmentId] = useState("");
 
-  const canManageContacts = hasRole(['owner', 'marketer']);
+  const canManageContacts = hasRole(['administrador', 'manager']);
 
   // Static segments for adding contacts
   const staticSegments = useMemo(() => 

@@ -148,7 +148,7 @@ export default function SettingsContactFieldsPage() {
   }, [customFields]);
 
   // Check permissions
-  if (!hasRole(['owner'])) {
+  if (!hasRole(['administrador'])) {
     return (
       <SettingsLayout title="Campos personalizados" description="Campos de contactos" icon={ListPlus}>
         <div className="flex flex-col items-center justify-center py-20 text-center">

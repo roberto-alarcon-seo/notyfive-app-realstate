@@ -3,7 +3,10 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 export type GlobalRole = 'super_admin' | 'user';
-export type TenantRole = 'owner' | 'marketer' | 'readonly';
+// Nuevos roles de tenant: administrador (acceso total), manager (operativo), asesor (solo propiedades asignadas)
+export type TenantRole = 'administrador' | 'manager' | 'asesor';
+// Legacy roles para compatibilidad (mapeo: owner->administrador, marketer->manager, readonly->asesor)
+export type LegacyTenantRole = 'owner' | 'marketer' | 'readonly';
 
 interface Profile {
   id: string;

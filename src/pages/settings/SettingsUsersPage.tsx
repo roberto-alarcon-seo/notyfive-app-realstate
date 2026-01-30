@@ -53,13 +53,13 @@ const userSchema = z.object({
   name: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
   email: z.string().trim().email("Email inválido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-  tenant_role: z.enum(['owner', 'marketer', 'readonly']),
+  tenant_role: z.enum(['administrador', 'manager', 'asesor']),
 });
 
 const ROLE_ORDER: Record<TenantRole, number> = {
-  owner: 0,
-  marketer: 1,
-  readonly: 2,
+  administrador: 0,
+  manager: 1,
+  asesor: 2,
 };
 
 export default function SettingsUsers() {
@@ -73,7 +73,7 @@ export default function SettingsUsers() {
 
   // Edit role dialog state
   const [editRoleUser, setEditRoleUser] = useState<TenantUser | null>(null);
-  const [newRole, setNewRole] = useState<TenantRole>('marketer');
+  const [newRole, setNewRole] = useState<TenantRole>('asesor');
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   // Form state
@@ -81,16 +81,16 @@ export default function SettingsUsers() {
     name: '',
     email: '',
     password: '',
-    tenant_role: 'marketer' as TenantRole,
+    tenant_role: 'asesor' as TenantRole,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Computed values
   const activeUsersCount = users.filter(u => u.status === 'active').length;
-  const ownerCount = users.filter(u => u.tenant_role === 'owner' && u.status === 'active').length;
+  const adminCount = users.filter(u => u.tenant_role === 'administrador' && u.status === 'active').length;
 
-  // Check access - only owners can access this module
-  const hasAccess = tenantRole === 'owner';
+  // Check access - only administrador can access this module
+  const hasAccess = tenantRole === 'administrador';
 
   const fetchUsers = async () => {
     if (!profile?.tenant_id) return;
@@ -128,8 +128,8 @@ export default function SettingsUsers() {
           };
         })
         .sort((a, b) => {
-          const roleA = ROLE_ORDER[a.tenant_role || 'readonly'];
-          const roleB = ROLE_ORDER[b.tenant_role || 'readonly'];
+          const roleA = ROLE_ORDER[a.tenant_role || 'asesor'];
+          const roleB = ROLE_ORDER[b.tenant_role || 'asesor'];
           if (roleA !== roleB) return roleA - roleB;
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
@@ -157,8 +157,6 @@ export default function SettingsUsers() {
       toast.error('No se encontró el tenant');
       return;
     }
-
-    // No limit checks - unlimited users
 
     const result = userSchema.safeParse(formData);
     if (!result.success) {
@@ -191,7 +189,7 @@ export default function SettingsUsers() {
 
       toast.success('Usuario creado correctamente');
       setIsCreateOpen(false);
-      setFormData({ name: '', email: '', password: '', tenant_role: 'marketer' });
+      setFormData({ name: '', email: '', password: '', tenant_role: 'asesor' });
       setShowPassword(false);
       fetchUsers();
     } catch (error: any) {
@@ -209,12 +207,10 @@ export default function SettingsUsers() {
     const user = users.find(u => u.id === userId);
     if (!user) return;
 
-    if (newStatus === 'disabled' && user.tenant_role === 'owner' && ownerCount <= 1) {
-      toast.error('No puedes desactivar al único Owner de este tenant.');
+    if (newStatus === 'disabled' && user.tenant_role === 'administrador' && adminCount <= 1) {
+      toast.error('No puedes desactivar al único Administrador de este tenant.');
       return;
     }
-
-    // No limit checks for reactivating users - unlimited users
 
     try {
       const { error } = await supabase
@@ -233,8 +229,8 @@ export default function SettingsUsers() {
   const handleUpdateRole = async () => {
     if (!editRoleUser) return;
 
-    if (editRoleUser.tenant_role === 'owner' && newRole !== 'owner' && ownerCount <= 1) {
-      toast.error('Debe existir al menos un Owner en cada empresa.');
+    if (editRoleUser.tenant_role === 'administrador' && newRole !== 'administrador' && adminCount <= 1) {
+      toast.error('Debe existir al menos un Administrador en cada empresa.');
       setEditRoleUser(null);
       return;
     }
@@ -265,17 +261,17 @@ export default function SettingsUsers() {
 
   const getRoleBadgeVariant = (role: TenantRole | null) => {
     switch (role) {
-      case 'owner': return 'default';
-      case 'marketer': return 'secondary';
+      case 'administrador': return 'default';
+      case 'manager': return 'secondary';
       default: return 'outline';
     }
   };
 
   const getRoleLabel = (role: TenantRole | null) => {
     switch (role) {
-      case 'owner': return 'Owner';
-      case 'marketer': return 'Marketer';
-      case 'readonly': return 'Solo lectura';
+      case 'administrador': return 'Administrador';
+      case 'manager': return 'Manager';
+      case 'asesor': return 'Asesor';
       default: return 'Sin rol';
     }
   };
@@ -288,7 +284,7 @@ export default function SettingsUsers() {
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold text-foreground mb-2">Acceso restringido</h2>
           <p className="text-muted-foreground max-w-md">
-            Solo los Owners pueden gestionar los usuarios del equipo.
+            Solo los Administradores pueden gestionar los usuarios del equipo.
           </p>
         </div>
       </SettingsLayout>
@@ -380,9 +376,9 @@ export default function SettingsUsers() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="owner">Owner - Acceso completo</SelectItem>
-                      <SelectItem value="marketer">Marketer - Puede crear y editar</SelectItem>
-                      <SelectItem value="readonly">Solo lectura - Solo puede ver</SelectItem>
+                      <SelectItem value="administrador">Administrador — Acceso completo</SelectItem>
+                      <SelectItem value="manager">Manager — Acceso operativo total</SelectItem>
+                      <SelectItem value="asesor">Asesor — Solo propiedades asignadas</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -474,7 +470,7 @@ export default function SettingsUsers() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => {
                             setEditRoleUser(user);
-                            setNewRole(user.tenant_role || 'readonly');
+                            setNewRole(user.tenant_role || 'asesor');
                           }}>
                             Cambiar rol
                           </DropdownMenuItem>
@@ -514,9 +510,9 @@ export default function SettingsUsers() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="owner">Owner</SelectItem>
-              <SelectItem value="marketer">Marketer</SelectItem>
-              <SelectItem value="readonly">Solo lectura</SelectItem>
+              <SelectItem value="administrador">Administrador — Acceso completo</SelectItem>
+              <SelectItem value="manager">Manager — Acceso operativo total</SelectItem>
+              <SelectItem value="asesor">Asesor — Solo propiedades asignadas</SelectItem>
             </SelectContent>
           </Select>
           <AlertDialogFooter>

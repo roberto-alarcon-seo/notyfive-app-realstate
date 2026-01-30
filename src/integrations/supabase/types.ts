@@ -1763,7 +1763,9 @@ export type Database = {
           media_size_bytes: number | null
           media_type: string | null
           media_urls: string[] | null
+          on_behalf_of_user_id: string | null
           provider: string
+          sent_by_user_id: string | null
           source: string
           status: string
           template_id: string | null
@@ -1792,7 +1794,9 @@ export type Database = {
           media_size_bytes?: number | null
           media_type?: string | null
           media_urls?: string[] | null
+          on_behalf_of_user_id?: string | null
           provider?: string
+          sent_by_user_id?: string | null
           source?: string
           status?: string
           template_id?: string | null
@@ -1821,7 +1825,9 @@ export type Database = {
           media_size_bytes?: number | null
           media_type?: string | null
           media_urls?: string[] | null
+          on_behalf_of_user_id?: string | null
           provider?: string
+          sent_by_user_id?: string | null
           source?: string
           status?: string
           template_id?: string | null
@@ -2124,6 +2130,48 @@ export type Database = {
           },
           {
             foreignKeyName: "properties_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string | null
+          id: string
+          property_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          property_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          property_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_assignments_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_assignments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3417,6 +3465,10 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: boolean
       }
+      can_access_conversation: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_send_message: { Args: { p_tenant_id: string }; Returns: boolean }
       can_tenant_send_message: {
         Args: { p_tenant_id: string }
@@ -3550,6 +3602,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_property_assignment: {
+        Args: { _property_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_tenant_role: {
         Args: {
           _role: Database["public"]["Enums"]["tenant_role"]
@@ -3558,6 +3614,11 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_tenant_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_tenant_manager_or_admin: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       ai_tone: "cordial" | "professional" | "friendly" | "adaptive"
@@ -3651,7 +3712,13 @@ export type Database = {
         | "starter"
         | "growth"
         | "scale"
-      tenant_role: "owner" | "marketer" | "readonly"
+      tenant_role:
+        | "owner"
+        | "marketer"
+        | "readonly"
+        | "administrador"
+        | "manager"
+        | "asesor"
       tenant_status: "active" | "suspended" | "trial"
       ticket_category:
         | "bug"
@@ -3903,7 +3970,14 @@ export const Constants = {
         "growth",
         "scale",
       ],
-      tenant_role: ["owner", "marketer", "readonly"],
+      tenant_role: [
+        "owner",
+        "marketer",
+        "readonly",
+        "administrador",
+        "manager",
+        "asesor",
+      ],
       tenant_status: ["active", "suspended", "trial"],
       ticket_category: [
         "bug",
