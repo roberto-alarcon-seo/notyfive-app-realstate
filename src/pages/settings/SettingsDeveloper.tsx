@@ -8,7 +8,7 @@ import { ShieldAlert } from "lucide-react";
 
 export default function SettingsDeveloper() {
   const { tenantRole, isSuperAdmin } = useAuth();
-  const isOwner = tenantRole === "owner" || isSuperAdmin;
+  const isOwner = tenantRole === "administrador" || isSuperAdmin;
 
   return (
     <SettingsLayout

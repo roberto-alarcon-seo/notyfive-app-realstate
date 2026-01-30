@@ -33,9 +33,9 @@ export const UserMenu = () => {
   const getRoleLabel = () => {
     if (isSuperAdmin) return 'Super Admin';
     switch (tenantRole) {
-      case 'owner': return 'Owner';
-      case 'marketer': return 'Marketer';
-      case 'readonly': return 'Solo lectura';
+      case 'administrador': return 'Administrador';
+      case 'manager': return 'Manager';
+      case 'asesor': return 'Asesor';
       default: return 'Usuario';
     }
   };
@@ -94,7 +94,7 @@ export const UserMenu = () => {
           Configuración
         </DropdownMenuItem>
 
-        {tenantRole === 'owner' && (
+        {tenantRole === 'administrador' && (
           <DropdownMenuItem onClick={() => navigate('/support')}>
             <LifeBuoy className="h-4 w-4 mr-2" />
             Soporte técnico

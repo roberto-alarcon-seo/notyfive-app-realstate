@@ -43,7 +43,7 @@ export function useCustomFields() {
   const tenantId = useEffectiveTenantId();
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [loading, setLoading] = useState(true);
-  const isOwner = hasRole(['owner']);
+  const isOwner = hasRole(['administrador']);
 
   const fetchCustomFields = useCallback(async () => {
     if (!tenantId) {

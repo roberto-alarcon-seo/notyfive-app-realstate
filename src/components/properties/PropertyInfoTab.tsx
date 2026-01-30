@@ -62,16 +62,34 @@ export default function PropertyInfoTab({
 }: PropertyInfoTabProps) {
   const tenantId = useEffectiveTenantId();
 
-  const { data: users } = useQuery({
-    queryKey: ["tenant-users", tenantId],
+  // Fetch only users with 'asesor' role for property assignment
+  const { data: asesores } = useQuery({
+    queryKey: ["tenant-asesores", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!tenantId) return [];
+      
+      // First get user_roles with asesor role
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("tenant_role", "asesor");
+      
+      if (rolesError) throw rolesError;
+      
+      const asesorUserIds = roles?.map(r => r.user_id) || [];
+      
+      if (asesorUserIds.length === 0) return [];
+      
+      // Then get profiles for those users
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, name")
-        .eq("tenant_id", tenantId!)
-        .eq("status", "active");
-      if (error) throw error;
-      return data;
+        .eq("tenant_id", tenantId)
+        .eq("status", "active")
+        .in("id", asesorUserIds);
+      
+      if (profilesError) throw profilesError;
+      return profiles || [];
     },
     enabled: !!tenantId,
   });
@@ -104,7 +122,7 @@ export default function PropertyInfoTab({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="assigned_user">Usuario asignado</Label>
+                <Label htmlFor="assigned_user">Asesor asignado</Label>
                 <Select
                   value={formData.assigned_user_id || "none"}
                   onValueChange={(v) =>
@@ -116,7 +134,7 @@ export default function PropertyInfoTab({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin asignar</SelectItem>
-                    {users?.map((user) => (
+                    {asesores?.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name}
                       </SelectItem>

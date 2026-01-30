@@ -83,6 +83,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }
 
+  // For settings routes, only administrador can access (checked separately in routes)
+
   // Normal user must have a tenant
   if (!isSuperAdmin && !profile.tenant_id) {
     return (
