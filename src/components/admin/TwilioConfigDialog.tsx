@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { 
   Eye, EyeOff, Loader2, Check, Copy, ExternalLink, 
-  Phone, Webhook, AlertTriangle, MessageSquare
+  Phone, Webhook, AlertTriangle, MessageSquare, Smartphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,14 @@ interface PhoneNumber {
   sid: string;
   phoneNumber: string;
   friendlyName: string;
+}
+
+interface WhatsAppSender {
+  phoneNumber: string;
+  displayPhoneNumber: string;
+  businessName: string;
+  qualityRating: string;
+  status: string;
 }
 
 interface TenantIntegration {
@@ -69,6 +77,7 @@ export function TwilioConfigDialog({
   const [showAuthToken, setShowAuthToken] = useState(false);
   const [messagingServices, setMessagingServices] = useState<MessagingService[]>([]);
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
+  const [whatsappSenders, setWhatsappSenders] = useState<WhatsAppSender[]>([]);
   const [accountInfo, setAccountInfo] = useState<{ name: string; status: string } | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -78,11 +87,12 @@ export function TwilioConfigDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
-  // Selection state
-  const [selectionType, setSelectionType] = useState<'service' | 'number' | 'sandbox'>('service');
+  // Selection state - now includes 'whatsapp' option
+  const [selectionType, setSelectionType] = useState<'service' | 'number' | 'whatsapp' | 'manual'>('service');
   const [selectedServiceSid, setSelectedServiceSid] = useState<string>("");
   const [selectedNumberSid, setSelectedNumberSid] = useState<string>("");
-  const [manualPhoneNumber, setManualPhoneNumber] = useState<string>("+1 415 523 8886"); // Default Sandbox number
+  const [selectedWhatsAppNumber, setSelectedWhatsAppNumber] = useState<string>("");
+  const [manualPhoneNumber, setManualPhoneNumber] = useState<string>("");
 
   const isConnected = existingIntegration?.status === 'connected';
 
@@ -101,10 +111,13 @@ export function TwilioConfigDialog({
       setAuthToken("");
       setMessagingServices([]);
       setPhoneNumbers([]);
+      setWhatsappSenders([]);
       setAccountInfo(null);
       setWarning(null);
       setSelectedServiceSid("");
       setSelectedNumberSid("");
+      setSelectedWhatsAppNumber("");
+      setManualPhoneNumber("");
     }
   }, [open]);
 
@@ -155,17 +168,25 @@ export function TwilioConfigDialog({
       setWarning(data.warning || null);
       setMessagingServices(data.messagingServices || []);
       setPhoneNumbers(data.phoneNumbers || []);
+      setWhatsappSenders(data.whatsappSenders || []);
 
-      // Detect if no resources are available (Sandbox mode)
-      const hasResources = (data.messagingServices?.length > 0) || (data.phoneNumbers?.length > 0);
+      // Priority order for selection type:
+      // 1. WhatsApp Senders (most common for WhatsApp Business)
+      // 2. Messaging Services
+      // 3. Phone Numbers
+      // 4. Manual entry (fallback)
+      const hasWhatsAppSenders = (data.whatsappSenders?.length > 0);
+      const hasMessagingServices = (data.messagingServices?.length > 0);
+      const hasPhoneNumbers = (data.phoneNumbers?.length > 0);
       
-      if (!hasResources) {
-        // No resources found - likely Sandbox mode
-        setSelectionType('sandbox');
-      } else if (data.messagingServices && data.messagingServices.length > 0) {
+      if (hasWhatsAppSenders) {
+        setSelectionType('whatsapp');
+      } else if (hasMessagingServices) {
         setSelectionType('service');
-      } else if (data.phoneNumbers && data.phoneNumbers.length > 0) {
+      } else if (hasPhoneNumbers) {
         setSelectionType('number');
+      } else {
+        setSelectionType('manual');
       }
 
       setStep(2);
@@ -185,13 +206,16 @@ export function TwilioConfigDialog({
     const selectedNumber = selectionType === 'number'
       ? phoneNumbers.find(n => n.sid === selectedNumberSid)
       : null;
+    const selectedSender = selectionType === 'whatsapp'
+      ? whatsappSenders.find(s => s.phoneNumber === selectedWhatsAppNumber)
+      : null;
     
-    // For sandbox mode, create a manual number object
-    const sandboxNumber = selectionType === 'sandbox' && manualPhoneNumber.trim()
-      ? { sid: 'SANDBOX', phoneNumber: manualPhoneNumber.trim(), friendlyName: 'WhatsApp Sandbox' }
+    // For manual mode, create a manual number object
+    const manualNumber = selectionType === 'manual' && manualPhoneNumber.trim()
+      ? { sid: 'MANUAL', phoneNumber: manualPhoneNumber.trim(), friendlyName: 'WhatsApp Manual' }
       : null;
 
-    if (!selectedService && !selectedNumber && !sandboxNumber) {
+    if (!selectedService && !selectedNumber && !selectedSender && !manualNumber) {
       toast.error("Selecciona o ingresa un número");
       return;
     }
@@ -205,7 +229,8 @@ export function TwilioConfigDialog({
           action: 'save',
           tenantId,
           selectedService,
-          selectedNumber: selectedNumber || sandboxNumber
+          selectedNumber: selectedNumber || manualNumber,
+          selectedWhatsAppSender: selectedSender
         }
       });
 
@@ -269,6 +294,23 @@ export function TwilioConfigDialog({
     setStep(1);
   };
 
+  // Check if save button should be disabled
+  const isSaveDisabled = () => {
+    if (isSaving) return true;
+    switch (selectionType) {
+      case 'service':
+        return !selectedServiceSid;
+      case 'number':
+        return !selectedNumberSid;
+      case 'whatsapp':
+        return !selectedWhatsAppNumber;
+      case 'manual':
+        return !manualPhoneNumber.trim();
+      default:
+        return true;
+    }
+  };
+
   if (isLoadingIntegration) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -307,7 +349,7 @@ export function TwilioConfigDialog({
                   </div>
                   <div>
                     <p className="text-muted-foreground">
-                      {existingIntegration?.messaging_service_sid ? 'Messaging Service' : 'Número'}
+                      {existingIntegration?.messaging_service_sid ? 'Messaging Service' : 'Número WhatsApp'}
                     </p>
                     <p className="text-xs">
                       {existingIntegration?.messaging_service_sid 
@@ -460,15 +502,59 @@ export function TwilioConfigDialog({
 
                   <RadioGroup
                     value={selectionType}
-                    onValueChange={(v) => setSelectionType(v as 'service' | 'number' | 'sandbox')}
+                    onValueChange={(v) => setSelectionType(v as 'service' | 'number' | 'whatsapp' | 'manual')}
                     className="space-y-3"
                   >
+                    {/* WhatsApp Senders - Priority option for WABA numbers */}
+                    {whatsappSenders.length > 0 && (
+                      <div className={`flex items-start gap-3 p-3 rounded-lg border ${
+                        selectionType === 'whatsapp' ? 'border-primary bg-primary/5' : 'border-border'
+                      }`}>
+                        <RadioGroupItem value="whatsapp" id="whatsapp" className="mt-1" />
+                        <div className="flex-1">
+                          <Label htmlFor="whatsapp" className="font-medium cursor-pointer flex items-center gap-2">
+                            <Badge className="bg-green-600 text-xs">Recomendado</Badge>
+                            WhatsApp Business
+                          </Label>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Líneas registradas en WhatsApp Business API
+                          </p>
+                          {selectionType === 'whatsapp' && (
+                            <Select value={selectedWhatsAppNumber} onValueChange={setSelectedWhatsAppNumber}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona tu línea WhatsApp" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {whatsappSenders.map((sender) => (
+                                  <SelectItem key={sender.phoneNumber} value={sender.phoneNumber}>
+                                    <div className="flex items-center gap-2">
+                                      <Smartphone className="h-4 w-4 text-green-600" />
+                                      <span>{sender.phoneNumber}</span>
+                                      {sender.businessName && sender.businessName !== sender.phoneNumber && (
+                                        <span className="text-muted-foreground">- {sender.businessName}</span>
+                                      )}
+                                      {sender.status === 'Online' && (
+                                        <Badge variant="outline" className="text-xs text-green-600 border-green-600">Online</Badge>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Messaging Services */}
                     {messagingServices.length > 0 && (
-                      <div className="flex items-start gap-3 p-3 rounded-lg border border-border">
+                      <div className={`flex items-start gap-3 p-3 rounded-lg border ${
+                        selectionType === 'service' ? 'border-primary bg-primary/5' : 'border-border'
+                      }`}>
                         <RadioGroupItem value="service" id="service" className="mt-1" />
                         <div className="flex-1">
                           <Label htmlFor="service" className="font-medium cursor-pointer">
-                            Messaging Service (Recomendado)
+                            Messaging Service
                           </Label>
                           <p className="text-xs text-muted-foreground mb-2">
                             Usa un servicio configurado en Twilio
@@ -491,15 +577,18 @@ export function TwilioConfigDialog({
                       </div>
                     )}
 
+                    {/* Phone Numbers (Twilio-owned numbers) */}
                     {phoneNumbers.length > 0 && (
-                      <div className="flex items-start gap-3 p-3 rounded-lg border border-border">
+                      <div className={`flex items-start gap-3 p-3 rounded-lg border ${
+                        selectionType === 'number' ? 'border-primary bg-primary/5' : 'border-border'
+                      }`}>
                         <RadioGroupItem value="number" id="number" className="mt-1" />
                         <div className="flex-1">
                           <Label htmlFor="number" className="font-medium cursor-pointer">
-                            Número WhatsApp
+                            Número Twilio
                           </Label>
                           <p className="text-xs text-muted-foreground mb-2">
-                            Envía directamente desde un número
+                            Números comprados en Twilio
                           </p>
                           {selectionType === 'number' && (
                             <Select value={selectedNumberSid} onValueChange={setSelectedNumberSid}>
@@ -522,32 +611,23 @@ export function TwilioConfigDialog({
                       </div>
                     )}
 
-                    {/* Sandbox/Manual mode - shown when no resources or always as option */}
+                    {/* Manual entry - always available as fallback */}
                     <div className={`flex items-start gap-3 p-3 rounded-lg border ${
-                      selectionType === 'sandbox' ? 'border-primary bg-primary/5' : 'border-border'
+                      selectionType === 'manual' ? 'border-primary bg-primary/5' : 'border-border'
                     }`}>
-                      <RadioGroupItem value="sandbox" id="sandbox" className="mt-1" />
+                      <RadioGroupItem value="manual" id="manual" className="mt-1" />
                       <div className="flex-1">
-                        <Label htmlFor="sandbox" className="font-medium cursor-pointer flex items-center gap-2">
-                          {messagingServices.length === 0 && phoneNumbers.length === 0 ? (
-                            <>
-                              <Badge variant="secondary" className="text-xs">Sandbox</Badge>
-                              Número Manual / Sandbox
-                            </>
-                          ) : (
-                            'Ingresar número manualmente'
-                          )}
+                        <Label htmlFor="manual" className="font-medium cursor-pointer">
+                          Ingresar número manualmente
                         </Label>
                         <p className="text-xs text-muted-foreground mb-2">
-                          {messagingServices.length === 0 && phoneNumbers.length === 0 
-                            ? 'No se detectaron números. Ingresa el número del Sandbox de Twilio.'
-                            : 'Ingresa un número WhatsApp manualmente'}
+                          Ingresa el número de WhatsApp manualmente (incluye el código de país)
                         </p>
-                        {selectionType === 'sandbox' && (
+                        {selectionType === 'manual' && (
                           <Input
                             value={manualPhoneNumber}
                             onChange={(e) => setManualPhoneNumber(e.target.value)}
-                            placeholder="+1 415 523 8886"
+                            placeholder="+521XXXXXXXXXX"
                             className="font-mono"
                           />
                         )}
@@ -561,11 +641,7 @@ export function TwilioConfigDialog({
                     </Button>
                     <Button 
                       onClick={handleSave} 
-                      disabled={isSaving || (
-                        selectionType === 'service' ? !selectedServiceSid : 
-                        selectionType === 'number' ? !selectedNumberSid :
-                        !manualPhoneNumber.trim()
-                      )}
+                      disabled={isSaveDisabled()}
                       className="flex-1"
                     >
                       {isSaving ? (
