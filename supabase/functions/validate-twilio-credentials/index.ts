@@ -16,11 +16,19 @@ interface TwilioPhoneNumber {
   sid: string;
   phone_number: string;
   friendly_name: string;
-  capabilities: {
+  capabilities?: {
     mms: boolean;
     sms: boolean;
     voice: boolean;
   };
+}
+
+interface WhatsAppSender {
+  phone_number: string;
+  display_phone_number: string;
+  business_name: string;
+  quality_rating: string;
+  status: string;
 }
 
 serve(async (req) => {
@@ -30,7 +38,7 @@ serve(async (req) => {
   }
 
   try {
-    const { accountSid, authToken, action, tenantId, selectedService, selectedNumber } = await req.json();
+    const { accountSid, authToken, action, tenantId, selectedService, selectedNumber, selectedWhatsAppSender } = await req.json();
 
     if (!accountSid || !authToken) {
       return new Response(
@@ -55,9 +63,9 @@ serve(async (req) => {
         );
       }
 
-      if (!selectedService && !selectedNumber) {
+      if (!selectedService && !selectedNumber && !selectedWhatsAppSender) {
         return new Response(
-          JSON.stringify({ error: 'Debes seleccionar un Messaging Service o un número' }),
+          JSON.stringify({ error: 'Debes seleccionar un Messaging Service, número o WhatsApp Sender' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -105,6 +113,16 @@ serve(async (req) => {
         integrationData.messaging_service_sid = selectedService.sid;
         integrationData.phone_number_name = selectedService.name || selectedService.friendly_name || accountData.friendly_name;
         integrationData.phone_number = null;
+      } else if (selectedWhatsAppSender) {
+        // WhatsApp Sender - use the phone number from the sender
+        const phoneNum = selectedWhatsAppSender.phoneNumber || selectedWhatsAppSender.phone_number;
+        const businessName = selectedWhatsAppSender.businessName || selectedWhatsAppSender.business_name;
+        
+        console.log('Saving WhatsApp Sender:', { phoneNum, businessName, selectedWhatsAppSender });
+        
+        integrationData.phone_number = phoneNum;
+        integrationData.phone_number_name = businessName || accountData.friendly_name;
+        integrationData.messaging_service_sid = null;
       } else if (selectedNumber) {
         // Handle both camelCase (from frontend) and snake_case property names
         const phoneNum = selectedNumber.phoneNumber || selectedNumber.phone_number;
@@ -211,10 +229,39 @@ serve(async (req) => {
       console.error('Error fetching messaging services:', e);
     }
 
-    // Step 3: Fetch WhatsApp-enabled numbers (Twilio Senders)
-    let whatsappNumbers: TwilioPhoneNumber[] = [];
+    // Step 3: Fetch WhatsApp Senders (registered WhatsApp numbers)
+    let whatsappSenders: WhatsAppSender[] = [];
     try {
-      // Fetch incoming phone numbers that could be WhatsApp enabled
+      // Fetch WhatsApp Senders from Twilio Messaging API
+      const sendersRes = await fetch(
+        `https://messaging.twilio.com/v1/Senders?Types=whatsapp`,
+        { headers: twilioHeaders }
+      );
+      
+      if (sendersRes.ok) {
+        const sendersData = await sendersRes.json();
+        console.log('WhatsApp Senders response:', JSON.stringify(sendersData));
+        
+        if (sendersData.senders && sendersData.senders.length > 0) {
+          whatsappSenders = sendersData.senders.map((s: any) => ({
+            phone_number: s.phone_number,
+            display_phone_number: s.phone_number,
+            business_name: s.friendly_name || s.phone_number,
+            quality_rating: s.quality_rating || 'unknown',
+            status: s.status || 'unknown',
+          }));
+          console.log('WhatsApp Senders found:', whatsappSenders.length);
+        }
+      } else {
+        console.log('WhatsApp Senders API returned:', sendersRes.status);
+      }
+    } catch (e) {
+      console.error('Error fetching WhatsApp senders:', e);
+    }
+
+    // Step 4: Fetch incoming phone numbers (Twilio numbers)
+    let phoneNumbers: TwilioPhoneNumber[] = [];
+    try {
       const numbersRes = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/IncomingPhoneNumbers.json`,
         { headers: twilioHeaders }
@@ -222,8 +269,8 @@ serve(async (req) => {
       
       if (numbersRes.ok) {
         const numbersData = await numbersRes.json();
-        whatsappNumbers = numbersData.incoming_phone_numbers || [];
-        console.log('Phone numbers found:', whatsappNumbers.length);
+        phoneNumbers = numbersData.incoming_phone_numbers || [];
+        console.log('Incoming Phone numbers found:', phoneNumbers.length);
       }
     } catch (e) {
       console.error('Error fetching phone numbers:', e);
@@ -248,7 +295,14 @@ serve(async (req) => {
           name: s.friendly_name,
           dateCreated: s.date_created,
         })),
-        phoneNumbers: whatsappNumbers.map(n => ({
+        whatsappSenders: whatsappSenders.map(s => ({
+          phoneNumber: s.phone_number,
+          displayPhoneNumber: s.display_phone_number,
+          businessName: s.business_name,
+          qualityRating: s.quality_rating,
+          status: s.status,
+        })),
+        phoneNumbers: phoneNumbers.map(n => ({
           sid: n.sid,
           phoneNumber: n.phone_number,
           friendlyName: n.friendly_name,
