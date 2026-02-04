@@ -171,21 +171,24 @@ export default function SettingsUsers() {
     setIsCreating(true);
 
     try {
-      const { error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            name: formData.name,
-            tenant_id: profile.tenant_id,
-            global_role: 'user',
-            tenant_role: formData.tenant_role,
-          },
+      // Use edge function to create user (doesn't affect caller's session)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('invite-tenant-user', {
+        body: {
+          email: formData.email,
+          name: formData.name,
+          password: formData.password,
+          tenantRole: formData.tenant_role,
         },
       });
 
-      if (authError) throw authError;
+      if (response.error) {
+        throw new Error(response.error.message || 'Error al crear el usuario');
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
 
       toast.success('Usuario creado correctamente');
       setIsCreateOpen(false);
@@ -193,8 +196,10 @@ export default function SettingsUsers() {
       setShowPassword(false);
       fetchUsers();
     } catch (error: any) {
-      if (error.message?.includes('already registered')) {
+      if (error.message?.includes('already registered') || error.message?.includes('ya está registrado')) {
         toast.error('Este email ya está registrado');
+      } else if (error.message?.includes('límite de usuarios')) {
+        toast.error(error.message);
       } else {
         toast.error(error.message || 'Error al crear el usuario');
       }
