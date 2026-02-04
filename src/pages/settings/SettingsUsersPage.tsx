@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, MoreHorizontal, Loader2, UserCheck, UserX, Eye, EyeOff, Users, AlertCircle } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Loader2, UserCheck, UserX, Eye, EyeOff, Users, AlertCircle, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth, TenantRole } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -75,6 +75,10 @@ export default function SettingsUsers() {
   const [editRoleUser, setEditRoleUser] = useState<TenantUser | null>(null);
   const [newRole, setNewRole] = useState<TenantRole>('asesor');
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+
+  // Delete user dialog state
+  const [deleteUser, setDeleteUser] = useState<TenantUser | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -256,6 +260,48 @@ export default function SettingsUsers() {
       toast.error('Error al actualizar el rol');
     } finally {
       setIsUpdatingRole(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUser) return;
+
+    // Prevent deleting yourself
+    if (deleteUser.id === profile?.id) {
+      toast.error('No puedes eliminarte a ti mismo');
+      setDeleteUser(null);
+      return;
+    }
+
+    // Prevent deleting last admin
+    if (deleteUser.tenant_role === 'administrador' && adminCount <= 1) {
+      toast.error('No puedes eliminar al único Administrador del tenant');
+      setDeleteUser(null);
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const response = await supabase.functions.invoke('delete-tenant-user', {
+        body: { userId: deleteUser.id },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Error al eliminar el usuario');
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast.success('Usuario eliminado correctamente');
+      setDeleteUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar el usuario');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -490,6 +536,15 @@ export default function SettingsUsers() {
                               Activar
                             </DropdownMenuItem>
                           )}
+                          {user.id !== profile?.id && (
+                            <DropdownMenuItem 
+                              onClick={() => setDeleteUser(user)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -524,6 +579,28 @@ export default function SettingsUsers() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleUpdateRole} disabled={isUpdatingRole}>
               {isUpdatingRole ? 'Guardando...' : 'Guardar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!deleteUser} onOpenChange={() => setDeleteUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente a <strong>{deleteUser?.name}</strong> ({deleteUser?.email}) del sistema. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser} 
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Eliminando...' : 'Eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
