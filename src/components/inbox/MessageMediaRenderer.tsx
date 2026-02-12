@@ -148,19 +148,41 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { url: proxiedUrl, isLoading: mediaLoading } = useProxiedMediaUrl(media.url);
 
-  // Handle legacy media_urls array
-  if (media.mediaUrls && media.mediaUrls.length > 0 && !media.url) {
+  // Handle multiple images (media_urls array with more than 1 item)
+  const multipleImages = media.mediaUrls && media.mediaUrls.length > 1 && 
+    (media.type === 'image' || !media.type || media.mimeType?.startsWith('image/'));
+  
+  if (multipleImages) {
+    const urls = media.mediaUrls!;
+    const gridCols = urls.length === 2 ? 'grid-cols-2' : urls.length >= 3 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1';
     return (
-      <div className={cn("space-y-2", className)}>
-        {media.mediaUrls.map((url, idx) => (
-          <ImagePreview
-            key={idx}
-            url={url}
-            onExpand={() => setImagePreview(url)}
-          />
-        ))}
+      <div className={cn("space-y-1", className)}>
+        <div className={cn("grid gap-1.5", gridCols)}>
+          {urls.map((url, idx) => (
+            <ImagePreview
+              key={idx}
+              url={url}
+              onExpand={() => setImagePreview(url)}
+              className="!max-w-full"
+            />
+          ))}
+        </div>
         <ImageDialog url={imagePreview} onClose={() => setImagePreview(null)} />
       </div>
+    );
+  }
+
+  // Handle single media_urls array (legacy)
+  if (media.mediaUrls && media.mediaUrls.length === 1 && !media.url) {
+    return (
+      <>
+        <ImagePreview
+          url={media.mediaUrls[0]}
+          onExpand={() => setImagePreview(media.mediaUrls![0])}
+          className={className}
+        />
+        <ImageDialog url={imagePreview} onClose={() => setImagePreview(null)} />
+      </>
     );
   }
 
