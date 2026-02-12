@@ -430,27 +430,53 @@ async function sendAIResponse(
 
     // Send via Twilio
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    const authHeader = `Basic ${btoa(`${accountSid}:${authToken}`)}`;
     
+    // Send text message first
     const formData = new URLSearchParams();
     formData.append('From', `whatsapp:${fromNumber}`);
     formData.append('To', `whatsapp:${toNumber}`);
     formData.append('Body', message);
     
-    // Add media URLs if present (max 5 images)
-    if (mediaUrls?.length) {
-      for (const url of mediaUrls.slice(0, 5)) {
-        formData.append('MediaUrl', url);
-      }
+    // WhatsApp only supports 1 media per message, so we send the first image with the text
+    const imagesToSend = mediaUrls?.slice(0, 5) || [];
+    if (imagesToSend.length > 0) {
+      formData.append('MediaUrl', imagesToSend[0]);
     }
 
     const twilioResponse = await fetch(twilioUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+        'Authorization': authHeader,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: formData,
     });
+
+    // Send remaining images as separate messages (2nd through 5th)
+    if (imagesToSend.length > 1) {
+      for (let i = 1; i < imagesToSend.length; i++) {
+        try {
+          const imgForm = new URLSearchParams();
+          imgForm.append('From', `whatsapp:${fromNumber}`);
+          imgForm.append('To', `whatsapp:${toNumber}`);
+          imgForm.append('MediaUrl', imagesToSend[i]);
+          
+          await fetch(twilioUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': authHeader,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: imgForm,
+          });
+          // Small delay between sends to avoid rate limits
+          await delay(300);
+        } catch (imgErr) {
+          console.warn(`⚠️ Failed to send image ${i + 1}:`, imgErr);
+        }
+      }
+    }
 
     const twilioResult = await twilioResponse.json();
 
