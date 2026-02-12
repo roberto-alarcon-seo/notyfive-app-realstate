@@ -486,12 +486,12 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
         {/* Needs Human Alert Section */}
         {conversation.needs_human && (
           <div className="space-y-3 overflow-hidden">
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 overflow-hidden">
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/15 p-3 overflow-hidden">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                 <div className="flex-1 space-y-1 min-w-0">
-                  <p className="text-sm font-medium text-amber-200 truncate">Requiere atención humana</p>
-                  <p className="text-xs text-amber-200/70 break-words">
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200 truncate">Requiere atención humana</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300/80 break-words">
                     {conversation.ai_pause_reason === 'human_request' ? 'El cliente solicitó hablar con una persona.' :
                      conversation.ai_pause_reason === 'frustration' ? 'Se detectó frustración en el cliente.' :
                      conversation.ai_pause_reason === 'no_answer' ? 'La IA no encontró una respuesta adecuada.' :
