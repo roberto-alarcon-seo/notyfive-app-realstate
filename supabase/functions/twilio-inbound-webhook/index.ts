@@ -48,6 +48,7 @@ serve(async (req) => {
     const messageBody = body.Body || '';
     const numMedia = parseInt(body.NumMedia || '0');
     const accountSid = body.AccountSid;
+    const profileName = body.ProfileName || null;
 
     if (!from || !to || !accountSid) {
       console.error('❌ Missing required fields');
@@ -80,17 +81,23 @@ serve(async (req) => {
     let contactId: string;
     const { data: existingContact } = await supabase
       .from('contacts')
-      .select('id')
+      .select('id, name')
       .eq('tenant_id', tenantId)
       .eq('phone', customerPhone)
       .maybeSingle();
 
     if (existingContact) {
       contactId = existingContact.id;
+      // Update contact name if it was a generic "WhatsApp Lead" and we now have a profile name
+      if (profileName && existingContact.name === 'WhatsApp Lead') {
+        await supabase.from('contacts').update({ name: profileName }).eq('id', existingContact.id);
+        console.log(`📝 Updated contact name from "WhatsApp Lead" to "${profileName}"`);
+      }
     } else {
+      const contactName = profileName || 'WhatsApp Lead';
       const { data: newContact, error: contactError } = await supabase
         .from('contacts')
-        .insert({ tenant_id: tenantId, phone: customerPhone, name: 'WhatsApp Lead', status: 'active' })
+        .insert({ tenant_id: tenantId, phone: customerPhone, name: contactName, status: 'active' })
         .select('id')
         .single();
 
@@ -99,6 +106,7 @@ serve(async (req) => {
         return emptyTwiml();
       }
       contactId = newContact.id;
+      console.log(`👤 Created contact "${contactName}" for ${customerPhone}`);
     }
 
     // Parse media
