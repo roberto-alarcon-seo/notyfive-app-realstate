@@ -207,14 +207,23 @@ serve(async (req) => {
 
     // Get FAQs for all active properties
     let propertyFaqs: { property_id: string; question: string; answer: string }[] = [];
+    let propertyImages: { property_id: string; file_url: string; is_cover: boolean; sort_order: number }[] = [];
     if (properties.length > 0) {
       const propertyIds = properties.map(p => p.id);
-      const { data: faqData } = await supabase
-        .from('property_faq')
-        .select('property_id, question, answer')
-        .in('property_id', propertyIds)
-        .order('sort_order', { ascending: true });
-      propertyFaqs = faqData || [];
+      const [faqResult, imagesResult] = await Promise.all([
+        supabase
+          .from('property_faq')
+          .select('property_id, question, answer')
+          .in('property_id', propertyIds)
+          .order('sort_order', { ascending: true }),
+        supabase
+          .from('property_images')
+          .select('property_id, file_url, is_cover, sort_order')
+          .in('property_id', propertyIds)
+          .order('sort_order', { ascending: true }),
+      ]);
+      propertyFaqs = faqResult.data || [];
+      propertyImages = imagesResult.data || [];
     }
 
     // Build properties context for AI
@@ -230,13 +239,20 @@ serve(async (req) => {
         const visitText = p.visit_availability || '';
         const aiPromptText = p.ai_prompt ? `\n  Instrucciones especiales: ${p.ai_prompt}` : '';
         
+        // Include image info (max 5)
+        const images = propertyImages.filter(img => img.property_id === p.id).slice(0, 5);
+        const hasPhotos = images.length > 0;
+        const photosText = hasPhotos 
+          ? `\n  Fotos disponibles: Sí (${images.length} fotos). Si el cliente pide fotos, responde con el texto [FOTOS:${p.property_code}] en tu mensaje.`
+          : '\n  Fotos disponibles: No';
+        
         return `- ${p.title} (Código: ${p.property_code})
   Zona: ${p.zone} | Precio: $${p.price.toLocaleString()} ${p.currency} | Tipo: ${p.operation_type}
   Tipo de propiedad: ${p.property_type || 'No especificado'} | Estatus: ${p.status}
   ${p.address ? `Dirección: ${p.address}` : ''}
   ${creditText}${maintenanceText ? ` | ${maintenanceText}` : ''}
   ${visitText ? `Disponibilidad de visitas: ${visitText}` : ''}
-  ${p.youtube_url ? `Video: ${p.youtube_url}` : ''}${aiPromptText}${faqText}`;
+  ${p.youtube_url ? `Video: ${p.youtube_url}` : ''}${aiPromptText}${photosText}${faqText}`;
       }).join('\n\n');
 
       propertiesContext = `\nPROPIEDADES DISPONIBLES:\n${propertyDetails}`;
@@ -379,6 +395,7 @@ INSTRUCCIONES:
 - Si el cliente pregunta por una propiedad, busca en PROPIEDADES DISPONIBLES. Si la propiedad tiene un campo "Instrucciones especiales" o "ai_prompt", usa ESA información como la descripción principal de la propiedad.
 - NUNCA inventes características, precios, medidas o amenidades que no estén en los datos.
 - Si no encuentras la respuesta exacta en los datos proporcionados, responde con la frase exacta: "[ESCALAR]"
+- FOTOS DE PROPIEDADES: Si el cliente pide fotos/imágenes de una propiedad y la propiedad tiene "Fotos disponibles: Sí", incluye el marcador [FOTOS:CÓDIGO_PROPIEDAD] en tu respuesta (ejemplo: [FOTOS:RVTMYA-EMX-0001]). Si NO tiene fotos, indica que por el momento no tienes fotos disponibles pero puedes agendar una visita. NUNCA incluyas el marcador [FOTOS:...] si la propiedad no tiene fotos.
 - Mantén las respuestas concisas y útiles.
 - Zona horaria: ${aiSettings.timezone}
 ${behaviorInstruction}
@@ -535,6 +552,25 @@ ${propertiesContext}`;
       });
     }
 
+    // Parse [FOTOS:CODE] markers and extract image URLs
+    const fotosMatch = generatedText.match(/\[FOTOS:([^\]]+)\]/);
+    let mediaUrls: string[] = [];
+    let cleanResponse = generatedText;
+    
+    if (fotosMatch) {
+      const propertyCode = fotosMatch[1];
+      // Find property by code
+      const matchedProperty = properties.find(p => p.property_code === propertyCode);
+      if (matchedProperty) {
+        const images = propertyImages
+          .filter(img => img.property_id === matchedProperty.id)
+          .slice(0, 5);
+        mediaUrls = images.map(img => img.file_url);
+      }
+      // Remove the marker from the text response
+      cleanResponse = generatedText.replace(/\[FOTOS:[^\]]+\]/g, '').trim();
+    }
+
     // Log successful AI response
     await supabase.from('ai_interaction_logs').insert({
       tenant_id,
@@ -548,7 +584,8 @@ ${propertiesContext}`;
 
     return new Response(JSON.stringify({
       action: 'respond',
-      response: generatedText,
+      response: cleanResponse,
+      media_urls: mediaUrls.length > 0 ? mediaUrls : undefined,
       delay_seconds: aiSettings.response_delay_seconds,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
