@@ -91,10 +91,10 @@ export function useConversations() {
     },
   });
 
-  // Subscribe to real-time updates
+  // Subscribe to real-time updates for conversations AND new messages (for list preview)
   useEffect(() => {
     const channel = supabase
-      .channel('conversations-changes')
+      .channel('conversations-realtime')
       .on(
         'postgres_changes',
         {
@@ -106,9 +106,35 @@ export function useConversations() {
           queryClient.invalidateQueries({ queryKey: ['conversations'] });
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          // When a new message arrives on ANY conversation, refresh the list
+          // so unread counts and previews update in real-time
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          // Retry subscription after a short delay
+          setTimeout(() => {
+            supabase.removeChannel(channel);
+          }, 3000);
+        }
+      });
+
+    // Fallback: poll every 30s in case realtime misses events
+    const pollInterval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    }, 30000);
 
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
