@@ -329,7 +329,7 @@ serve(async (req) => {
             
             if (aiResult.action === 'respond' && aiResult.response) {
               if (aiResult.delay_seconds > 0) await delay(aiResult.delay_seconds * 1000);
-              await sendAIResponse(supabase, tenantId, conversationId, businessPhone, customerPhone, aiResult.response, newMessage.id);
+              await sendAIResponse(supabase, tenantId, conversationId, businessPhone, customerPhone, aiResult.response, newMessage.id, aiResult.media_urls);
             }
             break;
           } catch (e) {
@@ -364,7 +364,8 @@ async function sendAIResponse(
   fromNumber: string,
   toNumber: string,
   message: string,
-  inboundMessageId: string
+  inboundMessageId: string,
+  mediaUrls?: string[]
 ): Promise<{ success: boolean; messageSid?: string; error?: string }> {
   try {
     // Get Twilio credentials
@@ -398,6 +399,8 @@ async function sendAIResponse(
       from_number: fromNumber,
       to_number: toNumber,
       body: message,
+      media_urls: mediaUrls?.length ? mediaUrls : [],
+      media_type: mediaUrls?.length ? 'image' : null,
       status: 'queued',
       ai_generated: true,
       source: 'ai',
@@ -432,6 +435,13 @@ async function sendAIResponse(
     formData.append('From', `whatsapp:${fromNumber}`);
     formData.append('To', `whatsapp:${toNumber}`);
     formData.append('Body', message);
+    
+    // Add media URLs if present (max 5 images)
+    if (mediaUrls?.length) {
+      for (const url of mediaUrls.slice(0, 5)) {
+        formData.append('MediaUrl', url);
+      }
+    }
 
     const twilioResponse = await fetch(twilioUrl, {
       method: 'POST',
