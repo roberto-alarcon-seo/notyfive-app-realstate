@@ -196,6 +196,52 @@ serve(async (req) => {
 
     const knowledgeBase = (kbEntries || []) as KnowledgeEntry[];
 
+    // Get active properties with their FAQs as additional knowledge
+    const { data: propertiesData } = await supabase
+      .from('properties')
+      .select('id, title, property_code, zone, price, currency, operation_type, property_type, status, address, accepted_credits, maintenance_fee, ai_prompt, visit_availability, youtube_url')
+      .eq('tenant_id', tenant_id)
+      .eq('is_active', true);
+
+    const properties = propertiesData || [];
+
+    // Get FAQs for all active properties
+    let propertyFaqs: { property_id: string; question: string; answer: string }[] = [];
+    if (properties.length > 0) {
+      const propertyIds = properties.map(p => p.id);
+      const { data: faqData } = await supabase
+        .from('property_faq')
+        .select('property_id, question, answer')
+        .in('property_id', propertyIds)
+        .order('sort_order', { ascending: true });
+      propertyFaqs = faqData || [];
+    }
+
+    // Build properties context for AI
+    let propertiesContext = '';
+    if (properties.length > 0) {
+      const propertyDetails = properties.map(p => {
+        const faqs = propertyFaqs.filter(f => f.property_id === p.id);
+        const faqText = faqs.length > 0
+          ? `\n  Preguntas frecuentes:\n${faqs.map(f => `    P: ${f.question}\n    R: ${f.answer}`).join('\n')}`
+          : '';
+        const creditText = p.accepted_credits?.length ? `Créditos aceptados: ${p.accepted_credits.join(', ')}` : '';
+        const maintenanceText = p.maintenance_fee ? `Mantenimiento: $${p.maintenance_fee.toLocaleString()} ${p.currency}/mes` : '';
+        const visitText = p.visit_availability || '';
+        const aiPromptText = p.ai_prompt ? `\n  Instrucciones especiales: ${p.ai_prompt}` : '';
+        
+        return `- ${p.title} (Código: ${p.property_code})
+  Zona: ${p.zone} | Precio: $${p.price.toLocaleString()} ${p.currency} | Tipo: ${p.operation_type}
+  Tipo de propiedad: ${p.property_type || 'No especificado'} | Estatus: ${p.status}
+  ${p.address ? `Dirección: ${p.address}` : ''}
+  ${creditText}${maintenanceText ? ` | ${maintenanceText}` : ''}
+  ${visitText ? `Disponibilidad de visitas: ${visitText}` : ''}
+  ${p.youtube_url ? `Video: ${p.youtube_url}` : ''}${aiPromptText}${faqText}`;
+      }).join('\n\n');
+
+      propertiesContext = `\nPROPIEDADES DISPONIBLES:\n${propertyDetails}`;
+    }
+
     // Check for escalation triggers first
     const lowerMessage = inbound_message.toLowerCase();
     const humanRequestTriggers = [
@@ -214,7 +260,6 @@ serve(async (req) => {
       if (wantsHuman) {
         console.log('Customer requested human, escalating');
         
-        // Update conversation state for handoff
         await supabase
           .from('conversations')
           .update({
@@ -226,7 +271,6 @@ serve(async (req) => {
           })
           .eq('id', conversation_id);
 
-        // Log escalation
         await supabase.from('ai_interaction_logs').insert({
           tenant_id,
           conversation_id,
@@ -236,7 +280,6 @@ serve(async (req) => {
           escalation_reason: 'human_request',
         });
 
-        // Return with fallback message to send to customer
         const fallbackText = aiSettings.fallback_message || 'Enseguida te atiende un asesor.';
         const customerMessage = aiSettings.use_customer_name && contact_name
           ? `Hola ${contact_name}. ${fallbackText}`
@@ -259,7 +302,6 @@ serve(async (req) => {
       if (isFrustrated) {
         console.log('Frustration detected, escalating');
         
-        // Update conversation state for handoff
         await supabase
           .from('conversations')
           .update({
@@ -280,7 +322,6 @@ serve(async (req) => {
           escalation_reason: 'frustration_detected',
         });
 
-        // Return with fallback message
         const fallbackText = aiSettings.fallback_message || 'Enseguida te atiende un asesor.';
         const customerMessage = aiSettings.use_customer_name && contact_name
           ? `Hola ${contact_name}. ${fallbackText}`
@@ -318,8 +359,8 @@ serve(async (req) => {
       : '';
 
     const knowledgeContext = knowledgeBase.length > 0
-      ? `BASE DE CONOCIMIENTO DISPONIBLE:\n${knowledgeBase.map(e => `Q: ${e.question}\nA: ${e.answer}`).join('\n\n')}`
-      : 'No hay base de conocimiento configurada.';
+      ? `BASE DE CONOCIMIENTO GENERAL:\n${knowledgeBase.map(e => `Q: ${e.question}\nA: ${e.answer}`).join('\n\n')}`
+      : '';
 
     const behaviorInstruction = aiSettings.behavior_prompt 
       ? `\nCOMPORTAMIENTO DEL NEGOCIO:\n${aiSettings.behavior_prompt}`
@@ -332,13 +373,15 @@ INSTRUCCIONES IMPORTANTES:
 - ${emojiInstruction}
 - ${nameInstruction}
 - ${identityInstruction}
-- Responde SOLO usando la información de la base de conocimiento.
-- Si no encuentras la respuesta en la base de conocimiento, responde con la frase exacta: "[ESCALAR]"
+- Responde usando la información de la base de conocimiento y las propiedades disponibles.
+- Si el cliente pregunta por una propiedad, busca en las PROPIEDADES DISPONIBLES y responde con los detalles relevantes.
+- Si no encuentras la respuesta en ninguna fuente de información disponible, responde con la frase exacta: "[ESCALAR]"
 - Mantén las respuestas concisas y útiles.
 - Zona horaria: ${aiSettings.timezone}
 ${behaviorInstruction}
 
-${knowledgeContext}`;
+${knowledgeContext}
+${propertiesContext}`;
 
     // Call Lovable AI with retry logic
     let generatedText = '';
