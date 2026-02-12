@@ -226,6 +226,22 @@ serve(async (req) => {
       propertyImages = imagesResult.data || [];
     }
 
+    // Fetch recent conversation history for context
+    const { data: recentMessages } = await supabase
+      .from('messages')
+      .select('direction, body, created_at')
+      .eq('conversation_id', conversation_id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    const conversationHistory = (recentMessages || [])
+      .reverse()
+      .filter(m => m.body)
+      .map(m => ({
+        role: m.direction === 'inbound' ? 'user' as const : 'assistant' as const,
+        content: m.body!,
+      }));
+
     // Build properties context for AI
     let propertiesContext = '';
     if (properties.length > 0) {
@@ -422,6 +438,7 @@ ${propertiesContext}`;
               model: 'google/gemini-2.5-flash',
               messages: [
                 { role: 'system', content: systemPrompt },
+                ...conversationHistory,
                 { role: 'user', content: inbound_message }
               ],
             }),
