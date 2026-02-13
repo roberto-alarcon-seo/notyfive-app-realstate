@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -39,6 +39,11 @@ export function PipelineStepper({
   const [isUpdating, setIsUpdating] = useState(false);
   const [localStage, setLocalStage] = useState(currentStage);
   const { handlePipelineStageChange } = usePipelineStageChange();
+
+  // Sync local state when prop changes (e.g. from accepted AI suggestion)
+  useEffect(() => {
+    setLocalStage(currentStage);
+  }, [currentStage]);
 
   const currentIndex = PIPELINE_STAGES.findIndex(s => s.value === localStage);
   

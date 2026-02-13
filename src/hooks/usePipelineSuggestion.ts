@@ -102,6 +102,8 @@ export function useAcceptPipelineSuggestion() {
       queryClient.invalidateQueries({ queryKey: ['pipeline-suggestion', suggestion.conversation_id] });
       queryClient.invalidateQueries({ queryKey: ['contact-pipeline', suggestion.contact_id] });
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', suggestion.conversation_id] });
     },
   });
 }
