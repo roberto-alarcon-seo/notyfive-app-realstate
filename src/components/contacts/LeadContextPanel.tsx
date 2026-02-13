@@ -185,6 +185,9 @@ export function LeadContextPanel({ data }: LeadContextPanelProps) {
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
               <TrendingUp className="h-3.5 w-3.5" />
               Lead Score
+              <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-primary/30">
+                IA
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
@@ -210,7 +213,7 @@ export function LeadContextPanel({ data }: LeadContextPanelProps) {
               <TempIcon className={`h-5 w-5 ${temp.color}`} />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Temperatura</p>
+              <p className="text-xs text-muted-foreground">Temperatura <span className="text-[10px] text-primary">(IA)</span></p>
               <p className={`font-semibold ${temp.color}`}>{temp.label}</p>
             </div>
           </div>
