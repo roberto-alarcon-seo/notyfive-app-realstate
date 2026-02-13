@@ -237,6 +237,17 @@ export function useCompleteFollowup() {
 
       if (updateError) throw updateError;
 
+      // Re-enable AI and clear needs_human after followup is done
+      await supabase
+        .from('conversations')
+        .update({
+          ai_enabled: true,
+          ai_state: 'active',
+          needs_human: false,
+          ai_pause_reason: null,
+        })
+        .eq('id', followup.conversation_id);
+
       // Log activity
       if (profile?.tenant_id) {
         await supabase.from('conversation_activity').insert({
@@ -258,6 +269,7 @@ export function useCompleteFollowup() {
       queryClient.invalidateQueries({ queryKey: ['followups'] });
       queryClient.invalidateQueries({ queryKey: ['conversation-followup'] });
       queryClient.invalidateQueries({ queryKey: ['conversation-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
   });
 }
