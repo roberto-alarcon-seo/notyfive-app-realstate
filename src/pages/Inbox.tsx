@@ -22,10 +22,14 @@ import { MessageMediaRenderer } from "@/components/inbox/MessageMediaRenderer";
 import { DateSeparator } from "@/components/inbox/DateSeparator";
 import { PipelineHeaderSelect } from "@/components/inbox/PipelineHeaderSelect";
 import { toast } from "sonner";
+import { useNewLeadSound } from "@/hooks/useNewLeadSound";
 
 export default function Inbox() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
+
+  // Play notification sound when a new lead/conversation appears
+  useNewLeadSound(conversations?.length);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterNeedsHuman, setFilterNeedsHuman] = useState(false);
