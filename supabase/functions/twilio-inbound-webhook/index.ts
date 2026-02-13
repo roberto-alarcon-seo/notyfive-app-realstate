@@ -353,6 +353,17 @@ serve(async (req) => {
       console.warn('Pipeline suggestion trigger error:', e);
     }
 
+    // Trigger AI lead scoring (fire-and-forget, non-blocking)
+    try {
+      fetch(`${supabaseUrl}/functions/v1/ai-lead-scoring`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
+        body: JSON.stringify({ tenant_id: tenantId, contact_id: contactId }),
+      }).catch(e => console.warn('Lead scoring fire-and-forget error:', e));
+    } catch (e) {
+      console.warn('Lead scoring trigger error:', e);
+    }
+
     console.log(`✅ Webhook completed in ${Date.now() - startTime}ms`);
     return emptyTwiml();
 
