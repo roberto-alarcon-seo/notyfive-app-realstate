@@ -3770,6 +3770,13 @@ export type Database = {
         | "policies"
         | "schedules"
         | "other"
+        | "properties"
+        | "financing"
+        | "visits"
+        | "legal"
+        | "location"
+        | "construction"
+        | "post_sale"
       segment_status: "active" | "archived"
       segment_type: "static" | "dynamic"
       tenant_billing_state:
@@ -4025,6 +4032,13 @@ export const Constants = {
         "policies",
         "schedules",
         "other",
+        "properties",
+        "financing",
+        "visits",
+        "legal",
+        "location",
+        "construction",
+        "post_sale",
       ],
       segment_status: ["active", "archived"],
       segment_type: ["static", "dynamic"],

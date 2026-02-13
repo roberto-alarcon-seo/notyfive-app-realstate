@@ -6,12 +6,17 @@ import { toast } from 'sonner';
 
 export type KBCategory = 
   | 'general_info'
-  | 'products'
-  | 'services'
+  | 'properties'
   | 'pricing'
+  | 'financing'
   | 'purchase_process'
+  | 'visits'
+  | 'legal'
+  | 'location'
+  | 'construction'
   | 'payments'
   | 'policies'
+  | 'post_sale'
   | 'schedules'
   | 'other';
 
@@ -29,13 +34,18 @@ export interface KnowledgeBaseEntry {
 
 export const KB_CATEGORY_LABELS: Record<KBCategory, string> = {
   general_info: 'Información General',
-  products: 'Productos',
-  services: 'Servicios',
-  pricing: 'Precios',
+  properties: 'Propiedades e Inventario',
+  pricing: 'Precios y Cotizaciones',
+  financing: 'Créditos y Financiamiento',
   purchase_process: 'Proceso de Compra',
-  payments: 'Pagos',
-  policies: 'Políticas',
-  schedules: 'Horarios',
+  visits: 'Visitas y Recorridos',
+  legal: 'Legal y Documentación',
+  location: 'Ubicación y Entorno',
+  construction: 'Construcción y Acabados',
+  payments: 'Formas de Pago',
+  policies: 'Políticas y Garantías',
+  post_sale: 'Postventa y Entrega',
+  schedules: 'Horarios de Atención',
   other: 'Otros',
 };
 
