@@ -1,6 +1,8 @@
 import { Bell } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
+import { isNewLeadSoundEnabled, setNewLeadSoundEnabled } from "@/hooks/useNewLeadSound";
 
 const notificationSettings = [
   { 
@@ -30,6 +32,17 @@ const notificationSettings = [
 ];
 
 export default function SettingsNotifications() {
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  useEffect(() => {
+    setSoundEnabled(isNewLeadSoundEnabled());
+  }, []);
+
+  const handleSoundToggle = (checked: boolean) => {
+    setSoundEnabled(checked);
+    setNewLeadSoundEnabled(checked);
+  };
+
   return (
     <SettingsLayout
       title="Notificaciones"
@@ -37,6 +50,24 @@ export default function SettingsNotifications() {
       icon={Bell}
     >
       <div className="space-y-6 max-w-2xl">
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="p-4 border-b border-border bg-muted/30">
+            <h3 className="font-semibold text-foreground">Sonido de notificación</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Reproduce un sonido cuando entra un nuevo lead al inbox
+            </p>
+          </div>
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">Nuevo lead entrante</p>
+              <p className="text-sm text-muted-foreground">
+                Sonido de alerta al recibir una nueva conversación
+              </p>
+            </div>
+            <Switch checked={soundEnabled} onCheckedChange={handleSoundToggle} />
+          </div>
+        </div>
+
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="p-4 border-b border-border bg-muted/30">
             <h3 className="font-semibold text-foreground">Preferencias de notificaciones</h3>
