@@ -11,7 +11,7 @@ import {
 import { usePipelineStageChange } from "@/hooks/usePipelineStageChange";
 
 // Pipeline stages with labels and short labels
-const PIPELINE_STAGES = [
+export const PIPELINE_STAGES = [
   { value: 'new_lead', label: 'Nuevo lead', short: 'Nuevo' },
   { value: 'interest_confirmed', label: 'Interés confirmado', short: 'Interés' },
   { value: 'financial_validation', label: 'Validación financiera', short: 'Finanzas' },
