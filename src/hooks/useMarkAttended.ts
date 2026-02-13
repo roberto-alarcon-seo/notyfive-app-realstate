@@ -23,13 +23,13 @@ export function useMarkAttended() {
 
       if (convError) throw convError;
 
-      // 1) Update conversation to clear needs_human
+      // 1) Update conversation: clear needs_human and re-enable AI
       const { error: updateError } = await supabase
         .from('conversations')
         .update({
           needs_human: false,
-          ai_state: 'paused',
-          ai_enabled: false,
+          ai_state: 'active',
+          ai_enabled: true,
           ai_pause_reason: null,
         })
         .eq('id', conversationId);
