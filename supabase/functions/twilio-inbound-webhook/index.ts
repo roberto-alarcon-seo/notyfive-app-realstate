@@ -342,6 +342,17 @@ serve(async (req) => {
       }
     }
 
+    // Trigger AI pipeline stage analysis (fire-and-forget, non-blocking)
+    try {
+      fetch(`${supabaseUrl}/functions/v1/ai-suggest-pipeline-stage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
+        body: JSON.stringify({ tenant_id: tenantId, conversation_id: conversationId, contact_id: contactId }),
+      }).catch(e => console.warn('Pipeline suggestion fire-and-forget error:', e));
+    } catch (e) {
+      console.warn('Pipeline suggestion trigger error:', e);
+    }
+
     console.log(`✅ Webhook completed in ${Date.now() - startTime}ms`);
     return emptyTwiml();
 
