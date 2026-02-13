@@ -3777,6 +3777,7 @@ export type Database = {
         | "location"
         | "construction"
         | "post_sale"
+        | "objections"
       segment_status: "active" | "archived"
       segment_type: "static" | "dynamic"
       tenant_billing_state:
@@ -4039,6 +4040,7 @@ export const Constants = {
         "location",
         "construction",
         "post_sale",
+        "objections",
       ],
       segment_status: ["active", "archived"],
       segment_type: ["static", "dynamic"],
