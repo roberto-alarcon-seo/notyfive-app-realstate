@@ -101,8 +101,9 @@ REGLAS:
 SEÑALES CLAVE:
 - new_lead → interest_confirmed: El cliente pregunta por precios, ubicación, fotos, detalles de una propiedad específica.
 - interest_confirmed → financial_validation: El cliente menciona crédito, presupuesto, enganche, tipo de financiamiento.
-- financial_validation → searching: El cliente pide ver más opciones, comparar propiedades.
-- searching → visit_done: El cliente confirma que visitó o quiere agendar visita.
+- financial_validation → searching: El cliente pide ver más opciones, comparar propiedades, no encuentra algo que le guste.
+- searching → visit_scheduled: El cliente quiere agendar una visita, pide fecha/hora para conocer un inmueble.
+- visit_scheduled → visit_done: El cliente confirma que ya realizó la visita.
 - visit_done → follow_up: El cliente dice que lo va a pensar, necesita consultarlo.
 - follow_up → negotiation: El cliente hace oferta, pregunta por apartado, contrato.
 - negotiation → closed_won: El cliente confirma la compra.
