@@ -1,11 +1,16 @@
 import { useState, useMemo } from "react";
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, isSameDay, isToday } from "date-fns";
+import { 
+  format, 
+  startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, 
+  startOfMonth, endOfMonth, addMonths, subMonths,
+  isSameDay, isToday, isSameMonth 
+} from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Event } from "@/hooks/useEvents";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 interface EventAgendaViewProps {
@@ -22,27 +27,44 @@ const STATUS_COLORS: Record<string, string> = {
   no_show: "bg-orange-500/20 border-orange-500 text-orange-700 dark:text-orange-300",
 };
 
+const DAY_NAMES = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
+
 export function EventAgendaView({ events, isLoading, onEventClick }: EventAgendaViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [agendaMode, setAgendaMode] = useState<'week' | 'month'>('week');
 
+  // Week calculations
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
+  // Month calculations
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const monthCalendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const monthCalendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const monthDays = eachDayOfInterval({ start: monthCalendarStart, end: monthCalendarEnd });
+
+  const days = agendaMode === 'week' ? weekDays : monthDays;
+
   const eventsByDay = useMemo(() => {
     const grouped: Record<string, Event[]> = {};
-    weekDays.forEach(day => {
+    days.forEach(day => {
       const dayKey = format(day, 'yyyy-MM-dd');
       grouped[dayKey] = events.filter(event => 
         isSameDay(new Date(event.start_at), day)
       ).sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
     });
     return grouped;
-  }, [events, weekDays]);
+  }, [events, days]);
 
-  const goToPreviousWeek = () => setCurrentDate(subWeeks(currentDate, 1));
-  const goToNextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
+  const goPrev = () => setCurrentDate(agendaMode === 'week' ? subWeeks(currentDate, 1) : subMonths(currentDate, 1));
+  const goNext = () => setCurrentDate(agendaMode === 'week' ? addWeeks(currentDate, 1) : addMonths(currentDate, 1));
   const goToToday = () => setCurrentDate(new Date());
+
+  const headerLabel = agendaMode === 'week'
+    ? `${format(weekStart, "d MMM", { locale: es })} - ${format(weekEnd, "d MMM yyyy", { locale: es })}`
+    : format(currentDate, "MMMM yyyy", { locale: es });
 
   if (isLoading) {
     return (
@@ -59,87 +81,158 @@ export function EventAgendaView({ events, isLoading, onEventClick }: EventAgenda
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Week Navigation */}
+      {/* Navigation */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
+          <Button variant="outline" size="icon" onClick={goPrev}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="icon" onClick={goToNextWeek}>
+          <Button variant="outline" size="icon" onClick={goNext}>
             <ChevronRight className="w-4 h-4" />
           </Button>
           <Button variant="outline" onClick={goToToday}>
             Hoy
           </Button>
+          <Tabs value={agendaMode} onValueChange={(v) => setAgendaMode(v as 'week' | 'month')} className="ml-2">
+            <TabsList className="h-8">
+              <TabsTrigger value="week" className="text-xs px-3 h-6">Semana</TabsTrigger>
+              <TabsTrigger value="month" className="text-xs px-3 h-6">Mes</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-        <h2 className="text-lg font-medium">
-          {format(weekStart, "d MMM", { locale: es })} - {format(weekEnd, "d MMM yyyy", { locale: es })}
-        </h2>
+        <h2 className="text-lg font-medium capitalize">{headerLabel}</h2>
       </div>
 
-      {/* Week Grid */}
-      <div className="grid grid-cols-7 gap-2 min-h-[400px]">
-        {weekDays.map((day) => {
-          const dayKey = format(day, 'yyyy-MM-dd');
-          const dayEvents = eventsByDay[dayKey] || [];
-          const isTodayDay = isToday(day);
+      {/* Week View */}
+      {agendaMode === 'week' && (
+        <div className="grid grid-cols-7 gap-2 min-h-[400px]">
+          {weekDays.map((day) => {
+            const dayKey = format(day, 'yyyy-MM-dd');
+            const dayEvents = eventsByDay[dayKey] || [];
+            const isTodayDay = isToday(day);
 
-          return (
-            <div
-              key={dayKey}
-              className={cn(
-                "flex flex-col border border-border rounded-lg overflow-hidden",
-                isTodayDay && "ring-2 ring-primary"
-              )}
-            >
-              {/* Day Header */}
-              <div className={cn(
-                "px-2 py-1 text-center border-b border-border",
-                isTodayDay ? "bg-primary text-primary-foreground" : "bg-muted"
-              )}>
-                <p className="text-xs font-medium uppercase">
-                  {format(day, "EEE", { locale: es })}
-                </p>
-                <p className="text-lg font-semibold">
-                  {format(day, "d")}
-                </p>
+            return (
+              <div
+                key={dayKey}
+                className={cn(
+                  "flex flex-col border border-border rounded-lg overflow-hidden",
+                  isTodayDay && "ring-2 ring-primary"
+                )}
+              >
+                <div className={cn(
+                  "px-2 py-1 text-center border-b border-border",
+                  isTodayDay ? "bg-primary text-primary-foreground" : "bg-muted"
+                )}>
+                  <p className="text-xs font-medium uppercase">
+                    {format(day, "EEE", { locale: es })}
+                  </p>
+                  <p className="text-lg font-semibold">{format(day, "d")}</p>
+                </div>
+                <div className="flex-1 p-1 space-y-1 overflow-y-auto max-h-[300px]">
+                  {dayEvents.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
+                      Sin eventos
+                    </div>
+                  ) : (
+                    dayEvents.map((event) => (
+                      <button
+                        key={event.id}
+                        onClick={() => onEventClick(event)}
+                        className={cn(
+                          "w-full text-left p-1.5 rounded border-l-2 text-xs transition-all hover:scale-[1.02]",
+                          STATUS_COLORS[event.status] || STATUS_COLORS.scheduled
+                        )}
+                      >
+                        <p className="font-medium truncate">{event.title}</p>
+                        <p className="text-[10px] opacity-80">
+                          {format(new Date(event.start_at), "HH:mm")}
+                          {event.contact?.name && ` • ${event.contact.name}`}
+                        </p>
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              {/* Day Events */}
-              <div className="flex-1 p-1 space-y-1 overflow-y-auto max-h-[300px]">
-                {dayEvents.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
-                    Sin eventos
-                  </div>
-                ) : (
-                  dayEvents.map((event) => (
-                    <button
-                      key={event.id}
-                      onClick={() => onEventClick(event)}
+      {/* Month View */}
+      {agendaMode === 'month' && (
+        <div className="flex flex-col">
+          {/* Day headers */}
+          <div className="grid grid-cols-7 gap-px mb-1">
+            {DAY_NAMES.map((name) => (
+              <div key={name} className="text-center text-xs font-semibold text-muted-foreground py-2">
+                {name}
+              </div>
+            ))}
+          </div>
+          {/* Calendar grid */}
+          <div className="grid grid-cols-7 gap-px bg-border/50 border border-border rounded-lg overflow-hidden">
+            {monthDays.map((day) => {
+              const dayKey = format(day, 'yyyy-MM-dd');
+              const dayEvents = eventsByDay[dayKey] || [];
+              const isTodayDay = isToday(day);
+              const isCurrentMonth = isSameMonth(day, currentDate);
+
+              return (
+                <div
+                  key={dayKey}
+                  className={cn(
+                    "bg-background min-h-[100px] p-1 flex flex-col",
+                    !isCurrentMonth && "opacity-40"
+                  )}
+                >
+                  {/* Day number */}
+                  <div className="flex justify-end mb-0.5">
+                    <span
                       className={cn(
-                        "w-full text-left p-1.5 rounded border-l-2 text-xs transition-all hover:scale-[1.02]",
-                        STATUS_COLORS[event.status] || STATUS_COLORS.scheduled
+                        "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full",
+                        isTodayDay && "bg-primary text-primary-foreground",
+                        !isTodayDay && "text-muted-foreground"
                       )}
                     >
-                      <p className="font-medium truncate">{event.title}</p>
-                      <p className="text-[10px] opacity-80">
-                        {format(new Date(event.start_at), "HH:mm")}
-                        {event.contact?.name && ` • ${event.contact.name}`}
+                      {format(day, "d")}
+                    </span>
+                  </div>
+                  {/* Events */}
+                  <div className="flex-1 space-y-0.5 overflow-hidden">
+                    {dayEvents.slice(0, 3).map((event) => (
+                      <button
+                        key={event.id}
+                        onClick={() => onEventClick(event)}
+                        className={cn(
+                          "w-full text-left px-1 py-0.5 rounded text-[10px] leading-tight truncate border-l-2 transition-colors hover:brightness-110",
+                          STATUS_COLORS[event.status] || STATUS_COLORS.scheduled
+                        )}
+                        title={`${event.title} - ${format(new Date(event.start_at), "HH:mm")}`}
+                      >
+                        <span className="font-medium">{format(new Date(event.start_at), "HH:mm")}</span>{" "}
+                        {event.title}
+                      </button>
+                    ))}
+                    {dayEvents.length > 3 && (
+                      <p className="text-[10px] text-muted-foreground text-center">
+                        +{dayEvents.length - 3} más
                       </p>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Empty state */}
       {events.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <CalendarDays className="w-12 h-12 text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">No hay eventos esta semana</p>
+          <p className="text-muted-foreground">
+            No hay eventos {agendaMode === 'week' ? 'esta semana' : 'este mes'}
+          </p>
         </div>
       )}
     </div>
