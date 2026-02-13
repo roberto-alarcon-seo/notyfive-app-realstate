@@ -13,6 +13,7 @@ const PIPELINE_LABELS: Record<string, string> = {
   interest_confirmed: 'Interés confirmado',
   financial_validation: 'Validación financiera',
   searching: 'En búsqueda',
+  visit_scheduled: 'Visita agendada',
   visit_done: 'Visita realizada',
   follow_up: 'Seguimiento',
   negotiation: 'Negociación',

@@ -15,7 +15,8 @@ const PIPELINE_STAGES = [
   { value: 'new_lead', label: 'Nuevo lead', short: 'Nuevo' },
   { value: 'interest_confirmed', label: 'Interés confirmado', short: 'Interés' },
   { value: 'financial_validation', label: 'Validación financiera', short: 'Finanzas' },
-  { value: 'searching', label: 'En búsqueda activa', short: 'Búsqueda' },
+  { value: 'searching', label: 'En búsqueda', short: 'Búsqueda' },
+  { value: 'visit_scheduled', label: 'Visita agendada', short: 'Agendada' },
   { value: 'visit_done', label: 'Visita realizada', short: 'Visita' },
   { value: 'follow_up', label: 'Seguimiento', short: 'Seguimiento' },
   { value: 'negotiation', label: 'Oferta / Negociación', short: 'Negociación' },
@@ -52,7 +53,7 @@ export function PipelineStepper({
     const idx = PIPELINE_STAGES.findIndex(s => s.value === stageValue);
     // Both closed stages count as the final step
     if (stageValue === 'closed_won' || stageValue === 'closed_lost') {
-      return 7; // Index of closed stages for progress calculation
+      return 8; // Index of closed stages for progress calculation
     }
     return idx;
   };
@@ -91,7 +92,7 @@ export function PipelineStepper({
 
   // Compact mode: shows only a horizontal progress bar with current stage
   if (compact) {
-    const progressPercent = Math.round((displayCurrentIndex / 7) * 100);
+    const progressPercent = Math.round((displayCurrentIndex / 8) * 100);
     
     return (
       <div className="space-y-2">
@@ -118,8 +119,8 @@ export function PipelineStepper({
   }
 
   // Full mode: clickable stepper
-  // We'll show stages 0-7 (first 8, excluding closed_lost from display but handling it)
-  const displayStages = PIPELINE_STAGES.slice(0, 8); // Show all except closed_lost in stepper
+  // We'll show stages 0-8 (first 9, excluding closed_lost from display but handling it)
+  const displayStages = PIPELINE_STAGES.slice(0, 9); // Show all except closed_lost in stepper
 
   return (
     <div className="space-y-3">
@@ -138,7 +139,7 @@ export function PipelineStepper({
             isLost ? "bg-destructive" : "bg-primary"
           )}
           style={{ 
-            width: `calc(${(Math.min(displayCurrentIndex, 7) / 7) * 100}% - 12px)` 
+            width: `calc(${(Math.min(displayCurrentIndex, 8) / 8) * 100}% - 12px)` 
           }}
         />
         

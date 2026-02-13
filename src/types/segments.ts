@@ -144,7 +144,7 @@ export const UNIVERSAL_FIXED_FIELDS = [
 
 // Operational fields (Real Estate pipeline)
 export const OPERATIONAL_FIELDS = [
-  { key: 'pipeline_stage', label: 'Etapa del pipeline', dataType: 'select', options: ['new_lead', 'interest_confirmed', 'financial_validation', 'searching', 'visit_done', 'follow_up', 'negotiation', 'closed_won', 'closed_lost'] },
+  { key: 'pipeline_stage', label: 'Etapa del pipeline', dataType: 'select', options: ['new_lead', 'interest_confirmed', 'financial_validation', 'searching', 'visit_scheduled', 'visit_done', 'follow_up', 'negotiation', 'closed_won', 'closed_lost'] },
   { key: 'operational_status', label: 'Estado del contacto', dataType: 'select', options: ['ACTIVE', 'WAITING_CUSTOMER', 'GHOSTING', 'DND', 'CLOSED'] },
   { key: 're_block_reason', label: 'Motivo de bloqueo', dataType: 'select', options: ['NO_RESPONSE', 'BUDGET_TOO_LOW', 'CREDIT_NOT_APPROVED', 'CREDIT_UNKNOWN_AMOUNT', 'CREDIT_NOT_COMPATIBLE', 'NO_PROPERTIES_MATCH', 'NOT_INTERESTED_AFTER_VISIT', 'POSTPONED', 'OTHER'] },
   { key: 're_visit_outcome', label: 'Resultado de visita', dataType: 'select', options: ['LIKED', 'DIDNT_LIKE', 'NO_SHOW', 'RESCHEDULE', 'PENDING'] },
