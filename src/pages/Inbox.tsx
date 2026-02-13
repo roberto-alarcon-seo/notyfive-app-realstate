@@ -28,8 +28,8 @@ export default function Inbox() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
 
-  // Play notification sound when a new lead/conversation appears
-  useNewLeadSound(conversations?.length);
+  // Play notification sound on new inbound messages
+  useNewLeadSound();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterNeedsHuman, setFilterNeedsHuman] = useState(false);
