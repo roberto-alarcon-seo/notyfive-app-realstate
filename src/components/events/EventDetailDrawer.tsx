@@ -14,6 +14,7 @@ import {
   Zap,
   MapPin,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 import {
   Sheet,
@@ -131,25 +132,36 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
 
             {/* Contact Card */}
             {event.contact && (
-              <div 
-                className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border/50 cursor-pointer hover:bg-muted/60 transition-colors"
-                onClick={() => navigate(`/contacts/${event.contact!.id}`)}
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/20 text-primary text-sm font-semibold">
-                    {contactInitials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{event.contact.name}</p>
-                  {event.contact.phone && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Phone className="w-3 h-3" />
-                      {event.contact.phone}
-                    </p>
-                  )}
+              <div className="flex items-center gap-2">
+                <div 
+                  className="flex-1 flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border/50 cursor-pointer hover:bg-muted/60 transition-colors"
+                  onClick={() => navigate(`/contacts/${event.contact!.id}`)}
+                >
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-primary/20 text-primary text-sm font-semibold">
+                      {contactInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{event.contact.name}</p>
+                    {event.contact.phone && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3 h-3" />
+                        {event.contact.phone}
+                      </p>
+                    )}
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
                 </div>
-                <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-10 w-10 shrink-0"
+                  title="Ir al chat"
+                  onClick={() => navigate(`/inbox?contact_id=${event.contact!.id}`)}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </Button>
               </div>
             )}
 
