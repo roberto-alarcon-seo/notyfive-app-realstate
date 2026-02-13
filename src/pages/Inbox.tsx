@@ -11,6 +11,8 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator,
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useConversations, useMarkConversationAsRead, useDeleteConversation, useArchiveContact, type Conversation, type Message } from "@/hooks/useConversations";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { usePaginatedMessages } from "@/hooks/usePaginatedMessages";
 import { formatDistanceToNow, format, parseISO, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -18,6 +20,7 @@ import { MessageComposer } from "@/components/inbox/MessageComposer";
 import { ContactProfilePanel } from "@/components/inbox/ContactProfilePanel";
 import { MessageMediaRenderer } from "@/components/inbox/MessageMediaRenderer";
 import { DateSeparator } from "@/components/inbox/DateSeparator";
+import { PipelineHeaderSelect } from "@/components/inbox/PipelineHeaderSelect";
 import { toast } from "sonner";
 
 export default function Inbox() {
@@ -49,6 +52,22 @@ export default function Inbox() {
   
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Fetch pipeline stage for header select
+  const selectedContactId = selectedConversation?.contact_id || null;
+  const { data: headerContactData } = useQuery({
+    queryKey: ['contact-pipeline', selectedContactId],
+    queryFn: async () => {
+      if (!selectedContactId) return null;
+      const { data } = await supabase
+        .from('contacts')
+        .select('pipeline_stage')
+        .eq('id', selectedContactId)
+        .single();
+      return data;
+    },
+    enabled: !!selectedContactId,
+  });
   const [archiveContactDialogOpen, setArchiveContactDialogOpen] = useState(false);
   const [targetConversation, setTargetConversation] = useState<Conversation | null>(null);
 
@@ -426,6 +445,13 @@ export default function Inbox() {
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{selectedConversation.customer_whatsapp}</p>
                 </div>
+                {/* Pipeline Stage Select */}
+                {selectedContactId && headerContactData?.pipeline_stage && (
+                  <PipelineHeaderSelect
+                    contactId={selectedContactId}
+                    currentStage={headerContactData.pipeline_stage}
+                  />
+                )}
               </div>
               
               <div className="flex items-center gap-2 shrink-0">
