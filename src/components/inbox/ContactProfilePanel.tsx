@@ -549,18 +549,10 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
 
         <Separator />
 
-        {/* Pipeline Stepper */}
-        {contactId && contactData?.pipeline_stage && (
+        {/* AI Pipeline Suggestion */}
+        {contactId && (
           <>
-            <PipelineStepper
-              contactId={contactId}
-              currentStage={contactData.pipeline_stage}
-              compact={false}
-            />
-            
-            {/* AI Pipeline Suggestion */}
             <PipelineSuggestionBadge conversationId={conversation.id} />
-            
             <Separator />
           </>
         )}
