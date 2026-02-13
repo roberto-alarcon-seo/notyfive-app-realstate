@@ -414,6 +414,26 @@ INSTRUCCIONES:
 - FOTOS DE PROPIEDADES: Si el cliente pide fotos/imágenes de una propiedad y la propiedad tiene "Fotos disponibles: Sí", incluye el marcador [FOTOS:CÓDIGO_PROPIEDAD] en tu respuesta (ejemplo: [FOTOS:RVTMYA-EMX-0001]). Si NO tiene fotos, indica que por el momento no tienes fotos disponibles pero puedes agendar una visita. NUNCA incluyas el marcador [FOTOS:...] si la propiedad no tiene fotos.
 - Mantén las respuestas concisas y útiles.
 - Zona horaria: ${aiSettings.timezone}
+
+REGLAS DE HANDOFF A ASESOR HUMANO:
+Cuando se cumpla CUALQUIERA de estas condiciones, DEBES incluir el marcador [SEGUIMIENTO_HUMANO] al final de tu respuesta:
+
+1. **VISITA SOLICITADA**: Si el cliente indica que quiere visitar una propiedad, agendar una cita, o ver un inmueble en persona:
+   - Pídele su NOMBRE COMPLETO si no lo tienes.
+   - Confirma la propiedad de interés.
+   - Dile: "En breve un asesor se pondrá en contacto contigo para coordinar los detalles de tu visita."
+   - Incluye [SEGUIMIENTO_HUMANO] al final.
+
+2. **INFORMACIÓN DE CRÉDITO/FINANCIERA RECOPILADA**: Si ya tienes información suficiente del cliente sobre su situación crediticia (tipo de crédito, presupuesto, enganche, ingresos) o si el cliente necesita una evaluación crediticia personalizada:
+   - Agradece la información proporcionada.
+   - Dile: "Con esta información, un asesor especializado se pondrá en contacto contigo para darte una atención personalizada."
+   - Incluye [SEGUIMIENTO_HUMANO] al final.
+
+3. **NEGOCIACIÓN DE PRECIO**: Si el cliente quiere negociar precio, descuentos o condiciones especiales:
+   - Dile: "Ese tema lo maneja directamente nuestro equipo comercial. Un asesor se pondrá en contacto contigo en breve."
+   - Incluye [SEGUIMIENTO_HUMANO] al final.
+
+IMPORTANTE: El marcador [SEGUIMIENTO_HUMANO] NO debe ser visible para el cliente. Solo inclúyelo al final de tu mensaje como instrucción interna.
 ${behaviorInstruction}
 
 ${knowledgeContext}
@@ -569,6 +589,9 @@ ${propertiesContext}`;
       });
     }
 
+    // Check for [SEGUIMIENTO_HUMANO] marker — AI determined handoff is needed
+    const needsHandoff = generatedText.includes('[SEGUIMIENTO_HUMANO]');
+
     // Parse [FOTOS:CODE] markers and extract image URLs
     const fotosMatch = generatedText.match(/\[FOTOS:([^\]]+)\]/);
     let mediaUrls: string[] = [];
@@ -576,7 +599,6 @@ ${propertiesContext}`;
     
     if (fotosMatch) {
       const propertyCode = fotosMatch[1];
-      // Find property by code
       const matchedProperty = properties.find(p => p.property_code === propertyCode);
       if (matchedProperty) {
         const images = propertyImages
@@ -584,8 +606,48 @@ ${propertiesContext}`;
           .slice(0, 5);
         mediaUrls = images.map(img => img.file_url);
       }
-      // Remove the marker from the text response
-      cleanResponse = generatedText.replace(/\[FOTOS:[^\]]+\]/g, '').trim();
+      cleanResponse = cleanResponse.replace(/\[FOTOS:[^\]]+\]/g, '').trim();
+    }
+
+    // Remove internal markers from response
+    cleanResponse = cleanResponse.replace(/\[SEGUIMIENTO_HUMANO\]/g, '').trim();
+
+    // If handoff is needed, send the AI's final message AND escalate
+    if (needsHandoff) {
+      console.log('🤝 AI triggered human handoff via [SEGUIMIENTO_HUMANO]');
+      
+      await supabase
+        .from('conversations')
+        .update({
+          ai_enabled: false,
+          ai_state: 'escalated',
+          needs_human: true,
+          ai_pause_reason: 'qualification_complete',
+          ai_paused_at: new Date().toISOString()
+        })
+        .eq('id', conversation_id);
+
+      await supabase.from('ai_interaction_logs').insert({
+        tenant_id,
+        conversation_id,
+        contact_id,
+        inbound_message,
+        ai_response: generatedText,
+        was_escalated: true,
+        escalation_reason: 'qualification_handoff',
+        response_time_ms: responseTime,
+      });
+
+      // Return the AI's composed farewell message (not the fallback)
+      return new Response(JSON.stringify({
+        action: 'escalate',
+        reason: 'qualification_handoff',
+        message: cleanResponse,
+        media_urls: mediaUrls.length > 0 ? mediaUrls : undefined,
+        delay_seconds: aiSettings.response_delay_seconds,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Log successful AI response
