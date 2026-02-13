@@ -34,6 +34,7 @@ import { MarkAttendedModal } from "./MarkAttendedModal";
 import { CompleteFollowupModal } from "./CompleteFollowupModal";
 import { PipelineStepper } from "./PipelineStepper";
 import { PipelineSuggestionBadge } from "./PipelineSuggestionBadge";
+import { ScheduleVisitModal } from "./ScheduleVisitModal";
 import { useQuery } from "@tanstack/react-query";
 
 interface ContactProfilePanelProps {
@@ -181,6 +182,7 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
   // Followup hooks
   const [showFollowupModal, setShowFollowupModal] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [showVisitModal, setShowVisitModal] = useState(false);
   const { data: activeFollowup, isLoading: isLoadingFollowup } = useConversationFollowup(conversation.id);
   const createFollowup = useCreateFollowup();
   const completeFollowup = useCompleteFollowup();
@@ -535,15 +537,25 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
 
           {/* Edit Contact Button */}
           {contactId && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-3 w-full"
-              onClick={handleEditContact}
-            >
-              <Pencil className="h-3.5 w-3.5 mr-2" />
-              Editar contacto
-            </Button>
+           <div className="mt-3 flex gap-2 w-full">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1"
+                onClick={handleEditContact}
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                Editar
+              </Button>
+              <Button 
+                size="sm" 
+                className="flex-1"
+                onClick={() => setShowVisitModal(true)}
+              >
+                <Calendar className="h-3.5 w-3.5 mr-1" />
+                Agendar cita
+              </Button>
+            </div>
           )}
         </div>
 
@@ -907,6 +919,17 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
         onReschedule={handleRescheduleFollowup}
         isLoading={completeFollowup.isPending || rescheduleFollowup.isPending}
       />
+
+      {/* Schedule Visit Modal */}
+      {contactId && (
+        <ScheduleVisitModal
+          open={showVisitModal}
+          onOpenChange={setShowVisitModal}
+          contactId={contactId}
+          contactName={conversation.contact?.name || 'Contacto'}
+          propertyInterestId={contactData?.re_property_interest_id}
+        />
+      )}
     </ScrollArea>
   );
 }
