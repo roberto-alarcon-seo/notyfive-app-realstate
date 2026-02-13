@@ -1980,6 +1980,80 @@ export type Database = {
           },
         ]
       }
+      pipeline_stage_suggestions: {
+        Row: {
+          confidence: number
+          contact_id: string
+          conversation_id: string
+          created_at: string
+          current_stage: string
+          id: string
+          reasoning: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          suggested_stage: string
+          tenant_id: string
+        }
+        Insert: {
+          confidence?: number
+          contact_id: string
+          conversation_id: string
+          created_at?: string
+          current_stage: string
+          id?: string
+          reasoning: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          suggested_stage: string
+          tenant_id: string
+        }
+        Update: {
+          confidence?: number
+          contact_id?: string
+          conversation_id?: string
+          created_at?: string
+          current_stage?: string
+          id?: string
+          reasoning?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          suggested_stage?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_stage_suggestions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_stage_suggestions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_stage_suggestions_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_stage_suggestions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

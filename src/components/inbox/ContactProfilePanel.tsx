@@ -33,6 +33,7 @@ import { FollowupCard } from "./FollowupCard";
 import { MarkAttendedModal } from "./MarkAttendedModal";
 import { CompleteFollowupModal } from "./CompleteFollowupModal";
 import { PipelineStepper } from "./PipelineStepper";
+import { PipelineSuggestionBadge } from "./PipelineSuggestionBadge";
 import { useQuery } from "@tanstack/react-query";
 
 interface ContactProfilePanelProps {
@@ -479,6 +480,10 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
               currentStage={contactData.pipeline_stage}
               compact={false}
             />
+            
+            {/* AI Pipeline Suggestion */}
+            <PipelineSuggestionBadge conversationId={conversation.id} />
+            
             <Separator />
           </>
         )}
