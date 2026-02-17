@@ -188,6 +188,7 @@ export default function Inbox() {
       const conv = conversations.find(c => c.id === conversationId);
       if (conv) {
         setSelectedConversation(conv);
+        if (isMobile) setMobileView('chat');
       }
       searchParams.delete('conversation');
       setSearchParams(searchParams, { replace: true });
@@ -195,9 +196,9 @@ export default function Inbox() {
       const conv = conversations.find(c => c.contact_id === contactId);
       if (conv) {
         setSelectedConversation(conv);
+        if (isMobile) setMobileView('chat');
       } else {
         toast.info('Este contacto aún no tiene conversación');
-        // Auto-select first if no matching conversation
         if (!selectedConversation) {
           setSelectedConversation(conversations[0]);
         }
@@ -208,6 +209,9 @@ export default function Inbox() {
       // Auto-select first conversation only on desktop
       if (!isMobile) {
         setSelectedConversation(conversations[0]);
+      } else {
+        // On mobile without params, always show the list
+        setMobileView('list');
       }
     }
   }, [conversations, searchParams, setSearchParams]);
@@ -438,7 +442,7 @@ export default function Inbox() {
         isMobile
           ? cn(
               "absolute inset-0 z-20 w-full bg-background transition-transform duration-300 ease-in-out",
-              mobileView === 'chat' || mobileView === 'profile' ? "translate-x-0" : "translate-x-full"
+              mobileView === 'chat' || mobileView === 'profile' ? "translate-x-0" : "translate-x-full pointer-events-none"
             )
           : ""
       )}>
