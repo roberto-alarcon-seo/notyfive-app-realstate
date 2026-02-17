@@ -412,6 +412,7 @@ INSTRUCCIONES:
 - NUNCA inventes características, precios, medidas o amenidades que no estén en los datos.
 - Si no encuentras la respuesta exacta en los datos proporcionados, responde con la frase exacta: "[ESCALAR]"
 - FOTOS DE PROPIEDADES: Si el cliente pide fotos/imágenes de una propiedad y la propiedad tiene "Fotos disponibles: Sí", incluye el marcador [FOTOS:CÓDIGO_PROPIEDAD] en tu respuesta (ejemplo: [FOTOS:RVTMYA-EMX-0001]). Si NO tiene fotos, indica que por el momento no tienes fotos disponibles pero puedes agendar una visita. NUNCA incluyas el marcador [FOTOS:...] si la propiedad no tiene fotos.
+- DETECCIÓN DE PROPIEDAD DE INTERÉS: Cuando el cliente pregunte, mencione o muestre interés por una propiedad específica (ya sea por código, nombre, zona, o contexto de la conversación), incluye el marcador [PROPIEDAD_INTERES:CÓDIGO_PROPIEDAD] en tu respuesta (ejemplo: [PROPIEDAD_INTERES:RVTMYA-EMX-0001]). Esto permite asociar automáticamente la propiedad al contacto. Solo incluye este marcador cuando estés seguro de cuál propiedad se refiere el cliente. Si mencionan varias, usa la más reciente o la que muestre mayor interés.
 - Mantén las respuestas concisas y útiles.
 - Zona horaria: ${aiSettings.timezone}
 
@@ -433,7 +434,7 @@ Cuando se cumpla CUALQUIERA de estas condiciones, DEBES incluir el marcador [SEG
    - Dile: "Ese tema lo maneja directamente nuestro equipo comercial. Un asesor se pondrá en contacto contigo en breve."
    - Incluye [SEGUIMIENTO_HUMANO] al final.
 
-IMPORTANTE: El marcador [SEGUIMIENTO_HUMANO] NO debe ser visible para el cliente. Solo inclúyelo al final de tu mensaje como instrucción interna.
+IMPORTANTE: Los marcadores [SEGUIMIENTO_HUMANO], [FOTOS:...] y [PROPIEDAD_INTERES:...] NO deben ser visibles para el cliente. Solo inclúyelos al final de tu mensaje como instrucciones internas.
 ${behaviorInstruction}
 
 ${knowledgeContext}
@@ -607,6 +608,21 @@ ${propertiesContext}`;
         mediaUrls = images.map(img => img.file_url);
       }
       cleanResponse = cleanResponse.replace(/\[FOTOS:[^\]]+\]/g, '').trim();
+    }
+
+    // Parse [PROPIEDAD_INTERES:CODE] marker and auto-assign property to contact
+    const propInteresMatch = generatedText.match(/\[PROPIEDAD_INTERES:([^\]]+)\]/);
+    if (propInteresMatch && contact_id) {
+      const propertyCode = propInteresMatch[1].trim();
+      const matchedProperty = properties.find(p => p.property_code === propertyCode);
+      if (matchedProperty) {
+        console.log(`🏠 Auto-assigning property ${propertyCode} (${matchedProperty.id}) to contact ${contact_id}`);
+        await supabase
+          .from('contacts')
+          .update({ re_property_interest_id: matchedProperty.id })
+          .eq('id', contact_id);
+      }
+      cleanResponse = cleanResponse.replace(/\[PROPIEDAD_INTERES:[^\]]+\]/g, '').trim();
     }
 
     // Remove internal markers from response
