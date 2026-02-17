@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SupportModeProvider } from "@/contexts/SupportModeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { MobileRouteGuard } from "@/components/layout/MobileRouteGuard";
 import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import Contacts from "./pages/Contacts";
@@ -81,6 +82,7 @@ const App = () => (
         <RecoveryHashRedirector />
         <AuthProvider>
           <SupportModeProvider>
+            <MobileRouteGuard>
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
@@ -139,6 +141,7 @@ const App = () => (
               <Route path="/settings/whatsapp-twilio" element={<Navigate to="/settings/whatsapp" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </MobileRouteGuard>
           </SupportModeProvider>
         </AuthProvider>
       </BrowserRouter>
