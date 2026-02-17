@@ -130,7 +130,14 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                   end={item.path === "/"}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 relative"
                   activeClassName="bg-primary/10 text-primary font-medium"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={(e) => {
+                    setMenuOpen(false);
+                    // Force re-navigation to inbox even if already on /inbox
+                    if (item.path === '/inbox' && window.location.pathname === '/inbox') {
+                      e.preventDefault();
+                      navigate('/inbox', { state: { resetKey: Date.now() } });
+                    }
+                  }}
                 >
                   <item.icon className="w-5 h-5 shrink-0" />
                   <span className="text-sm">{item.label}</span>

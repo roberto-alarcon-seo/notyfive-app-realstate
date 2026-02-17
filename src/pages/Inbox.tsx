@@ -178,7 +178,8 @@ export default function Inbox() {
     }
   }, [messages.length, isAtBottom, isLoadingMore]);
 
-  // On mobile, reset to list view when navigating to /inbox (location.key changes on each navigation)
+  // On mobile, reset to list view when navigating to /inbox
+  const resetKey = (location.state as any)?.resetKey;
   useEffect(() => {
     if (isMobile) {
       const hasConversationParam = searchParams.get('conversation');
@@ -188,7 +189,7 @@ export default function Inbox() {
         setSelectedConversation(null);
       }
     }
-  }, [location.key]); // Re-runs on every navigation to this route
+  }, [resetKey]); // Re-runs when resetKey changes (menu re-click)
 
   // Handle conversation selection: query params or auto-select first
   useEffect(() => {
