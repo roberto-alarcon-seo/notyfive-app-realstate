@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   format, 
   startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, 
@@ -32,6 +33,7 @@ const DAY_NAMES = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 export function EventAgendaView({ events, isLoading, onEventClick }: EventAgendaViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [agendaMode, setAgendaMode] = useState<'week' | 'month'>('week');
+  const isMobile = useIsMobile();
 
   // Week calculations
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -80,31 +82,31 @@ export function EventAgendaView({ events, isLoading, onEventClick }: EventAgenda
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:gap-4">
       {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goPrev}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+          <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9" onClick={goPrev}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="icon" onClick={goNext}>
+          <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9" onClick={goNext}>
             <ChevronRight className="w-4 h-4" />
           </Button>
-          <Button variant="outline" onClick={goToToday}>
+          <Button variant="outline" onClick={goToToday} size="sm" className="text-xs md:text-sm h-8 md:h-9">
             Hoy
           </Button>
-          <Tabs value={agendaMode} onValueChange={(v) => setAgendaMode(v as 'week' | 'month')} className="ml-2">
+          <Tabs value={agendaMode} onValueChange={(v) => setAgendaMode(v as 'week' | 'month')} className="ml-1">
             <TabsList className="h-8">
-              <TabsTrigger value="week" className="text-xs px-3 h-6">Semana</TabsTrigger>
-              <TabsTrigger value="month" className="text-xs px-3 h-6">Mes</TabsTrigger>
+              <TabsTrigger value="week" className="text-xs px-2 md:px-3 h-6">Semana</TabsTrigger>
+              <TabsTrigger value="month" className="text-xs px-2 md:px-3 h-6">Mes</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
-        <h2 className="text-lg font-medium capitalize">{headerLabel}</h2>
+        <h2 className="text-sm md:text-lg font-medium capitalize">{headerLabel}</h2>
       </div>
 
-      {/* Week View */}
-      {agendaMode === 'week' && (
+      {/* Week View - Desktop: 7-column grid */}
+      {agendaMode === 'week' && !isMobile && (
         <div className="grid grid-cols-7 gap-2 min-h-[400px]">
           {weekDays.map((day) => {
             const dayKey = format(day, 'yyyy-MM-dd');
@@ -158,14 +160,70 @@ export function EventAgendaView({ events, isLoading, onEventClick }: EventAgenda
         </div>
       )}
 
+      {/* Week View - Mobile: vertical day list */}
+      {agendaMode === 'week' && isMobile && (
+        <div className="space-y-2">
+          {weekDays.map((day) => {
+            const dayKey = format(day, 'yyyy-MM-dd');
+            const dayEvents = eventsByDay[dayKey] || [];
+            const isTodayDay = isToday(day);
+
+            return (
+              <div
+                key={dayKey}
+                className={cn(
+                  "rounded-lg border border-border overflow-hidden",
+                  isTodayDay && "ring-2 ring-primary"
+                )}
+              >
+                <div className={cn(
+                  "px-3 py-2 flex items-center gap-2 border-b border-border",
+                  isTodayDay ? "bg-primary text-primary-foreground" : "bg-muted"
+                )}>
+                  <span className="text-xs font-medium uppercase">
+                    {format(day, "EEE", { locale: es })}
+                  </span>
+                  <span className="text-sm font-semibold">{format(day, "d MMM", { locale: es })}</span>
+                  {dayEvents.length > 0 && (
+                    <span className="ml-auto text-[10px] opacity-70">{dayEvents.length} evento{dayEvents.length > 1 ? 's' : ''}</span>
+                  )}
+                </div>
+                {dayEvents.length === 0 ? (
+                  <div className="px-3 py-3 text-xs text-muted-foreground">Sin eventos</div>
+                ) : (
+                  <div className="p-1.5 space-y-1">
+                    {dayEvents.map((event) => (
+                      <button
+                        key={event.id}
+                        onClick={() => onEventClick(event)}
+                        className={cn(
+                          "w-full text-left p-2 rounded border-l-2 text-xs transition-all",
+                          STATUS_COLORS[event.status] || STATUS_COLORS.scheduled
+                        )}
+                      >
+                        <p className="font-medium truncate">{event.title}</p>
+                        <p className="text-[10px] opacity-80">
+                          {format(new Date(event.start_at), "HH:mm")}
+                          {event.contact?.name && ` • ${event.contact.name}`}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Month View */}
       {agendaMode === 'month' && (
         <div className="flex flex-col">
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-px mb-1">
             {DAY_NAMES.map((name) => (
-              <div key={name} className="text-center text-xs font-semibold text-muted-foreground py-2">
-                {name}
+              <div key={name} className="text-center text-[10px] md:text-xs font-semibold text-muted-foreground py-1 md:py-2">
+                {isMobile ? name.charAt(0) : name}
               </div>
             ))}
           </div>
@@ -181,7 +239,7 @@ export function EventAgendaView({ events, isLoading, onEventClick }: EventAgenda
                 <div
                   key={dayKey}
                   className={cn(
-                    "bg-background min-h-[100px] p-1 flex flex-col",
+                    "bg-background min-h-[60px] md:min-h-[100px] p-0.5 md:p-1 flex flex-col",
                     !isCurrentMonth && "opacity-40"
                   )}
                 >
@@ -189,7 +247,7 @@ export function EventAgendaView({ events, isLoading, onEventClick }: EventAgenda
                   <div className="flex justify-end mb-0.5">
                     <span
                       className={cn(
-                        "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full",
+                        "text-[10px] md:text-xs font-medium w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full",
                         isTodayDay && "bg-primary text-primary-foreground",
                         !isTodayDay && "text-muted-foreground"
                       )}
@@ -199,23 +257,29 @@ export function EventAgendaView({ events, isLoading, onEventClick }: EventAgenda
                   </div>
                   {/* Events */}
                   <div className="flex-1 space-y-0.5 overflow-hidden">
-                    {dayEvents.slice(0, 3).map((event) => (
+                    {dayEvents.slice(0, isMobile ? 2 : 3).map((event) => (
                       <button
                         key={event.id}
                         onClick={() => onEventClick(event)}
                         className={cn(
-                          "w-full text-left px-1 py-0.5 rounded text-[10px] leading-tight truncate border-l-2 transition-colors hover:brightness-110",
+                          "w-full text-left px-0.5 md:px-1 py-0.5 rounded text-[8px] md:text-[10px] leading-tight truncate border-l-2 transition-colors hover:brightness-110",
                           STATUS_COLORS[event.status] || STATUS_COLORS.scheduled
                         )}
                         title={`${event.title} - ${format(new Date(event.start_at), "HH:mm")}`}
                       >
-                        <span className="font-medium">{format(new Date(event.start_at), "HH:mm")}</span>{" "}
-                        {event.title}
+                        {isMobile ? (
+                          <span className="font-medium">{format(new Date(event.start_at), "HH:mm")}</span>
+                        ) : (
+                          <>
+                            <span className="font-medium">{format(new Date(event.start_at), "HH:mm")}</span>{" "}
+                            {event.title}
+                          </>
+                        )}
                       </button>
                     ))}
-                    {dayEvents.length > 3 && (
-                      <p className="text-[10px] text-muted-foreground text-center">
-                        +{dayEvents.length - 3} más
+                    {dayEvents.length > (isMobile ? 2 : 3) && (
+                      <p className="text-[8px] md:text-[10px] text-muted-foreground text-center">
+                        +{dayEvents.length - (isMobile ? 2 : 3)} más
                       </p>
                     )}
                   </div>
