@@ -4,6 +4,7 @@ import {
   ArrowLeft, Loader2, Save, User, Settings2, X, MessageSquare, Activity, 
   FolderOpen, TrendingUp, DollarSign, Home, Phone, Mail, MapPin
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -327,25 +328,27 @@ export default function ContactEditor() {
   // Filter sections for new contacts (no activity tab)
   const availableSections = isEditing ? SECTIONS : SECTIONS.filter(s => s.id !== 'activity');
 
+  const isMobile = useIsMobile();
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="shrink-0 px-6 py-4 border-b border-border bg-card">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={handleBack}>
-              <ArrowLeft className="h-5 w-5" />
+      <div className="shrink-0 px-4 md:px-6 py-3 md:py-4 border-b border-border bg-card">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0">
+            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 md:h-10 md:w-10" onClick={handleBack}>
+              <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4 min-w-0">
               {/* Contact Avatar/Initial */}
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-lg font-semibold text-primary">
+              <div className="h-9 w-9 md:h-12 md:w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="text-sm md:text-lg font-semibold text-primary">
                   {formData.name ? formData.name.charAt(0).toUpperCase() : '?'}
                 </span>
               </div>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-xl font-bold text-foreground">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                  <h1 className="text-base md:text-xl font-bold text-foreground truncate">
                     {formData.name || (isEditing ? 'Sin nombre' : 'Nuevo contacto')}
                   </h1>
                   {getTemperatureBadge()}
@@ -355,7 +358,7 @@ export default function ContactEditor() {
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-0.5">
+                <div className="hidden md:flex items-center gap-4 text-sm text-muted-foreground mt-0.5">
                   {formData.email && (
                     <span className="flex items-center gap-1">
                       <Mail className="h-3 w-3" /> {formData.email}
@@ -372,35 +375,68 @@ export default function ContactEditor() {
                     </span>
                   )}
                 </div>
+                {/* Mobile: show phone below name */}
+                {isMobile && formData.phone && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Phone className="h-3 w-3" /> {formData.phone}
+                  </p>
+                )}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {fromConversationId && (
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
+            {fromConversationId && !isMobile && (
               <Button variant="outline" size="sm" onClick={handleBack}>
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Conversación
               </Button>
             )}
-            {isEditing && id && (
+            {isEditing && id && !isMobile && (
               <ConsentBadge contactId={id} />
             )}
-            <Button onClick={handleSave} disabled={isSaving || !formData.name.trim()}>
+            <Button size={isMobile ? "sm" : "default"} onClick={handleSave} disabled={isSaving || !formData.name.trim()}>
               {isSaving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Save className="w-4 h-4 mr-2" />
+                <Save className="w-4 h-4" />
               )}
-              Guardar
+              {!isMobile && <span className="ml-2">Guardar</span>}
             </Button>
           </div>
         </div>
       </div>
 
       {/* Main Content with Sidebar Navigation */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar Navigation */}
-        <div className="w-56 shrink-0 border-r border-border bg-muted/30">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Mobile: Horizontal scrollable tabs */}
+        {isMobile && (
+          <div className="shrink-0 border-b border-border bg-muted/30 overflow-x-auto">
+            <nav className="flex gap-1 p-2 min-w-max">
+              {availableSections.map((section) => {
+                const Icon = section.icon;
+                const isActive = activeSection === section.id;
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
+                      isActive 
+                        ? "bg-primary text-primary-foreground" 
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <span>{section.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        )}
+
+        {/* Desktop: Left Sidebar Navigation */}
+        <div className="hidden md:block w-56 shrink-0 border-r border-border bg-muted/30">
           <ScrollArea className="h-full">
             <nav className="p-3 space-y-1">
               {availableSections.map((section) => {
@@ -426,9 +462,9 @@ export default function ContactEditor() {
           </ScrollArea>
         </div>
 
-        {/* Right Content Area */}
+        {/* Content Area */}
         <div className="flex-1 overflow-auto">
-          <div className="p-6 max-w-3xl">
+          <div className="p-4 md:p-6 max-w-3xl">
             {/* General Information Section */}
             {activeSection === 'general' && (
               <div className="space-y-6">
@@ -448,7 +484,7 @@ export default function ContactEditor() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input
