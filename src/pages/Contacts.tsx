@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Upload, MoreHorizontal, Filter, Mail, Phone, Globe, Loader2, Users, X, Archive, Tag, Trash2, FolderPlus } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -426,24 +427,26 @@ export default function Contacts() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-4 md:p-6 border-b border-border">
+        <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Contactos</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Contactos</h1>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">
               {contactCount} contactos activos
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {canManageContacts && (
               <>
-                <Button variant="secondary" onClick={() => setShowImportModal(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Importar CSV
+                <Button variant="secondary" size="sm" onClick={() => setShowImportModal(true)}>
+                  <Upload className="w-4 h-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Importar CSV</span>
+                  <span className="sm:hidden">CSV</span>
                 </Button>
-                <Button onClick={() => navigate('/contacts/new')}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nuevo contacto
+                <Button size="sm" onClick={() => navigate('/contacts/new')}>
+                  <Plus className="w-4 h-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Nuevo contacto</span>
+                  <span className="sm:hidden">Nuevo</span>
                 </Button>
               </>
             )}
@@ -451,8 +454,8 @@ export default function Contacts() {
         </div>
 
         {/* Search and Filter */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex items-center gap-2 md:gap-4">
+          <div className="relative flex-1 md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Buscar contactos..."
@@ -645,49 +648,28 @@ export default function Contacts() {
 
         {/* Bulk Actions Bar */}
         {selectedContacts.length > 0 && canManageContacts && (
-          <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-between">
+          <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <span className="text-sm font-medium">
               {selectedContacts.length} contacto{selectedContacts.length > 1 ? 's' : ''} seleccionado{selectedContacts.length > 1 ? 's' : ''}
             </span>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="secondary" 
-                size="sm"
-                onClick={() => setShowBulkTagDialog(true)}
-              >
-                <Tag className="w-4 h-4 mr-2" />
-                Agregar etiqueta
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="secondary" size="sm" onClick={() => setShowBulkTagDialog(true)}>
+                <Tag className="w-4 h-4 mr-1" />
+                <span className="text-xs">Etiqueta</span>
               </Button>
-              <Button 
-                variant="secondary" 
-                size="sm"
-                onClick={() => setShowBulkSegmentDialog(true)}
-                disabled={staticSegments.length === 0}
-              >
-                <FolderPlus className="w-4 h-4 mr-2" />
-                Agregar a segmento
+              <Button variant="secondary" size="sm" onClick={() => setShowBulkSegmentDialog(true)} disabled={staticSegments.length === 0}>
+                <FolderPlus className="w-4 h-4 mr-1" />
+                <span className="text-xs">Segmento</span>
               </Button>
-              <Button 
-                variant="secondary" 
-                size="sm"
-                onClick={() => setShowBulkArchiveDialog(true)}
-              >
-                <Archive className="w-4 h-4 mr-2" />
-                Archivar
+              <Button variant="secondary" size="sm" onClick={() => setShowBulkArchiveDialog(true)}>
+                <Archive className="w-4 h-4 mr-1" />
+                <span className="text-xs">Archivar</span>
               </Button>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={() => setShowBulkDeleteDialog(true)}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Eliminar
+              <Button variant="destructive" size="sm" onClick={() => setShowBulkDeleteDialog(true)}>
+                <Trash2 className="w-4 h-4 mr-1" />
+                <span className="text-xs">Eliminar</span>
               </Button>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setSelectedContacts([])}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setSelectedContacts([])}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -695,9 +677,10 @@ export default function Contacts() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Content */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full">
+        {/* Desktop: Table */}
+        <table className="w-full hidden md:table">
           <thead className="bg-background sticky top-0 z-10">
             <tr>
               <th className="w-12 p-4">
@@ -821,18 +804,61 @@ export default function Contacts() {
             )}
           </tbody>
         </table>
+
+        {/* Mobile: Card list */}
+        <div className="md:hidden p-2 space-y-1">
+          {paginatedContacts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground text-sm">
+                {searchQuery ? 'No se encontraron contactos' : 'No hay contactos aún'}
+              </p>
+            </div>
+          ) : (
+            paginatedContacts.map((contact) => (
+              <div
+                key={contact.id}
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <Checkbox
+                  checked={selectedContacts.includes(contact.id)}
+                  onCheckedChange={() => toggleContact(contact.id)}
+                  className="shrink-0"
+                />
+                <button
+                  onClick={() => navigate(`/contacts/${contact.id}`)}
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                >
+                  <Avatar className="w-9 h-9 shrink-0">
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                      {contact.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-foreground truncate">{contact.name}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Mail className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{contact.email || '-'}</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {selectedContacts.length > 0
-            ? `${selectedContacts.length} contactos seleccionados`
-            : `${filteredContacts.length} contactos`}
+      <div className="p-3 md:p-4 border-t border-border flex items-center justify-between">
+        <p className="text-xs md:text-sm text-muted-foreground">
+          {filteredContacts.length} contactos
+          <span className="hidden sm:inline ml-2">
+            · Página {currentPage} de {totalPages || 1}
+          </span>
         </p>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground mr-2">
-            Página {currentPage} de {totalPages || 1}
+          <span className="text-xs text-muted-foreground sm:hidden">
+            {currentPage}/{totalPages || 1}
           </span>
           <Button 
             variant="outline" 
