@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSendMessage, isOutOfWindow, getHoursUntilWindowClose } from "@/hooks/useSendMessage";
 import { useSendTemplate } from "@/hooks/useSendTemplate";
 import { useWallet } from "@/hooks/useWallet";
@@ -55,6 +56,7 @@ export function MessageComposer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const isMobile = useIsMobile();
 
   const { data: wallet, refetch: refetchWallet } = useWallet();
   const { data: templates } = useTemplates();
@@ -319,97 +321,177 @@ export function MessageComposer({
         )}
 
         {/* Composer */}
-        <div className="flex items-end gap-2">
-          {/* Media upload button */}
-          <MediaUploadButton
-            onMediaSelected={handleMediaSelected}
-            onMediaRemoved={() => setSelectedMedia(null)}
-            selectedMedia={null}
-            disabled={isDisabled}
-            tenantId={profile?.tenant_id || undefined}
-          />
-          
-          <EmojiPicker onEmojiSelect={handleEmojiSelect} disabled={isDisabled} />
-          
-          {/* Template button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 shrink-0"
-                  disabled={!canSendTemplates}
-                  onClick={() => setShowTemplates(true)}
-                >
-                  <FileText className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {!hasApprovedTemplates 
-                  ? 'No hay plantillas aprobadas' 
-                  : 'Enviar plantilla'}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <div className="flex-1 relative">
-            <Textarea
-              ref={textareaRef}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={getPlaceholder()}
-              disabled={isDisabled}
-              className={cn(
-                "min-h-[44px] max-h-[200px] resize-none pr-4",
-                "bg-muted border-none focus-visible:ring-1 focus-visible:ring-primary",
-                canShowRewrite && "pr-12"
-              )}
-              rows={1}
-            />
-            
-            {/* AI Rewrite button - inside textarea area */}
-            {canShowRewrite && (
+        {isMobile ? (
+          /* Mobile layout: action bar on top, input + send below */
+          <div className="space-y-2">
+            <div className="flex items-center gap-1">
+              <MediaUploadButton
+                onMediaSelected={handleMediaSelected}
+                onMediaRemoved={() => setSelectedMedia(null)}
+                selectedMedia={null}
+                disabled={isDisabled}
+                tenantId={profile?.tenant_id || undefined}
+              />
+              <EmojiPicker onEmojiSelect={handleEmojiSelect} disabled={isDisabled} />
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-primary hover:bg-primary/10"
-                      onClick={handleRewriteClick}
-                      disabled={rewriteText.isPending}
+                      className="h-9 w-9 shrink-0"
+                      disabled={!canSendTemplates}
+                      onClick={() => setShowTemplates(true)}
                     >
-                      {rewriteText.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4" />
-                      )}
+                      <FileText className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Mejorar redacción con IA
+                    {!hasApprovedTemplates 
+                      ? 'No hay plantillas aprobadas' 
+                      : 'Enviar plantilla'}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            )}
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1 relative">
+                <Textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={getPlaceholder()}
+                  disabled={isDisabled}
+                  className={cn(
+                    "min-h-[40px] max-h-[120px] resize-none",
+                    "bg-muted border-none focus-visible:ring-1 focus-visible:ring-primary",
+                    canShowRewrite && "pr-10"
+                  )}
+                  rows={1}
+                />
+                {canShowRewrite && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-primary hover:bg-primary/10"
+                    onClick={handleRewriteClick}
+                    disabled={rewriteText.isPending}
+                  >
+                    {rewriteText.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                )}
+              </div>
+              <Button
+                size="icon"
+                onClick={() => handleSend()}
+                disabled={!text.trim() || isDisabled}
+                className="h-10 w-10 shrink-0 rounded-full"
+              >
+                {sendMessage.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
-          
-          <Button
-            size="icon"
-            onClick={() => handleSend()}
-            disabled={!text.trim() || isDisabled}
-            className="h-11 w-11 shrink-0"
-          >
-            {sendMessage.isPending ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
-          </Button>
-        </div>
+        ) : (
+          /* Desktop layout: inline */
+          <div className="flex items-end gap-2">
+            <MediaUploadButton
+              onMediaSelected={handleMediaSelected}
+              onMediaRemoved={() => setSelectedMedia(null)}
+              selectedMedia={null}
+              disabled={isDisabled}
+              tenantId={profile?.tenant_id || undefined}
+            />
+            
+            <EmojiPicker onEmojiSelect={handleEmojiSelect} disabled={isDisabled} />
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11 shrink-0"
+                    disabled={!canSendTemplates}
+                    onClick={() => setShowTemplates(true)}
+                  >
+                    <FileText className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!hasApprovedTemplates 
+                    ? 'No hay plantillas aprobadas' 
+                    : 'Enviar plantilla'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <div className="flex-1 relative">
+              <Textarea
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={getPlaceholder()}
+                disabled={isDisabled}
+                className={cn(
+                  "min-h-[44px] max-h-[200px] resize-none pr-4",
+                  "bg-muted border-none focus-visible:ring-1 focus-visible:ring-primary",
+                  canShowRewrite && "pr-12"
+                )}
+                rows={1}
+              />
+              
+              {canShowRewrite && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-primary hover:bg-primary/10"
+                        onClick={handleRewriteClick}
+                        disabled={rewriteText.isPending}
+                      >
+                        {rewriteText.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Mejorar redacción con IA
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+            
+            <Button
+              size="icon"
+              onClick={() => handleSend()}
+              disabled={!text.trim() || isDisabled}
+              className="h-11 w-11 shrink-0"
+            >
+              {sendMessage.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Window status indicator */}
         <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
