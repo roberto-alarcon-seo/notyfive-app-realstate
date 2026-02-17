@@ -5,8 +5,15 @@ import {
   Activity, Megaphone, StickyNote, Check, CheckCheck,
   ArrowDownLeft, ArrowUpRight, Bot, Ban, AlertCircle,
   Loader2, XCircle, Pencil, AlertTriangle, CheckCircle2,
-  CalendarClock, RefreshCw, Building, DollarSign, Globe
+  CalendarClock, RefreshCw, Building, DollarSign, Globe,
+  ChevronDown
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -547,14 +554,24 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
                 <Pencil className="h-3.5 w-3.5 mr-1" />
                 Editar
               </Button>
-              <Button 
-                size="sm" 
-                className="flex-1"
-                onClick={() => setShowVisitModal(true)}
-              >
-                <Calendar className="h-3.5 w-3.5 mr-1" />
-                Agendar cita
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" className="flex-1">
+                    Acciones
+                    <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowVisitModal(true)}>
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Agendar cita
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowFollowupModal(true)}>
+                    <CalendarClock className="h-4 w-4 mr-2" />
+                    Programar seguimiento
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>
