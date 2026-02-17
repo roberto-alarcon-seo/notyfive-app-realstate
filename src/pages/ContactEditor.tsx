@@ -112,6 +112,7 @@ export default function ContactEditor() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const fromConversationId = searchParams.get('from_conversation');
+  const isMobile = useIsMobile();
   const { hasRole } = useAuth();
   const { 
     contacts, 
@@ -328,7 +329,6 @@ export default function ContactEditor() {
   // Filter sections for new contacts (no activity tab)
   const availableSections = isEditing ? SECTIONS : SECTIONS.filter(s => s.id !== 'activity');
 
-  const isMobile = useIsMobile();
 
   return (
     <div className="h-full flex flex-col bg-background">
