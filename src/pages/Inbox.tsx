@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { Search, Clock, MessageSquare, Loader2, Ban, Check, CheckCheck, XCircle, Copy, Info, Megaphone, Bot, Archive, Trash2, UserX, AlertTriangle, ArrowLeft, User } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import { useNewLeadSound } from "@/hooks/useNewLeadSound";
 
 export default function Inbox() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
 
@@ -177,7 +178,7 @@ export default function Inbox() {
     }
   }, [messages.length, isAtBottom, isLoadingMore]);
 
-  // On mobile, reset to list view when component mounts without deep-link params
+  // On mobile, reset to list view when navigating to /inbox (location.key changes on each navigation)
   useEffect(() => {
     if (isMobile) {
       const hasConversationParam = searchParams.get('conversation');
@@ -187,7 +188,7 @@ export default function Inbox() {
         setSelectedConversation(null);
       }
     }
-  }, []); // Only on mount
+  }, [location.key]); // Re-runs on every navigation to this route
 
   // Handle conversation selection: query params or auto-select first
   useEffect(() => {
