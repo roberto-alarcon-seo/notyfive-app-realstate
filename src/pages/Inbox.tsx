@@ -287,14 +287,14 @@ export default function Inbox() {
   };
 
   return (
-    <div className={cn("flex h-full", isMobile && "overflow-hidden relative")}>
+    <div className={cn("flex h-full", isMobile && "overflow-hidden relative bg-background")}>
       {/* Conversations List */}
       <div className={cn(
         "border-r border-border flex flex-col bg-card",
         isMobile
           ? cn(
               "absolute inset-0 z-10 w-full transition-transform duration-300 ease-in-out",
-              mobileView === 'list' ? "translate-x-0" : "-translate-x-full"
+              mobileView === 'list' ? "translate-x-0" : "-translate-x-full pointer-events-none"
             )
           : "w-80"
       )}>
