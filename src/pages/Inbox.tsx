@@ -287,12 +287,16 @@ export default function Inbox() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className={cn("flex h-full", isMobile && "overflow-hidden relative")}>
       {/* Conversations List */}
       <div className={cn(
         "border-r border-border flex flex-col bg-card",
-        isMobile ? "w-full" : "w-80",
-        isMobile && mobileView !== 'list' && "hidden"
+        isMobile
+          ? cn(
+              "absolute inset-0 z-10 w-full transition-transform duration-300 ease-in-out",
+              mobileView === 'list' ? "translate-x-0" : "-translate-x-full"
+            )
+          : "w-80"
       )}>
         {/* Search Header */}
         <div className="p-4 border-b border-border space-y-3">
@@ -431,8 +435,12 @@ export default function Inbox() {
       {/* Chat Area */}
       <div className={cn(
         "flex-1 flex flex-col min-w-0",
-        isMobile && mobileView !== 'chat' && "hidden",
-        isMobile && "w-full"
+        isMobile
+          ? cn(
+              "absolute inset-0 z-20 w-full bg-background transition-transform duration-300 ease-in-out",
+              mobileView === 'chat' || mobileView === 'profile' ? "translate-x-0" : "translate-x-full"
+            )
+          : ""
       )}>
         {selectedConversation ? (
           <>
