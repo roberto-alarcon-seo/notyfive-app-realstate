@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { MoreHorizontal, Edit, XCircle, Eye } from "lucide-react";
+import { MoreHorizontal, Edit, XCircle, Eye, CalendarClock, User } from "lucide-react";
 import { Event, useCancelEvent, getEventTypeLabel } from "@/hooks/useEvents";
 import {
   Table,
@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EventListViewProps {
   events: Event[];
@@ -44,6 +45,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export function EventListView({ events, isLoading, onEventClick, onEditEvent }: EventListViewProps) {
   const cancelEvent = useCancelEvent();
+  const isMobile = useIsMobile();
 
   if (isLoading) {
     return (
@@ -75,6 +77,49 @@ export function EventListView({ events, isLoading, onEventClick, onEditEvent }: 
     }
   };
 
+  // Mobile: card layout
+  if (isMobile) {
+    return (
+      <div className="space-y-2">
+        {events.map((event) => {
+          const statusBadge = STATUS_BADGES[event.status] || STATUS_BADGES.scheduled;
+          return (
+            <button
+              key={event.id}
+              onClick={() => onEventClick(event)}
+              className="w-full text-left rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors space-y-2"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm text-foreground truncate">{event.title}</p>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                    <CalendarClock className="h-3 w-3 shrink-0" />
+                    {format(new Date(event.start_at), "d MMM yyyy, HH:mm", { locale: es })}
+                  </div>
+                </div>
+                <Badge variant={statusBadge.variant} className="text-[10px] shrink-0">
+                  {statusBadge.label}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="capitalize text-[10px]">
+                  {getEventTypeLabel(event.event_type)}
+                </Badge>
+                {event.contact?.name && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <User className="h-3 w-3" />
+                    {event.contact.name}
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Desktop: table layout
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       <Table>

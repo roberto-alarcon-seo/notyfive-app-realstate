@@ -59,18 +59,18 @@ export default function Events() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-border">
-        <h1 className="text-2xl font-semibold text-foreground">Eventos</h1>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
+      <div className="flex items-center justify-between p-4 md:p-6 border-b border-border">
+        <h1 className="text-xl md:text-2xl font-semibold text-foreground">Eventos</h1>
+        <Button onClick={() => setIsCreateOpen(true)} size="sm">
+          <Plus className="w-4 h-4 mr-1 md:mr-2" />
           Crear evento
         </Button>
       </div>
 
       {/* Filters & View Toggle */}
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 border-b border-border bg-muted/30">
+      <div className="flex flex-col gap-3 p-3 md:p-4 border-b border-border bg-muted/30">
         {/* Search */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por título, contacto..."
@@ -79,11 +79,11 @@ export default function Events() {
           />
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
+        {/* Filters + View Toggle row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
           <Select onValueChange={handleStatusFilter} defaultValue="all">
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[130px] md:w-[160px] text-xs md:text-sm h-9">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -96,7 +96,7 @@ export default function Events() {
           </Select>
 
           <Select onValueChange={handleTypeFilter} defaultValue="all">
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[130px] md:w-[160px] text-xs md:text-sm h-9">
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
@@ -108,21 +108,21 @@ export default function Events() {
               ))}
             </SelectContent>
           </Select>
-        </div>
 
-        {/* View Toggle */}
-        <Tabs value={view} onValueChange={(v) => setView(v as 'list' | 'agenda')} className="ml-auto">
-          <TabsList>
-            <TabsTrigger value="list" className="gap-2">
-              <List className="w-4 h-4" />
-              Lista
-            </TabsTrigger>
-            <TabsTrigger value="agenda" className="gap-2">
-              <CalendarIcon className="w-4 h-4" />
-              Agenda
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          {/* View Toggle */}
+          <Tabs value={view} onValueChange={(v) => setView(v as 'list' | 'agenda')} className="ml-auto">
+            <TabsList className="h-9">
+              <TabsTrigger value="list" className="gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3">
+                <List className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                Lista
+              </TabsTrigger>
+              <TabsTrigger value="agenda" className="gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3">
+                <CalendarIcon className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                Agenda
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {/* Content */}
