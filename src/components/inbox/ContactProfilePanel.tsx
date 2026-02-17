@@ -800,8 +800,7 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
               </h4>
               <div className="space-y-3 text-sm">
                 {/* Property Interest Selector */}
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">Inmueble de interés</label>
+                <div>
                   <Select
                     value={contactData?.re_property_interest_id || "none"}
                     onValueChange={handlePropertyInterestChange}
