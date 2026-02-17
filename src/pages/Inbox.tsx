@@ -177,6 +177,18 @@ export default function Inbox() {
     }
   }, [messages.length, isAtBottom, isLoadingMore]);
 
+  // On mobile, reset to list view when component mounts without deep-link params
+  useEffect(() => {
+    if (isMobile) {
+      const hasConversationParam = searchParams.get('conversation');
+      const hasContactParam = searchParams.get('contact_id');
+      if (!hasConversationParam && !hasContactParam) {
+        setMobileView('list');
+        setSelectedConversation(null);
+      }
+    }
+  }, []); // Only on mount
+
   // Handle conversation selection: query params or auto-select first
   useEffect(() => {
     if (!conversations || conversations.length === 0) return;
@@ -209,9 +221,6 @@ export default function Inbox() {
       // Auto-select first conversation only on desktop
       if (!isMobile) {
         setSelectedConversation(conversations[0]);
-      } else {
-        // On mobile without params, always show the list
-        setMobileView('list');
       }
     }
   }, [conversations, searchParams, setSearchParams]);
