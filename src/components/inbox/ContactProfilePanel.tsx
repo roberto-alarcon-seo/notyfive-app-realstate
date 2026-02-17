@@ -42,7 +42,15 @@ import { CompleteFollowupModal } from "./CompleteFollowupModal";
 import { PipelineStepper } from "./PipelineStepper";
 import { PipelineSuggestionBadge } from "./PipelineSuggestionBadge";
 import { ScheduleVisitModal } from "./ScheduleVisitModal";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useProperties } from "@/hooks/useProperties";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ContactProfilePanelProps {
   conversation: Conversation;
@@ -135,6 +143,7 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
   const [aiEnabled, setAiEnabled] = useState(conversation.ai_enabled ?? true);
   const [isTogglingAi, setIsTogglingAi] = useState(false);
 
+  const queryClient = useQueryClient();
   const contactId = conversation.contact?.id || null;
   const { data: campaignDeliveries = [], isLoading: isLoadingCampaigns, refetch: refetchDeliveries } = useCampaignDeliveriesForContact(contactId);
   
@@ -175,6 +184,33 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
     enabled: !!contactData?.re_property_interest_id,
   });
   
+  // Fetch active properties for the selector
+  const { data: activeProperties = [], isLoading: isLoadingProperties } = useProperties();
+  const filteredActiveProperties = activeProperties.filter(p => p.is_active);
+
+  // Handler to update property of interest
+  const [isUpdatingProperty, setIsUpdatingProperty] = useState(false);
+  const handlePropertyInterestChange = async (propertyId: string) => {
+    if (!contactId) return;
+    setIsUpdatingProperty(true);
+    try {
+      const newValue = propertyId === "none" ? null : propertyId;
+      const { error } = await supabase
+        .from('contacts')
+        .update({ re_property_interest_id: newValue })
+        .eq('id', contactId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['contact-pipeline', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['property-of-interest'] });
+      toast.success(newValue ? 'Propiedad de interés asignada' : 'Propiedad de interés removida');
+    } catch (error) {
+      console.error('Error updating property interest:', error);
+      toast.error('Error al actualizar propiedad de interés');
+    } finally {
+      setIsUpdatingProperty(false);
+    }
+  };
+
   // Get global AI settings to check if AI is enabled at tenant level
   const { data: aiSettings, isLoading: isLoadingAISettings } = useAISettings();
   const isAiGloballyEnabled = aiSettings?.enabled === true;
@@ -754,21 +790,47 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
 
         <Separator />
 
-        {/* Real Estate Context Section */}
-        {(propertyOfInterest || contactData?.re_credit_type || contactData?.re_budget_estimated_mxn) && (
+        {/* Real Estate Context Section - Always visible for property assignment */}
+        {contactId && (
           <>
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Building className="h-4 w-4 text-muted-foreground" />
                 Contexto inmobiliario
               </h4>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-3 text-sm">
+                {/* Property Interest Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Inmueble de interés</label>
+                  <Select
+                    value={contactData?.re_property_interest_id || "none"}
+                    onValueChange={handlePropertyInterestChange}
+                    disabled={isUpdatingProperty}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Seleccionar propiedad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground">Sin propiedad asignada</span>
+                      </SelectItem>
+                      {isLoadingProperties ? (
+                        <SelectItem value="loading" disabled>Cargando...</SelectItem>
+                      ) : (
+                        filteredActiveProperties.map((property) => (
+                          <SelectItem key={property.id} value={property.id}>
+                            <span className="font-medium">{property.property_code}</span>
+                            <span className="text-muted-foreground ml-1">— {property.title}</span>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Selected property preview */}
                 {propertyOfInterest && (
                   <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20 space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <Building className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-xs text-muted-foreground">Inmueble de interés</span>
-                    </div>
                     <p className="font-medium text-foreground text-sm">{propertyOfInterest.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">
@@ -778,6 +840,7 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
                     </div>
                   </div>
                 )}
+
                 {contactData?.re_credit_type && (
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground flex items-center gap-1.5">
