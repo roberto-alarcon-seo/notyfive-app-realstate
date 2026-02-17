@@ -135,7 +135,7 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
-export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) {
+export function ContactProfilePanel({ conversation, onClose }: ContactProfilePanelProps) {
   const navigate = useNavigate();
   const [notes, setNotes] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -534,6 +534,14 @@ export function ContactProfilePanel({ conversation }: ContactProfilePanelProps) 
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-5">
+        {/* Close / Back button */}
+        {onClose && (
+          <div className="flex justify-end">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+              <XCircle className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
         {/* Contact Header */}
         <div className="text-center">
           <Avatar className="w-16 h-16 mx-auto mb-3">
