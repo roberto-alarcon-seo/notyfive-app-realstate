@@ -117,14 +117,14 @@ export default function Followups() {
     <MainLayout>
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="border-b border-border p-6">
+        <div className="border-b border-border p-4 md:p-6">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
-              <CalendarClock className="h-6 w-6 text-primary" />
+              <CalendarClock className="h-5 w-5 md:h-6 md:w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Seguimientos</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-xl md:text-2xl font-bold text-foreground">Seguimientos</h1>
+              <p className="text-xs md:text-sm text-muted-foreground">
                 Gestiona tus recordatorios de seguimiento
               </p>
             </div>
@@ -132,32 +132,32 @@ export default function Followups() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 overflow-hidden">
+        <div className="flex-1 p-3 md:p-6 overflow-hidden">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="h-full flex flex-col">
             <TabsList className="grid w-full max-w-md grid-cols-3">
-              <TabsTrigger value="overdue" className="gap-2">
-                <AlertTriangle className="h-4 w-4" />
+              <TabsTrigger value="overdue" className="gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3">
+                <AlertTriangle className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 Atrasados
                 {overdueFollowups.length > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-5 px-1.5">
+                  <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-[10px]">
                     {overdueFollowups.length}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="today" className="gap-2">
-                <Calendar className="h-4 w-4" />
+              <TabsTrigger value="today" className="gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3">
+                <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 Hoy
                 {todayFollowups.length > 0 && (
-                  <Badge variant="default" className="ml-1 h-5 px-1.5">
+                  <Badge variant="default" className="ml-1 h-5 px-1.5 text-[10px]">
                     {todayFollowups.length}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="upcoming" className="gap-2">
-                <Clock className="h-4 w-4" />
+              <TabsTrigger value="upcoming" className="gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3">
+                <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 Próximos
                 {upcomingFollowups.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
                     {upcomingFollowups.length}
                   </Badge>
                 )}
@@ -227,13 +227,13 @@ function FollowupRow({ followup, onOpen, onComplete, isCompleting, getInitials }
 
   return (
     <div className={`
-      rounded-lg border p-4 transition-colors hover:bg-muted/50
+      rounded-lg border p-3 md:p-4 transition-colors hover:bg-muted/50
       ${isOverdue ? 'border-destructive/30 bg-destructive/5' : 'border-border'}
     `}>
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 md:gap-4">
         {/* Avatar */}
-        <Avatar className="h-10 w-10 shrink-0">
-          <AvatarFallback className="bg-primary/20 text-primary text-sm">
+        <Avatar className="h-9 w-9 md:h-10 md:w-10 shrink-0">
+          <AvatarFallback className="bg-primary/20 text-primary text-xs md:text-sm">
             {getInitials(followup.contact?.name)}
           </AvatarFallback>
         </Avatar>
@@ -241,47 +241,48 @@ function FollowupRow({ followup, onOpen, onComplete, isCompleting, getInitials }
         {/* Content */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-foreground truncate">
+            <span className="font-medium text-sm md:text-base text-foreground truncate">
               {followup.contact?.name || followup.conversation?.customer_whatsapp}
             </span>
             {isOverdue && (
-              <Badge variant="destructive" className="shrink-0">Atrasado</Badge>
+              <Badge variant="destructive" className="shrink-0 text-[10px]">Atrasado</Badge>
             )}
           </div>
 
           {followup.conversation?.last_message_preview && (
-            <p className="text-sm text-muted-foreground truncate">
+            <p className="text-xs md:text-sm text-muted-foreground truncate">
               {followup.conversation.last_message_preview}
             </p>
           )}
 
           {followup.note && (
-            <p className="text-sm text-foreground/80 line-clamp-2">
+            <p className="text-xs md:text-sm text-foreground/80 line-clamp-2">
               {followup.note}
             </p>
           )}
 
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 md:gap-4 text-[11px] md:text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <CalendarClock className="h-3.5 w-3.5" />
+              <CalendarClock className="h-3 w-3 md:h-3.5 md:w-3.5" />
               {format(dueDate, "d MMM, HH:mm", { locale: es })}
             </span>
             {followup.assigned_user && (
               <span className="flex items-center gap-1">
-                <User className="h-3.5 w-3.5" />
+                <User className="h-3 w-3 md:h-3.5 md:w-3.5" />
                 {followup.assigned_user.name}
               </span>
             )}
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions - desktop inline, mobile: just complete */}
         <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="outline"
             size="sm"
             onClick={onComplete}
             disabled={isCompleting}
+            className="text-xs"
           >
             <Check className="h-4 w-4 mr-1" />
             Completar
@@ -290,6 +291,7 @@ function FollowupRow({ followup, onOpen, onComplete, isCompleting, getInitials }
             variant="default"
             size="sm"
             onClick={onOpen}
+            className="hidden md:inline-flex"
           >
             <MessageSquare className="h-4 w-4 mr-1" />
             Abrir chat
@@ -297,6 +299,15 @@ function FollowupRow({ followup, onOpen, onComplete, isCompleting, getInitials }
           </Button>
         </div>
       </div>
+
+      {/* Mobile: tap row to open chat */}
+      <button
+        onClick={onOpen}
+        className="md:hidden w-full mt-2 flex items-center justify-center gap-1 text-xs text-primary py-1.5 rounded-md border border-primary/20 hover:bg-primary/10 transition-colors"
+      >
+        <MessageSquare className="h-3.5 w-3.5" />
+        Abrir chat
+      </button>
     </div>
   );
 }
