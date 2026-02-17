@@ -1,0 +1,129 @@
+import { ReactNode, useState } from "react";
+import { NavLink } from "@/components/NavLink";
+import { UserMenu } from "@/components/layout/UserMenu";
+import { WalletIndicator } from "@/components/inbox/WalletIndicator";
+import { CreditsGatingBanner } from "./CreditsGatingBanner";
+import { SupportModeBanner } from "./SupportModeBanner";
+import { useTenantCredits } from "@/hooks/useTenantCredits";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSupportMode } from "@/contexts/SupportModeContext";
+import {
+  LayoutDashboard,
+  MessageSquare,
+  CalendarClock,
+  CalendarDays,
+  Users,
+  Menu,
+  X,
+} from "lucide-react";
+import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
+import logo from "@/assets/brokia-logo.png";
+
+const mobileMenuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: MessageSquare, label: "Inbox", path: "/inbox", showBadge: true },
+  { icon: CalendarClock, label: "Seguimientos", path: "/followups" },
+  { icon: CalendarDays, label: "Agenda", path: "/events" },
+  { icon: Users, label: "Contactos", path: "/contacts" },
+];
+
+interface MobileLayoutProps {
+  children: ReactNode;
+}
+
+export function MobileLayout({ children }: MobileLayoutProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { data: credits } = useTenantCredits();
+  const { isSuperAdmin } = useAuth();
+  const { isSupportMode } = useSupportMode();
+  const totalUnread = useTotalUnreadCount();
+
+  const walletBalance = credits?.message_credits || 0;
+  const walletRollover = credits?.accumulated_credits || 0;
+  const walletMonthly = credits?.monthly_credits_remaining || 0;
+  const walletExtra = credits?.extra_credits || 0;
+  const showWallet = isSupportMode || !isSuperAdmin;
+
+  return (
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-background">
+      <SupportModeBanner />
+      {!isSupportMode && <CreditsGatingBanner />}
+
+      {/* Mobile Header */}
+      <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+          <img src={logo} alt="Logo" className="h-8 w-8 object-contain" />
+        </div>
+        <div className="flex items-center gap-3">
+          {showWallet && (
+            <WalletIndicator
+              balance={walletBalance}
+              rollover={walletRollover}
+              monthly={walletMonthly}
+              extra={walletExtra}
+            />
+          )}
+          <UserMenu />
+        </div>
+      </header>
+
+      {/* Slide-over menu */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 flex" onClick={() => setMenuOpen(false)}>
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60" />
+          {/* Panel */}
+          <nav
+            className="relative z-10 w-72 bg-card border-r border-border h-full flex flex-col shadow-2xl animate-in slide-in-from-left duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="h-16 flex items-center justify-between px-5 border-b border-border">
+              <div className="flex items-center gap-3">
+                <img src={logo} alt="Logo" className="h-9 w-9 object-contain" />
+                <span className="text-lg font-semibold text-foreground">Brokia24</span>
+              </div>
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Menu Items */}
+            <div className="flex-1 py-4 px-3 space-y-1">
+              {mobileMenuItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === "/"}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 relative"
+                  activeClassName="bg-primary/10 text-primary font-medium"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="text-sm">{item.label}</span>
+                  {item.showBadge && totalUnread > 0 && (
+                    <span className="ml-auto min-w-[22px] h-[22px] rounded-full bg-destructive text-destructive-foreground text-xs font-medium flex items-center justify-center px-1.5">
+                      {totalUnread > 99 ? "99+" : totalUnread}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </nav>
+        </div>
+      )}
+
+      {/* Main content */}
+      <main className="flex-1 overflow-auto">{children}</main>
+    </div>
+  );
+}
