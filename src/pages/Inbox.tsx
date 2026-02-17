@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, Clock, MessageSquare, Loader2, Ban, Check, CheckCheck, XCircle, Copy, Info, Megaphone, Bot, Archive, Trash2, UserX, AlertTriangle } from "lucide-react";
+import { Search, Clock, MessageSquare, Loader2, Ban, Check, CheckCheck, XCircle, Copy, Info, Megaphone, Bot, Archive, Trash2, UserX, AlertTriangle, ArrowLeft, User } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -26,6 +27,7 @@ import { useNewLeadSound } from "@/hooks/useNewLeadSound";
 
 export default function Inbox() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile();
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
 
   // Play notification sound on new inbound messages
@@ -34,6 +36,7 @@ export default function Inbox() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterNeedsHuman, setFilterNeedsHuman] = useState(false);
   const [showContactPanel, setShowContactPanel] = useState(true);
+  const [mobileView, setMobileView] = useState<'list' | 'chat' | 'profile'>('list');
   const [isAtBottom, setIsAtBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -202,8 +205,10 @@ export default function Inbox() {
       searchParams.delete('contact_id');
       setSearchParams(searchParams, { replace: true });
     } else if (!selectedConversation) {
-      // Auto-select first conversation only if no query params
-      setSelectedConversation(conversations[0]);
+      // Auto-select first conversation only on desktop
+      if (!isMobile) {
+        setSelectedConversation(conversations[0]);
+      }
     }
   }, [conversations, searchParams, setSearchParams]);
 
@@ -276,10 +281,19 @@ export default function Inbox() {
     toast.success('Mensaje copiado');
   };
 
+  const handleSelectConversation = (conv: Conversation) => {
+    setSelectedConversation(conv);
+    if (isMobile) setMobileView('chat');
+  };
+
   return (
     <div className="flex h-full">
       {/* Conversations List */}
-      <div className="w-80 border-r border-border flex flex-col bg-card">
+      <div className={cn(
+        "border-r border-border flex flex-col bg-card",
+        isMobile ? "w-full" : "w-80",
+        isMobile && mobileView !== 'list' && "hidden"
+      )}>
         {/* Search Header */}
         <div className="p-4 border-b border-border space-y-3">
           <h2 className="text-xl font-semibold text-foreground">Conversaciones</h2>
@@ -335,7 +349,7 @@ export default function Inbox() {
                 <ContextMenu key={conv.id}>
                   <ContextMenuTrigger asChild>
                     <div
-                      onClick={() => setSelectedConversation(conv)}
+                      onClick={() => handleSelectConversation(conv)}
                       className={cn(
                         "p-4 cursor-pointer transition-colors hover:bg-muted/50",
                         selectedConversation?.id === conv.id && "bg-muted"
@@ -415,12 +429,21 @@ export default function Inbox() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={cn(
+        "flex-1 flex flex-col min-w-0",
+        isMobile && mobileView !== 'chat' && "hidden",
+        isMobile && "w-full"
+      )}>
         {selectedConversation ? (
           <>
             {/* Chat Header */}
             <div className="h-14 border-b border-border flex items-center justify-between px-4 bg-card shrink-0">
               <div className="flex items-center gap-3 min-w-0">
+                {isMobile && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setMobileView('list')}>
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                )}
                 <Avatar className="w-9 h-9 shrink-0">
                   <AvatarFallback className="bg-primary/20 text-primary text-sm">
                     {getInitials(selectedConversation.contact?.name)}
@@ -449,8 +472,8 @@ export default function Inbox() {
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{selectedConversation.customer_whatsapp}</p>
                 </div>
-                {/* Pipeline Stage Select */}
-                {selectedContactId && headerContactData?.pipeline_stage && (
+                {/* Pipeline Stage Select - hide on mobile */}
+                {!isMobile && selectedContactId && headerContactData?.pipeline_stage && (
                   <PipelineHeaderSelect
                     contactId={selectedContactId}
                     currentStage={headerContactData.pipeline_stage}
@@ -459,24 +482,34 @@ export default function Inbox() {
               </div>
               
               <div className="flex items-center gap-2 shrink-0">
-                {/* Toggle Contact Panel */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={showContactPanel ? "secondary" : "ghost"} 
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowContactPanel(!showContactPanel)}
-                      >
-                        <Info className="w-4 h-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {showContactPanel ? 'Ocultar perfil' : 'Ver perfil'}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {isMobile ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setMobileView('profile')}
+                  >
+                    <User className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={showContactPanel ? "secondary" : "ghost"} 
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setShowContactPanel(!showContactPanel)}
+                        >
+                          <Info className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {showContactPanel ? 'Ocultar perfil' : 'Ver perfil'}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             </div>
 
@@ -530,7 +563,8 @@ export default function Inbox() {
                         >
                       <div
                         className={cn(
-                          "max-w-[70%] rounded-2xl px-4 py-3 relative",
+                          "rounded-2xl px-4 py-3 relative",
+                          isMobile ? "max-w-[85%]" : "max-w-[70%]",
                           msg.direction === 'inbound'
                             ? "bg-message-incoming rounded-bl-sm"
                             : msg.status === 'failed'
@@ -660,12 +694,17 @@ export default function Inbox() {
         )}
       </div>
 
-      {/* Contact Info Panel - Collapsible */}
-      {selectedConversation && showContactPanel && (
-        <div className="w-72 border-l border-border bg-card animate-in slide-in-from-right-5 duration-200">
+      {/* Contact Info Panel - Desktop: collapsible sidebar, Mobile: full-screen overlay */}
+      {selectedConversation && (isMobile ? mobileView === 'profile' : showContactPanel) && (
+        <div className={cn(
+          "border-l border-border bg-card animate-in slide-in-from-right-5 duration-200",
+          isMobile 
+            ? "fixed inset-0 z-50 w-full border-l-0 overflow-auto" 
+            : "w-72"
+        )}>
           <ContactProfilePanel 
             conversation={selectedConversation}
-            onClose={() => setShowContactPanel(false)}
+            onClose={() => isMobile ? setMobileView('chat') : setShowContactPanel(false)}
           />
         </div>
       )}
