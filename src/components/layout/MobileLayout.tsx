@@ -1,5 +1,6 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { NavLink } from "@/components/NavLink";
+import { useNavigate } from "react-router-dom";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { WalletIndicator } from "@/components/inbox/WalletIndicator";
 import { CreditsGatingBanner } from "./CreditsGatingBanner";
@@ -15,9 +16,13 @@ import {
   Users,
   Menu,
   X,
+  Sun,
+  Moon,
+  LogOut,
 } from "lucide-react";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
 import logo from "@/assets/brokia-logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 const mobileMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -33,10 +38,29 @@ interface MobileLayoutProps {
 
 export function MobileLayout({ children }: MobileLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<string>(() => 
+    localStorage.getItem("brokia-theme") || "dark"
+  );
+  const navigate = useNavigate();
   const { data: credits } = useTenantCredits();
   const { isSuperAdmin } = useAuth();
   const { isSupportMode } = useSupportMode();
   const totalUnread = useTotalUnreadCount();
+
+  const toggleTheme = () => {
+    const next = currentTheme === "dark" ? "light" : "dark";
+    setCurrentTheme(next);
+    localStorage.setItem("brokia-theme", next);
+    document.documentElement.classList.remove("dark", "light", "blue");
+    document.body.classList.remove("dark", "light", "blue");
+    document.documentElement.classList.add(next);
+  };
+
+  const handleLogout = async () => {
+    setMenuOpen(false);
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
 
   const walletBalance = credits?.message_credits || 0;
   const walletRollover = credits?.accumulated_credits || 0;
@@ -117,6 +141,26 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                   )}
                 </NavLink>
               ))}
+            </div>
+
+            {/* Bottom: Theme toggle + Logout */}
+            <div className="border-t border-border px-4 py-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleTheme}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label="Cambiar tema"
+                >
+                  {currentTheme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 w-full"
+              >
+                <LogOut className="w-5 h-5 shrink-0" />
+                <span className="text-sm">Cerrar sesión</span>
+              </button>
             </div>
           </nav>
         </div>
