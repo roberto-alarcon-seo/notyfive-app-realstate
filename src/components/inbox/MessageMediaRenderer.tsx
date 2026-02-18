@@ -548,7 +548,7 @@ function ImagePreview({
           setHasError(true);
         }}
       />
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors" />
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors pointer-events-none" />
     </div>
   );
 }
@@ -598,7 +598,7 @@ function MultiImagePreview({
           setHasError(true);
         }}
       />
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors" />
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors pointer-events-none" />
     </div>
   );
 }
