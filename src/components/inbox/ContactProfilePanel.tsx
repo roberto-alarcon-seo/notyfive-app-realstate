@@ -859,7 +859,9 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
                        contactData.re_credit_type === 'COFINAVIT' ? 'Cofinavit' :
                        contactData.re_credit_type === 'BANK' ? 'Bancario' :
                        contactData.re_credit_type === 'CASH' ? 'Contado' :
-                       contactData.re_credit_type === 'MIXED' ? 'Mixto' :
+                       contactData.re_credit_type === 'FOVISSSTE' ? 'Fovissste' :
+                       contactData.re_credit_type === 'ISFAM' ? 'ISFAM' :
+                       contactData.re_credit_type === 'CFE' ? 'CFE' :
                        contactData.re_credit_type}
                     </Badge>
                   </div>

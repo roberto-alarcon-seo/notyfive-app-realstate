@@ -222,9 +222,11 @@ const defaultFilters: FilterState = {
 const CREDIT_TYPES = [
   { value: 'INFONAVIT', label: 'Infonavit' },
   { value: 'COFINAVIT', label: 'Cofinavit' },
+  { value: 'FOVISSSTE', label: 'Fovissste' },
+  { value: 'ISFAM', label: 'ISFAM' },
+  { value: 'CFE', label: 'CFE' },
   { value: 'BANK', label: 'Banco' },
   { value: 'CASH', label: 'Contado' },
-  { value: 'MIXED', label: 'Mixto' },
 ];
 
 // Block reasons for filter

@@ -32,7 +32,7 @@ export interface Contact {
   operational_status: string;
   // Real Estate fixed fields
   re_budget_estimated_mxn: number | null;
-  re_credit_type: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'MIXED' | null;
+  re_credit_type: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'FOVISSSTE' | 'ISFAM' | 'CFE' | null;
   re_credit_preapproved: boolean;
   re_down_payment_mxn: number | null;
   re_monthly_income_mxn: number | null;
@@ -102,7 +102,7 @@ export interface ContactFormData {
   operational_status?: string;
   // Real Estate fixed fields
   re_budget_estimated_mxn?: number | null;
-  re_credit_type?: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'MIXED' | null;
+  re_credit_type?: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'FOVISSSTE' | 'ISFAM' | 'CFE' | null;
   re_credit_preapproved?: boolean;
   re_down_payment_mxn?: number | null;
   re_monthly_income_mxn?: number | null;

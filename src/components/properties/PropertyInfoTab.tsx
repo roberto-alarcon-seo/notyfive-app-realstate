@@ -48,10 +48,12 @@ const CURRENCY_OPTIONS = [
 ];
 
 const CREDIT_OPTIONS = [
-  { value: "BANK", label: "Bancario" },
   { value: "INFONAVIT", label: "INFONAVIT" },
-  { value: "FOVISSSTE", label: "FOVISSSTE" },
   { value: "COFINAVIT", label: "COFINAVIT" },
+  { value: "FOVISSSTE", label: "FOVISSSTE" },
+  { value: "ISFAM", label: "ISFAM" },
+  { value: "CFE", label: "CFE" },
+  { value: "BANK", label: "Bancario" },
   { value: "CONTADO", label: "Contado" },
 ];
 
