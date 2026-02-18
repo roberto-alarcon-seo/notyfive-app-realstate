@@ -407,11 +407,8 @@ export function useDeleteEvent() {
 
 // Tipos de evento por defecto en español
 export const DEFAULT_EVENT_TYPES = [
-  { value: 'cita', label: 'Cita' },
-  { value: 'reservacion', label: 'Reservación' },
-  { value: 'visita', label: 'Visita' },
-  { value: 'consulta', label: 'Consulta' },
-  { value: 'seguimiento', label: 'Seguimiento' },
+  { value: 'visita_inmueble', label: 'Visita Inmueble' },
+  { value: 'llamada_revision_credito', label: 'Llamada Revisión de Crédito' },
 ];
 
 export function getEventTypeLabel(value: string): string {
