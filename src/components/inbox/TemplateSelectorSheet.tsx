@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, FileText, Image, Video, File, Clock, Loader2, X, AlertTriangle, Send } from "lucide-react";
+import { Search, FileText, Image, Video, File, Clock, Loader2, X, AlertTriangle, Send, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -152,7 +152,7 @@ export function TemplateSelectorSheet({
           <div className="flex items-center gap-3">
             {selectedTemplate && (
               <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0">
-                <X className="h-4 w-4" />
+                <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
             <SheetTitle className="flex-1">
@@ -305,7 +305,7 @@ export function TemplateSelectorSheet({
                 {/* Preview */}
                 <div className="space-y-2">
                   <h5 className="font-medium text-foreground text-sm">Vista previa</h5>
-                  <div className="p-4 rounded-lg bg-message-outgoing">
+                  <div className="p-4 rounded-lg bg-message-outgoing text-white">
                     {/* Media preview */}
                     {selectedTemplate.header_type === 'image' && selectedTemplate.media_url && (
                       <img 
@@ -328,15 +328,15 @@ export function TemplateSelectorSheet({
                     
                     {/* Header text */}
                     {selectedTemplate.header_type === 'text' && selectedTemplate.header_text && (
-                      <p className="font-medium text-foreground mb-2">{selectedTemplate.header_text}</p>
+                      <p className="font-medium text-white mb-2">{selectedTemplate.header_text}</p>
                     )}
                     
                     {/* Body */}
-                    <p className="text-sm text-foreground whitespace-pre-line">{previewBody}</p>
+                    <p className="text-sm text-white whitespace-pre-line">{previewBody}</p>
                     
                     {/* Footer */}
                     {selectedTemplate.footer && (
-                      <p className="text-xs text-muted-foreground mt-2">{selectedTemplate.footer}</p>
+                      <p className="text-xs text-white/70 mt-2">{selectedTemplate.footer}</p>
                     )}
                   </div>
                 </div>
