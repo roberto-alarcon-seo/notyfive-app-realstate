@@ -74,7 +74,7 @@ serve(async (req) => {
     const authToken = atob(integration.auth_token_encrypted!);
     const twilioAuth = btoa(`${integration.account_sid}:${authToken}`);
 
-    // 3) Fetch templates that have a Twilio SID and are pending
+    // 3) Fetch templates that have a Twilio SID and are pending or draft
     const { data: templates, error: templatesError } = await supabase
       .from('templates')
       .select('id, twilio_template_sid, approval_status, name')
@@ -97,43 +97,89 @@ serve(async (req) => {
       rejection_reason?: string;
     }> = [];
 
-    // 4) Sync each template
+    // 4) Use Twilio Content v2 API to get approval status with channel eligibility
+    // This is more reliable than the v1 ApprovalRequests endpoint
+    const contentListResponse = await fetch(
+      'https://content.twilio.com/v2/ContentAndApprovals',
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${twilioAuth}`,
+        },
+      }
+    );
+
+    let twilioContentMap = new Map<string, { status: string; rejection_reason?: string }>();
+
+    if (contentListResponse.ok) {
+      const contentListData = await contentListResponse.json();
+      const contents = contentListData.contents || [];
+      
+      for (const content of contents) {
+        const sid = content.sid;
+        if (!sid) continue;
+        
+        // Check WhatsApp channel eligibility from approval_requests
+        const approvalRequests = content.approval_requests || {};
+        const whatsapp = approvalRequests.whatsapp;
+        
+        if (whatsapp && whatsapp.status) {
+          twilioContentMap.set(sid, {
+            status: whatsapp.status,
+            rejection_reason: whatsapp.rejection_reason || undefined,
+          });
+          console.log(`📋 Twilio v2 status for ${sid}: ${whatsapp.status}`);
+        }
+      }
+    } else {
+      console.warn('⚠️ Failed to fetch v2 ContentAndApprovals, falling back to v1');
+    }
+
+    // 5) Sync each template
     for (const template of templates || []) {
       if (!template.twilio_template_sid) continue;
 
       try {
-        console.log(`🔍 Checking status for template: ${template.name} (${template.twilio_template_sid})`);
+        let approvalStatus: string | undefined;
+        let rejectionReason: string | undefined;
 
-        // Fetch approval status from Twilio
-        const approvalResponse = await fetch(
-          `https://content.twilio.com/v1/Content/${template.twilio_template_sid}/ApprovalRequests`,
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Basic ${twilioAuth}`,
-              'Content-Type': 'application/json',
-            },
+        // Try v2 data first
+        const v2Data = twilioContentMap.get(template.twilio_template_sid);
+        if (v2Data) {
+          approvalStatus = v2Data.status;
+          rejectionReason = v2Data.rejection_reason;
+        } else {
+          // Fallback to v1 ApprovalRequests
+          console.log(`🔍 Falling back to v1 for template: ${template.name} (${template.twilio_template_sid})`);
+
+          const approvalResponse = await fetch(
+            `https://content.twilio.com/v1/Content/${template.twilio_template_sid}/ApprovalRequests`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Basic ${twilioAuth}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+
+          if (approvalResponse.ok) {
+            const approvalData = await approvalResponse.json();
+            const whatsappApproval = approvalData.whatsapp || approvalData;
+            approvalStatus = whatsappApproval.status;
+            rejectionReason = whatsappApproval.rejection_reason;
+            console.log(`📋 v1 status for ${template.name}: ${approvalStatus}`);
           }
-        );
-
-        if (!approvalResponse.ok) {
-          console.warn(`⚠️ Failed to fetch approval status for ${template.id}:`, approvalResponse.status);
-          continue;
         }
 
-        const approvalData = await approvalResponse.json();
-        console.log(`📥 Approval data for ${template.name}:`, JSON.stringify(approvalData, null, 2));
-
-        // Get WhatsApp approval status
-        const whatsappApproval = approvalData.whatsapp;
-        if (!whatsappApproval) {
-          console.log(`ℹ️ No WhatsApp approval data for ${template.name}`);
+        if (!approvalStatus) {
+          console.log(`ℹ️ No approval status found for ${template.name}`);
           continue;
         }
 
         // Map Twilio status to our status
         let newStatus: string;
-        switch (whatsappApproval.status) {
+        switch (approvalStatus) {
           case 'approved':
             newStatus = 'approved';
             break;
@@ -144,7 +190,11 @@ serve(async (req) => {
           case 'received':
             newStatus = 'pending';
             break;
+          case 'unsubmitted':
+            newStatus = 'draft';
+            break;
           default:
+            console.log(`⚠️ Unknown approval status: ${approvalStatus}`);
             newStatus = template.approval_status;
         }
 
@@ -157,8 +207,8 @@ serve(async (req) => {
             last_synced_at: new Date().toISOString(),
           };
 
-          if (newStatus === 'rejected' && whatsappApproval.rejection_reason) {
-            updateData.rejection_reason = whatsappApproval.rejection_reason;
+          if (newStatus === 'rejected' && rejectionReason) {
+            updateData.rejection_reason = rejectionReason;
           } else if (newStatus === 'approved') {
             updateData.rejection_reason = null;
           }
@@ -173,7 +223,7 @@ serve(async (req) => {
             name: template.name,
             old_status: template.approval_status,
             new_status: newStatus,
-            rejection_reason: whatsappApproval.rejection_reason,
+            rejection_reason: rejectionReason,
           });
         }
       } catch (templateError) {
@@ -181,7 +231,7 @@ serve(async (req) => {
       }
     }
 
-    // 5) Also update last_synced_at for all synced templates
+    // 6) Also update last_synced_at for all synced templates
     if (templates && templates.length > 0) {
       await supabase
         .from('templates')
