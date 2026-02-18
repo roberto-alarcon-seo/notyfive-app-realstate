@@ -256,10 +256,13 @@ serve(async (req) => {
         const aiPromptText = p.ai_prompt ? `\n  Instrucciones especiales: ${p.ai_prompt}` : '';
         
         // Include image info (max 5)
-        const images = propertyImages.filter(img => img.property_id === p.id).slice(0, 5);
-        const hasPhotos = images.length > 0;
+        const uniqueImages = propertyImages
+          .filter(img => img.property_id === p.id)
+          .filter((img, idx, arr) => arr.findIndex(i => i.file_url === img.file_url) === idx)
+          .slice(0, 10);
+        const hasPhotos = uniqueImages.length > 0;
         const photosText = hasPhotos 
-          ? `\n  Fotos disponibles: Sí (${images.length} fotos). Si el cliente pide fotos, responde con el texto [FOTOS:${p.property_code}] en tu mensaje.`
+          ? `\n  Fotos disponibles: Sí (${uniqueImages.length} fotos). Si el cliente pide fotos, responde con el texto [FOTOS:${p.property_code}] en tu mensaje.`
           : '\n  Fotos disponibles: No';
         
         return `- ${p.title} (Código: ${p.property_code})
@@ -604,7 +607,8 @@ ${propertiesContext}`;
       if (matchedProperty) {
         const images = propertyImages
           .filter(img => img.property_id === matchedProperty.id)
-          .slice(0, 5);
+          .filter((img, idx, arr) => arr.findIndex(i => i.file_url === img.file_url) === idx)
+          .slice(0, 10);
         mediaUrls = images.map(img => img.file_url);
       }
       cleanResponse = cleanResponse.replace(/\[FOTOS:[^\]]+\]/g, '').trim();
