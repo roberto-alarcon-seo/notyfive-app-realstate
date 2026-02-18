@@ -15,6 +15,7 @@ import {
   MapPin,
   ExternalLink,
   MessageCircle,
+  Trash2,
 } from "lucide-react";
 import {
   Sheet,
@@ -27,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Event, useCancelEvent, useUpdateEvent, useEventAuditLogs, getEventTypeLabel } from "@/hooks/useEvents";
+import { Event, useCancelEvent, useUpdateEvent, useDeleteEvent, useEventAuditLogs, getEventTypeLabel } from "@/hooks/useEvents";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 
@@ -57,6 +58,7 @@ const ACTION_LABELS: Record<string, string> = {
 export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDetailDrawerProps) {
   const cancelEvent = useCancelEvent();
   const updateEvent = useUpdateEvent();
+  const deleteEvent = useDeleteEvent();
   const navigate = useNavigate();
   const { data: auditLogs = [], isLoading: isLoadingLogs } = useEventAuditLogs(event?.id);
 
@@ -81,6 +83,13 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
   const handleCancel = () => {
     if (window.confirm(`¿Estás seguro de cancelar "${event.title}"?`)) {
       cancelEvent.mutate({ id: event.id });
+      onOpenChange(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (window.confirm(`¿Estás seguro de eliminar "${event.title}"? Esta acción no se puede deshacer.`)) {
+      deleteEvent.mutate(event.id);
       onOpenChange(false);
     }
   };
@@ -332,6 +341,16 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
             >
               <XCircle className="w-4 h-4 mr-2" />
               Cancelar
+            </Button>
+          )}
+          {event.status === 'canceled' && (
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteEvent.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Eliminar
             </Button>
           )}
         </div>
