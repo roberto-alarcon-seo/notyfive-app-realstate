@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Plus, FileText, MoreHorizontal, Copy, Eye, RefreshCw, CheckCircle2, Clock, XCircle, Trash2, Pencil, Send, AlertTriangle, Loader2, Sparkles, User } from "lucide-react";
+import { Search, Plus, FileText, MoreHorizontal, Copy, Eye, RefreshCw, CheckCircle2, Clock, XCircle, Trash2, Pencil, Send, AlertTriangle, Loader2, Sparkles, User, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTemplates, useDeleteTemplate, useDuplicateTemplate, useSubmitTemplateForApproval, useSyncTemplates, useTwilioStatus, Template } from "@/hooks/useTemplates";
+import { useForceApproveTemplate } from "@/hooks/useForceApproveTemplate";
 import { TemplateFormDialog } from "@/components/templates/TemplateFormDialog";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
 import { formatDistanceToNow } from "date-fns";
@@ -64,6 +65,7 @@ export default function Templates() {
   const duplicateTemplate = useDuplicateTemplate();
   const submitForApproval = useSubmitTemplateForApproval();
   const syncTemplates = useSyncTemplates();
+  const forceApprove = useForceApproveTemplate();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
@@ -308,6 +310,15 @@ export default function Templates() {
                               <Send className="w-4 h-4 mr-2" />
                             )}
                             Enviar a aprobación
+                          </DropdownMenuItem>
+                        )}
+                        {template.approval_status === 'pending' && (
+                          <DropdownMenuItem 
+                            onClick={() => forceApprove.mutate(template.id)}
+                            disabled={forceApprove.isPending}
+                          >
+                            <ShieldCheck className="w-4 h-4 mr-2" />
+                            Marcar como aprobada
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
