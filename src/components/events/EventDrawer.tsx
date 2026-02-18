@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { localDatetimeToTimezoneISO } from "@/lib/timezoneUtils";
-import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2, Building, CreditCard } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -46,6 +46,18 @@ import {
 import { cn } from "@/lib/utils";
 import { Event, useCreateEvent, useUpdateEvent, useEventTypes, DEFAULT_EVENT_TYPES } from "@/hooks/useEvents";
 import { useContacts } from "@/hooks/useContacts";
+import { useProperties } from "@/hooks/useProperties";
+import { Label } from "@/components/ui/label";
+
+const CREDIT_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "INFONAVIT", label: "Infonavit" },
+  { value: "COFINAVIT", label: "Cofinavit" },
+  { value: "FOVISSSTE", label: "Fovissste" },
+  { value: "ISFAM", label: "ISFAM" },
+  { value: "CFE", label: "CFE" },
+  { value: "BANK", label: "Bancario" },
+  { value: "CASH", label: "Contado" },
+];
 
 const eventSchema = z.object({
   contact_id: z.string().min(1, "Selecciona un contacto"),
@@ -87,7 +99,11 @@ export function EventDrawer({ open, onOpenChange, event }: EventDrawerProps) {
   const { contacts } = useContacts();
   const { data: eventTypes = [] } = useEventTypes();
 
+  const { data: properties = [] } = useProperties();
+
   const [contactOpen, setContactOpen] = useState(false);
+  const [selectedPropertyId, setSelectedPropertyId] = useState("none");
+  const [selectedCreditType, setSelectedCreditType] = useState("none");
 
   // Merge default types with custom ones from DB
   const allEventTypes = [
@@ -104,7 +120,7 @@ export function EventDrawer({ open, onOpenChange, event }: EventDrawerProps) {
     resolver: zodResolver(eventSchema),
     defaultValues: {
       contact_id: "",
-      event_type: "cita",
+      event_type: "visita_inmueble",
       title: "",
       start_at: "",
       end_at: "",
@@ -130,10 +146,14 @@ export function EventDrawer({ open, onOpenChange, event }: EventDrawerProps) {
         value: String(value),
       }));
       setMetadataFields(fields.length > 0 ? fields : []);
+      // Load property/credit from metadata
+      const meta = event.metadata as Record<string, string> | undefined;
+      setSelectedPropertyId(meta?.property_id || "none");
+      setSelectedCreditType(meta?.credit_type || "none");
     } else {
       form.reset({
         contact_id: "",
-        event_type: "cita",
+        event_type: "visita_inmueble",
         title: "",
         start_at: "",
         end_at: "",
@@ -141,6 +161,8 @@ export function EventDrawer({ open, onOpenChange, event }: EventDrawerProps) {
         notes: "",
       });
       setMetadataFields([]);
+      setSelectedPropertyId("none");
+      setSelectedCreditType("none");
     }
   }, [event, form]);
 
@@ -151,6 +173,19 @@ export function EventDrawer({ open, onOpenChange, event }: EventDrawerProps) {
         metadata[field.key.trim()] = field.value;
       }
     });
+
+    // Add property and credit info to metadata if applicable
+    if (selectedPropertyId && selectedPropertyId !== "none") {
+      const property = properties.find(p => p.id === selectedPropertyId);
+      if (property) {
+        metadata.property_id = property.id;
+        metadata.property_title = property.title;
+        metadata.property_code = property.property_code || "";
+      }
+    }
+    if (selectedCreditType && selectedCreditType !== "none") {
+      metadata.credit_type = selectedCreditType;
+    }
 
     const eventType = customEventType || data.event_type;
 
@@ -298,16 +333,56 @@ export function EventDrawer({ open, onOpenChange, event }: EventDrawerProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    placeholder="O escribe un tipo personalizado..."
-                    value={customEventType}
-                    onChange={(e) => setCustomEventType(e.target.value)}
-                    className="mt-2"
-                  />
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {/* Property selector - only for visita_inmueble */}
+            {form.watch("event_type") === "visita_inmueble" && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Building className="h-3.5 w-3.5" />
+                  Inmueble
+                </Label>
+                <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar inmueble" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin inmueble</SelectItem>
+                    {properties.filter(p => p.is_active).map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.property_code ? `[${p.property_code}] ` : ""}{p.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Credit Type selector - for visita_inmueble */}
+            {form.watch("event_type") === "visita_inmueble" && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  Tipo de crédito (opcional)
+                </Label>
+                <Select value={selectedCreditType} onValueChange={setSelectedCreditType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar tipo de crédito" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin especificar</SelectItem>
+                    {CREDIT_TYPE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Title */}
             <FormField
