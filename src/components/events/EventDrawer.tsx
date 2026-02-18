@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
+import { localDatetimeToTimezoneISO } from "@/lib/timezoneUtils";
 import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import {
   Sheet,
@@ -153,14 +154,18 @@ export function EventDrawer({ open, onOpenChange, event }: EventDrawerProps) {
 
     const eventType = customEventType || data.event_type;
 
+    // Convert datetime-local to timezone-aware ISO
+    const startISO = localDatetimeToTimezoneISO(data.start_at);
+    const endISO = data.end_at ? localDatetimeToTimezoneISO(data.end_at) : null;
+
     if (isEditing && event) {
       await updateEvent.mutateAsync({ 
         id: event.id,
         contact_id: data.contact_id,
         event_type: eventType,
         title: data.title,
-        start_at: data.start_at,
-        end_at: data.end_at || null,
+        start_at: startISO,
+        end_at: endISO,
         status: data.status,
         notes: data.notes || null,
         metadata,
@@ -170,8 +175,8 @@ export function EventDrawer({ open, onOpenChange, event }: EventDrawerProps) {
         contact_id: data.contact_id,
         event_type: eventType,
         title: data.title,
-        start_at: data.start_at,
-        end_at: data.end_at || null,
+        start_at: startISO,
+        end_at: endISO,
         status: data.status,
         notes: data.notes || null,
         metadata,

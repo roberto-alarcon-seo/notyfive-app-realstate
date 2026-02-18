@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarPlus, Building } from "lucide-react";
+import { CalendarPlus, Building, User } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/select";
 import { useCreateEvent } from "@/hooks/useEvents";
 import { useProperties } from "@/hooks/useProperties";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { localDatetimeToTimezoneISO } from "@/lib/timezoneUtils";
 
 interface ScheduleVisitModalProps {
   open: boolean;
@@ -29,6 +32,7 @@ interface ScheduleVisitModalProps {
   contactName: string;
   propertyInterestId?: string | null;
 }
+
 
 export function ScheduleVisitModal({
   open,
@@ -40,12 +44,14 @@ export function ScheduleVisitModal({
   const createEvent = useCreateEvent();
   const { data: properties = [] } = useProperties();
 
+  const [clientName, setClientName] = useState(contactName);
   const [startAt, setStartAt] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState(propertyInterestId || "none");
   const [notes, setNotes] = useState("");
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
+      setClientName(contactName);
       setStartAt("");
       setSelectedPropertyId(propertyInterestId || "none");
       setNotes("");
@@ -56,10 +62,17 @@ export function ScheduleVisitModal({
   const handleSubmit = async () => {
     if (!startAt) return;
 
-    // Calculate end time: +1 hour
-    const startDate = new Date(startAt);
+    const trimmedName = clientName.trim();
+    if (!trimmedName) {
+      toast.error("El nombre del cliente es requerido");
+      return;
+    }
+
+    // Convert datetime-local to timezone-aware ISO string
+    const startISO = localDatetimeToTimezoneISO(startAt);
+    const startDate = new Date(startISO);
     const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
-    const endAt = endDate.toISOString();
+    const endISO = endDate.toISOString();
 
     const metadata: Record<string, string> = {};
     if (selectedPropertyId && selectedPropertyId !== "none") {
@@ -71,12 +84,26 @@ export function ScheduleVisitModal({
       }
     }
 
+    // 2.1 Update contact name if changed
+    if (trimmedName !== contactName) {
+      const { error: updateError } = await supabase
+        .from("contacts")
+        .update({ name: trimmedName })
+        .eq("id", contactId);
+
+      if (updateError) {
+        toast.error(`Error al actualizar nombre: ${updateError.message}`);
+        return;
+      }
+    }
+
+    // 2.2 Create the appointment
     await createEvent.mutateAsync({
       contact_id: contactId,
       event_type: "visita",
-      title: `Visita - ${contactName}`,
-      start_at: startAt,
-      end_at: endAt,
+      title: `Visita - ${trimmedName}`,
+      start_at: startISO,
+      end_at: endISO,
       status: "scheduled",
       source: "manual",
       notes: notes || undefined,
@@ -100,6 +127,23 @@ export function ScheduleVisitModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* Client Name - First field */}
+          <div className="space-y-2">
+            <Label htmlFor="visit-client-name" className="flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5" />
+              Nombre del cliente
+            </Label>
+            <Input
+              id="visit-client-name"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              placeholder="Nombre completo del cliente"
+            />
+            <p className="text-xs text-muted-foreground">
+              Se actualizará el nombre en la ficha del contacto
+            </p>
+          </div>
+
           {/* Date/Time */}
           <div className="space-y-2">
             <Label htmlFor="visit-start">Fecha y hora</Label>
@@ -156,7 +200,7 @@ export function ScheduleVisitModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!startAt || createEvent.isPending}
+            disabled={!startAt || !clientName.trim() || createEvent.isPending}
           >
             <CalendarPlus className="h-4 w-4 mr-2" />
             {createEvent.isPending ? "Agendando..." : "Agendar cita"}
