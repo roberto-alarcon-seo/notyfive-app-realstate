@@ -1578,6 +1578,7 @@ export type Database = {
           contact_id: string
           created_at: string
           error_message: string | null
+          event_id: string | null
           event_name: string
           id: string
           payload: Json | null
@@ -1590,6 +1591,7 @@ export type Database = {
           contact_id: string
           created_at?: string
           error_message?: string | null
+          event_id?: string | null
           event_name: string
           id?: string
           payload?: Json | null
@@ -1602,6 +1604,7 @@ export type Database = {
           contact_id?: string
           created_at?: string
           error_message?: string | null
+          event_id?: string | null
           event_name?: string
           id?: string
           payload?: Json | null
@@ -1876,6 +1879,7 @@ export type Database = {
       meta_event_mappings: {
         Row: {
           created_at: string
+          currency: string
           event_value: number | null
           id: string
           is_active: boolean
@@ -1889,6 +1893,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          currency?: string
           event_value?: number | null
           id?: string
           is_active?: boolean
@@ -1902,6 +1907,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          currency?: string
           event_value?: number | null
           id?: string
           is_active?: boolean

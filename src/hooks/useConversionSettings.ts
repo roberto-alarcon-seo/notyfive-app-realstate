@@ -28,6 +28,7 @@ export interface MetaEventMapping {
   send_capi: boolean;
   is_active: boolean;
   event_value?: number | null;
+  currency?: string;
 }
 
 const DEFAULT_SETTINGS: TenantSettings = {
@@ -161,6 +162,7 @@ export function useConversionSettings() {
           send_capi: m.send_capi,
           is_active: m.is_active,
           event_value: m.event_value || null,
+          currency: m.currency || 'MXN',
         }));
 
         const { error: insertError } = await supabase

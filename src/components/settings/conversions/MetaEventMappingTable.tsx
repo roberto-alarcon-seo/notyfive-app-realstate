@@ -35,6 +35,17 @@ const STANDARD_META_EVENTS = [
   { value: 'Custom', label: 'Custom (personalizado)' },
 ];
 
+const CURRENCIES = [
+  { value: 'MXN', label: 'MXN' },
+  { value: 'USD', label: 'USD' },
+  { value: 'EUR', label: 'EUR' },
+  { value: 'COP', label: 'COP' },
+  { value: 'ARS', label: 'ARS' },
+  { value: 'CLP', label: 'CLP' },
+  { value: 'PEN', label: 'PEN' },
+  { value: 'BRL', label: 'BRL' },
+];
+
 interface MetaEventMappingTableProps {
   mappings: MetaEventMapping[];
   onUpdate: (index: number, updates: Partial<MetaEventMapping>) => void;
@@ -51,15 +62,9 @@ export function MetaEventMappingTable({ mappings, onUpdate, onRemove }: MetaEven
 
   const handleEventChange = (index: number, value: string) => {
     if (value === 'Custom') {
-      onUpdate(index, { 
-        meta_event_type: 'CUSTOM', 
-        meta_event_name: '' 
-      });
+      onUpdate(index, { meta_event_type: 'CUSTOM', meta_event_name: '' });
     } else {
-      onUpdate(index, { 
-        meta_event_type: 'STANDARD', 
-        meta_event_name: value 
-      });
+      onUpdate(index, { meta_event_type: 'STANDARD', meta_event_name: value });
     }
   };
 
@@ -76,11 +81,13 @@ export function MetaEventMappingTable({ mappings, onUpdate, onRemove }: MetaEven
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[180px]">Stage del pipeline</TableHead>
-            <TableHead className="w-[180px]">Evento Meta</TableHead>
-            <TableHead className="w-[80px] text-center">Pixel</TableHead>
-            <TableHead className="w-[80px] text-center">CAPI</TableHead>
-            <TableHead className="w-[80px] text-center">Activo</TableHead>
+            <TableHead className="w-[160px]">Stage</TableHead>
+            <TableHead className="w-[160px]">Evento Meta</TableHead>
+            <TableHead className="w-[100px]">Valor</TableHead>
+            <TableHead className="w-[80px]">Moneda</TableHead>
+            <TableHead className="w-[60px] text-center">Pixel</TableHead>
+            <TableHead className="w-[60px] text-center">CAPI</TableHead>
+            <TableHead className="w-[60px] text-center">Activo</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -130,6 +137,32 @@ export function MetaEventMappingTable({ mappings, onUpdate, onRemove }: MetaEven
                     />
                   )}
                 </div>
+              </TableCell>
+              <TableCell>
+                <Input
+                  type="number"
+                  value={mapping.event_value || ''}
+                  onChange={(e) => onUpdate(index, { event_value: e.target.value ? Number(e.target.value) : null })}
+                  placeholder="0.00"
+                  className="h-9 w-[90px]"
+                />
+              </TableCell>
+              <TableCell>
+                <Select
+                  value={mapping.currency || 'MXN'}
+                  onValueChange={(value) => onUpdate(index, { currency: value })}
+                >
+                  <SelectTrigger className="h-9 w-[75px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </TableCell>
               <TableCell className="text-center">
                 <Switch

@@ -34,6 +34,8 @@ interface MetaEventMapping {
   send_pixel: boolean;
   send_capi: boolean;
   is_active: boolean;
+  event_value?: number | null;
+  currency?: string;
 }
 
 interface Contact {
@@ -45,6 +47,13 @@ interface Contact {
   internal_conversion_count: number;
   re_property_interest_id?: string | null;
   lead_score?: number;
+}
+
+/** Generate a unique event_id for deduplication between Pixel and CAPI */
+function generateEventId(contactId: string, stage: string): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  return `evt_${contactId.substring(0, 8)}_${stage}_${timestamp}_${random}`;
 }
 
 export function usePipelineStageChange() {
@@ -122,13 +131,11 @@ async function handleInternalConversion(
 
   // Check if moving TO the conversion stage
   if (newStage === conversionStage) {
-    // If first time only and already converted, skip
     if (firstTimeOnly && contact.internal_converted_at) {
       console.log('Contact already converted, skipping (first_time_only is true)');
       return;
     }
 
-    // Record conversion
     const { error } = await supabase
       .from('contacts')
       .update({
@@ -143,18 +150,15 @@ async function handleInternalConversion(
       return;
     }
 
-    // Log the event
     await logConversionEvent(tenantId, contact.id, 'INTERNAL', newStage, 'internal_conversion', 'SENT');
     console.log('Internal conversion recorded for contact:', contact.id);
   }
 
-  // Check for reversal (moving away from conversion stage to an earlier stage)
+  // Check for reversal
   if (allowReversal && contact.internal_converted_at && contact.internal_converted_stage === conversionStage) {
-    const oldIndex = PIPELINE_ORDER.indexOf(oldStage);
     const newIndex = PIPELINE_ORDER.indexOf(newStage);
     const conversionIndex = PIPELINE_ORDER.indexOf(conversionStage);
 
-    // If moving to a stage before the conversion stage
     if (newIndex < conversionIndex && newIndex >= 0) {
       const newCount = Math.max(0, contact.internal_conversion_count - 1);
       
@@ -172,7 +176,6 @@ async function handleInternalConversion(
         return;
       }
 
-      // Log the reversal event
       await logConversionEvent(tenantId, contact.id, 'INTERNAL', newStage, 'internal_conversion_reversal', 'SENT');
       console.log('Internal conversion reversed for contact:', contact.id);
     }
@@ -199,6 +202,9 @@ async function handleMetaEvents(
   }
 
   for (const mapping of mappings as MetaEventMapping[]) {
+    // Generate a single event_id for deduplication between Pixel and CAPI
+    const eventId = generateEventId(contact.id, newStage);
+
     const eventData = {
       contactId: contact.id,
       pipelineStage: newStage,
@@ -206,39 +212,55 @@ async function handleMetaEvents(
       leadScore: contact.lead_score,
     };
 
-    // Send Pixel event (browser-side)
+    const customDataForCapi: Record<string, unknown> = {
+      pipeline_stage: newStage,
+      contact_id: contact.id,
+      property_id: contact.re_property_interest_id,
+      lead_score: contact.lead_score,
+    };
+
+    // Add value + currency if configured
+    if (mapping.event_value) {
+      customDataForCapi.value = mapping.event_value;
+      customDataForCapi.currency = mapping.currency || 'MXN';
+    }
+
+    // Send Pixel event (browser-side) with event_id
     if (mapping.send_pixel && settings.meta_send_pixel) {
       try {
+        const pixelCustomData: Record<string, unknown> = {
+          ...eventData,
+          eventID: eventId, // Meta Pixel uses eventID for dedup
+        };
+        if (mapping.event_value) {
+          pixelCustomData.value = mapping.event_value;
+          pixelCustomData.currency = mapping.currency || 'MXN';
+        }
+
         trackPipelineEvent(
           mapping.meta_event_type as 'STANDARD' | 'CUSTOM',
           mapping.meta_event_name,
-          eventData
+          { ...eventData },
+          eventId
         );
         await logConversionEvent(
-          tenantId,
-          contact.id,
-          'META_PIXEL',
-          newStage,
-          mapping.meta_event_name,
-          'SENT',
-          { ...eventData }
+          tenantId, contact.id, 'META_PIXEL', newStage,
+          mapping.meta_event_name, 'SENT',
+          { ...eventData }, undefined, eventId
         );
       } catch (error) {
         console.error('Error sending pixel event:', error);
         await logConversionEvent(
-          tenantId,
-          contact.id,
-          'META_PIXEL',
-          newStage,
-          mapping.meta_event_name,
-          'FAILED',
+          tenantId, contact.id, 'META_PIXEL', newStage,
+          mapping.meta_event_name, 'FAILED',
           { ...eventData },
-          error instanceof Error ? error.message : 'Unknown error'
+          error instanceof Error ? error.message : 'Unknown error',
+          eventId
         );
       }
     }
 
-    // Send CAPI event (server-side)
+    // Send CAPI event (server-side) with same event_id
     if (mapping.send_capi && settings.meta_send_capi) {
       try {
         const metaCookies = getMetaCookies();
@@ -249,12 +271,8 @@ async function handleMetaEvents(
             contact_id: contact.id,
             event_name: mapping.meta_event_name,
             event_type: mapping.meta_event_type,
-            custom_data: {
-              pipeline_stage: newStage,
-              contact_id: contact.id,
-              property_id: contact.re_property_interest_id,
-              lead_score: contact.lead_score,
-            },
+            event_id: eventId,
+            custom_data: customDataForCapi,
             user_data: {
               phone: contact.phone,
               email: contact.email,
@@ -268,25 +286,18 @@ async function handleMetaEvents(
         if (error) throw error;
 
         await logConversionEvent(
-          tenantId,
-          contact.id,
-          'META_CAPI',
-          newStage,
-          mapping.meta_event_name,
-          'SENT',
-          { ...eventData }
+          tenantId, contact.id, 'META_CAPI', newStage,
+          mapping.meta_event_name, 'SENT',
+          { ...eventData }, undefined, eventId
         );
       } catch (error) {
         console.error('Error sending CAPI event:', error);
         await logConversionEvent(
-          tenantId,
-          contact.id,
-          'META_CAPI',
-          newStage,
-          mapping.meta_event_name,
-          'FAILED',
+          tenantId, contact.id, 'META_CAPI', newStage,
+          mapping.meta_event_name, 'FAILED',
           { ...eventData },
-          error instanceof Error ? error.message : 'Unknown error'
+          error instanceof Error ? error.message : 'Unknown error',
+          eventId
         );
       }
     }
@@ -301,7 +312,8 @@ async function logConversionEvent(
   eventName: string,
   status: string,
   payload?: Record<string, unknown>,
-  errorMessage?: string
+  errorMessage?: string,
+  eventId?: string
 ) {
   const { error } = await supabase
     .from('conversion_event_logs')
@@ -314,6 +326,7 @@ async function logConversionEvent(
       status,
       payload: (payload || {}) as Json,
       error_message: errorMessage || null,
+      event_id: eventId || null,
     }]);
 
   if (error) {

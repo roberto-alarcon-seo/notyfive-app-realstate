@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { BarChart3 } from "lucide-react";
 import { InternalConversionCard } from "@/components/settings/conversions/InternalConversionCard";
 import { MetaIntegrationCard } from "@/components/settings/conversions/MetaIntegrationCard";
+import { ConversionEventLogsPanel } from "@/components/settings/conversions/ConversionEventLogsPanel";
 import { useConversionSettings } from "@/hooks/useConversionSettings";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -43,6 +43,8 @@ export default function SettingsConversions() {
           onSaveMappings={saveMappings}
           onResetMappings={resetMappingsToDefault}
         />
+
+        <ConversionEventLogsPanel />
       </div>
     </SettingsLayout>
   );
