@@ -372,7 +372,10 @@ export default function Inbox() {
                       className={cn(
                         "p-4 cursor-pointer transition-colors hover:bg-muted/50",
                         selectedConversation?.id === conv.id && "bg-muted",
-                        conv.last_message_direction === 'inbound' && selectedConversation?.id !== conv.id && "bg-muted/40"
+                        selectedConversation?.id !== conv.id &&
+                          conv.last_customer_message_at &&
+                          (!conv.last_agent_message_at || new Date(conv.last_customer_message_at) > new Date(conv.last_agent_message_at)) &&
+                          "bg-muted/40"
                       )}
                     >
                       <div className="flex items-start gap-3">
