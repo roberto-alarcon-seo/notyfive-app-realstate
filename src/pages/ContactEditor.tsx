@@ -385,10 +385,16 @@ export default function ContactEditor() {
             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
+            {isEditing && id && formData.phone && !isMobile && (
+              <Button variant="outline" size="sm" onClick={() => navigate(`/inbox?contact_id=${id}`)}>
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Ir a conversación
+              </Button>
+            )}
             {fromConversationId && !isMobile && (
               <Button variant="outline" size="sm" onClick={handleBack}>
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Conversación
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver al chat
               </Button>
             )}
             {isEditing && id && !isMobile && (

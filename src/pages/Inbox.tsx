@@ -12,7 +12,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator,
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useConversations, useMarkConversationAsRead, useDeleteConversation, useArchiveContact, type Conversation, type Message } from "@/hooks/useConversations";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaginatedMessages } from "@/hooks/usePaginatedMessages";
 import { formatDistanceToNow, format, parseISO, startOfDay } from "date-fns";
@@ -29,6 +29,7 @@ export default function Inbox() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
 
   // Play notification sound on new inbound messages
@@ -212,10 +213,40 @@ export default function Inbox() {
         setSelectedConversation(conv);
         if (isMobile) setMobileView('chat');
       } else {
-        toast.info('Este contacto aún no tiene conversación');
-        if (!selectedConversation) {
-          setSelectedConversation(conversations[0]);
-        }
+        // Create conversation for this contact
+        (async () => {
+          const { data: contact } = await supabase
+            .from('contacts')
+            .select('id, phone, tenant_id')
+            .eq('id', contactId)
+            .single();
+          
+          if (contact?.phone && contact?.tenant_id) {
+            const whatsapp = contact.phone.startsWith('whatsapp:') 
+              ? contact.phone 
+              : `whatsapp:${contact.phone}`;
+            
+            const { data: newConv, error } = await supabase
+              .from('conversations')
+              .insert({
+                contact_id: contact.id,
+                tenant_id: contact.tenant_id,
+                customer_whatsapp: whatsapp,
+                status: 'open',
+              })
+              .select()
+              .single();
+            
+            if (newConv && !error) {
+              queryClient.invalidateQueries({ queryKey: ['conversations'] });
+              toast.success('Conversación creada');
+            } else {
+              toast.error('Error al crear conversación');
+            }
+          } else {
+            toast.info('Este contacto no tiene teléfono registrado');
+          }
+        })();
       }
       searchParams.delete('contact_id');
       setSearchParams(searchParams, { replace: true });
@@ -689,9 +720,12 @@ export default function Inbox() {
                   <div ref={messagesEndRef} />
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground px-6 text-center">
                   <MessageSquare className="h-12 w-12 mb-3" />
-                  <p>No hay mensajes en esta conversación</p>
+                  <p className="font-medium text-foreground">Sin mensajes aún</p>
+                  <p className="text-sm mt-2 max-w-md">
+                    Para iniciar la conversación con este cliente es necesario enviar una <strong>plantilla de WhatsApp</strong> aprobada. Usa el botón de plantillas en el compositor de abajo.
+                  </p>
                 </div>
               )}
             </ScrollArea>
