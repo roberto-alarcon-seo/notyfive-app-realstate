@@ -415,7 +415,7 @@ INSTRUCCIONES:
 - NUNCA inventes características, precios, medidas o amenidades que no estén en los datos.
 - Si no encuentras la respuesta exacta en los datos proporcionados, responde con la frase exacta: "[ESCALAR]"
 - FOTOS DE PROPIEDADES: Si el cliente pide fotos/imágenes de una propiedad y la propiedad tiene "Fotos disponibles: Sí", incluye el marcador [FOTOS:CÓDIGO_PROPIEDAD] en tu respuesta (ejemplo: [FOTOS:RVTMYA-EMX-0001]). Si NO tiene fotos, indica que por el momento no tienes fotos disponibles pero puedes agendar una visita. NUNCA incluyas el marcador [FOTOS:...] si la propiedad no tiene fotos.
-- DETECCIÓN DE PROPIEDAD DE INTERÉS: Cuando el cliente pregunte, mencione o muestre interés por una propiedad específica (ya sea por código, nombre, zona, o contexto de la conversación), incluye el marcador [PROPIEDAD_INTERES:CÓDIGO_PROPIEDAD] en tu respuesta (ejemplo: [PROPIEDAD_INTERES:RVTMYA-EMX-0001]). Esto permite asociar automáticamente la propiedad al contacto. Solo incluye este marcador cuando estés seguro de cuál propiedad se refiere el cliente. Si mencionan varias, usa la más reciente o la que muestre mayor interés.
+- DETECCIÓN DE PROPIEDAD DE INTERÉS (OBLIGATORIO): SIEMPRE que tu respuesta mencione, describa o proporcione información sobre una propiedad específica, DEBES incluir el marcador [PROPIEDAD_INTERES:CÓDIGO_PROPIEDAD] al final de tu mensaje. Esto es OBLIGATORIO sin excepción. Ejemplos de cuándo incluirlo: el cliente pregunta por una propiedad, tú describes una propiedad, envías fotos de una propiedad, compartes precio/ubicación de una propiedad. Si mencionas varias propiedades, usa el código de la propiedad principal de la conversación.
 - Mantén las respuestas concisas y útiles.
 - Zona horaria: ${aiSettings.timezone}
 
@@ -616,6 +616,7 @@ ${propertiesContext}`;
 
     // Parse [PROPIEDAD_INTERES:CODE] marker and auto-assign property to contact
     const propInteresMatch = generatedText.match(/\[PROPIEDAD_INTERES:([^\]]+)\]/);
+    let propertyAssigned = false;
     if (propInteresMatch && contact_id) {
       const propertyCode = propInteresMatch[1].trim();
       const matchedProperty = properties.find(p => p.property_code === propertyCode);
@@ -625,8 +626,23 @@ ${propertiesContext}`;
           .from('contacts')
           .update({ re_property_interest_id: matchedProperty.id })
           .eq('id', contact_id);
+        propertyAssigned = true;
       }
       cleanResponse = cleanResponse.replace(/\[PROPIEDAD_INTERES:[^\]]+\]/g, '').trim();
+    }
+
+    // Fallback: if AI didn't include [PROPIEDAD_INTERES:...] marker, scan the response for known property codes
+    if (!propertyAssigned && contact_id && properties.length > 0) {
+      for (const prop of properties) {
+        if (generatedText.includes(prop.property_code)) {
+          console.log(`🏠 Fallback: detected property code ${prop.property_code} in AI response, assigning to contact ${contact_id}`);
+          await supabase
+            .from('contacts')
+            .update({ re_property_interest_id: prop.id })
+            .eq('id', contact_id);
+          break;
+        }
+      }
     }
 
     // Remove internal markers from response
