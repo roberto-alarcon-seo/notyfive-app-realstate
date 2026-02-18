@@ -532,7 +532,7 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
         </div>
         
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-border shrink-0space-y-3">
+        <div className="px-6 py-4 border-t border-border shrink-0 space-y-3">
           {/* Twilio Warning */}
           {twilioNotConfigured && canSubmitForApproval && (
             <Alert variant="destructive" className="mb-3">
