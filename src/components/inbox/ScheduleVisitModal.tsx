@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CalendarPlus, Building, User } from "lucide-react";
+import { CalendarPlus, Building, User, CreditCard } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,12 +25,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { localDatetimeToTimezoneISO } from "@/lib/timezoneUtils";
 
+const CREDIT_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "INFONAVIT", label: "Infonavit" },
+  { value: "COFINAVIT", label: "Cofinavit" },
+  { value: "BANK", label: "Bancario" },
+  { value: "CASH", label: "Contado" },
+  { value: "MIXED", label: "Mixto" },
+];
+
 interface ScheduleVisitModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contactId: string;
   contactName: string;
   propertyInterestId?: string | null;
+  contactCreditType?: string | null;
 }
 
 
@@ -40,6 +49,7 @@ export function ScheduleVisitModal({
   contactId,
   contactName,
   propertyInterestId,
+  contactCreditType,
 }: ScheduleVisitModalProps) {
   const createEvent = useCreateEvent();
   const { data: properties = [] } = useProperties();
@@ -47,6 +57,7 @@ export function ScheduleVisitModal({
   const [clientName, setClientName] = useState(contactName);
   const [startAt, setStartAt] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState(propertyInterestId || "none");
+  const [selectedCreditType, setSelectedCreditType] = useState(contactCreditType || "none");
   const [notes, setNotes] = useState("");
 
   // Sync property interest when modal opens or prop changes
@@ -54,16 +65,18 @@ export function ScheduleVisitModal({
     if (open) {
       setClientName(contactName);
       setSelectedPropertyId(propertyInterestId || "none");
+      setSelectedCreditType(contactCreditType || "none");
       setStartAt("");
       setNotes("");
     }
-  }, [open, contactName, propertyInterestId]);
+  }, [open, contactName, propertyInterestId, contactCreditType]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
       setClientName(contactName);
       setStartAt("");
       setSelectedPropertyId(propertyInterestId || "none");
+      setSelectedCreditType(contactCreditType || "none");
       setNotes("");
     }
     onOpenChange(isOpen);
@@ -94,15 +107,24 @@ export function ScheduleVisitModal({
       }
     }
 
-    // 2.1 Update contact name if changed
+    // Update contact fields if changed (name and/or credit type)
+    const contactUpdates: Record<string, unknown> = {};
     if (trimmedName !== contactName) {
+      contactUpdates.name = trimmedName;
+    }
+    const newCreditType = selectedCreditType !== "none" ? selectedCreditType : null;
+    if (newCreditType !== (contactCreditType || null)) {
+      contactUpdates.re_credit_type = newCreditType;
+    }
+
+    if (Object.keys(contactUpdates).length > 0) {
       const { error: updateError } = await supabase
         .from("contacts")
-        .update({ name: trimmedName })
+        .update(contactUpdates)
         .eq("id", contactId);
 
       if (updateError) {
-        toast.error(`Error al actualizar nombre: ${updateError.message}`);
+        toast.error(`Error al actualizar contacto: ${updateError.message}`);
         return;
       }
     }
@@ -190,6 +212,30 @@ export function ScheduleVisitModal({
               </Select>
             </div>
           )}
+
+          {/* Credit Type selector */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <CreditCard className="h-3.5 w-3.5" />
+              Tipo de crédito (opcional)
+            </Label>
+            <Select value={selectedCreditType} onValueChange={setSelectedCreditType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar tipo de crédito" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin especificar</SelectItem>
+                {CREDIT_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Se actualizará en la ficha del contacto si se modifica
+            </p>
+          </div>
 
           {/* Notes */}
           <div className="space-y-2">
