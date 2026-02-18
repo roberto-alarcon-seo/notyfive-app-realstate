@@ -307,9 +307,16 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
   const handleToggleAi = async (enabled: boolean) => {
     setIsTogglingAi(true);
     try {
+      const updateData: Record<string, unknown> = { ai_enabled: enabled };
+      if (!enabled) {
+        updateData.needs_human = true;
+        updateData.ai_state = 'escalated';
+        updateData.ai_pause_reason = 'manual_disable';
+        updateData.ai_paused_at = new Date().toISOString();
+      }
       const { error } = await supabase
         .from('conversations')
-        .update({ ai_enabled: enabled })
+        .update(updateData)
         .eq('id', conversation.id);
 
       if (error) throw error;
