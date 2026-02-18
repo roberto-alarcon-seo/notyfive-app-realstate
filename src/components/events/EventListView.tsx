@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { MoreHorizontal, Edit, XCircle, Eye, CalendarClock, User } from "lucide-react";
+import { MoreHorizontal, Edit, XCircle, Eye, CalendarClock, User, Building2 } from "lucide-react";
 import { Event, useCancelEvent, getEventTypeLabel } from "@/hooks/useEvents";
 import {
   Table,
@@ -111,6 +111,12 @@ export function EventListView({ events, isLoading, onEventClick, onEditEvent }: 
                     {event.contact.name}
                   </span>
                 )}
+                {(event.metadata as any)?.property_title && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Building2 className="h-3 w-3" />
+                    {(event.metadata as any).property_title}
+                  </span>
+                )}
               </div>
             </button>
           );
@@ -128,6 +134,7 @@ export function EventListView({ events, isLoading, onEventClick, onEditEvent }: 
             <TableHead>Fecha/Hora</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Título</TableHead>
+            <TableHead>Propiedad</TableHead>
             <TableHead>Contacto</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Origen</TableHead>
@@ -152,6 +159,16 @@ export function EventListView({ events, isLoading, onEventClick, onEditEvent }: 
                   </Badge>
                 </TableCell>
                 <TableCell>{event.title}</TableCell>
+                <TableCell>
+                  {(event.metadata as any)?.property_title ? (
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-sm truncate max-w-[180px]">{(event.metadata as any).property_title}</span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">—</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <div>
                     <p className="font-medium">{event.contact?.name || "—"}</p>

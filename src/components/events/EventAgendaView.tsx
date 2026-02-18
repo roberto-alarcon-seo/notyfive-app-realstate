@@ -7,7 +7,7 @@ import {
   isSameDay, isToday, isSameMonth 
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Building2 } from "lucide-react";
 import { Event } from "@/hooks/useEvents";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -150,6 +150,12 @@ export function EventAgendaView({ events, isLoading, onEventClick }: EventAgenda
                           {format(new Date(event.start_at), "HH:mm")}
                           {event.contact?.name && ` • ${event.contact.name}`}
                         </p>
+                        {(event.metadata as any)?.property_title && (
+                          <p className="text-[10px] opacity-70 flex items-center gap-0.5 mt-0.5">
+                            <Building2 className="h-2.5 w-2.5" />
+                            {(event.metadata as any).property_title}
+                          </p>
+                        )}
                       </button>
                     ))
                   )}
@@ -206,6 +212,12 @@ export function EventAgendaView({ events, isLoading, onEventClick }: EventAgenda
                           {format(new Date(event.start_at), "HH:mm")}
                           {event.contact?.name && ` • ${event.contact.name}`}
                         </p>
+                        {(event.metadata as any)?.property_title && (
+                          <p className="text-[10px] opacity-70 flex items-center gap-0.5 mt-0.5">
+                            <Building2 className="h-2.5 w-2.5" />
+                            {(event.metadata as any).property_title}
+                          </p>
+                        )}
                       </button>
                     ))}
                   </div>
