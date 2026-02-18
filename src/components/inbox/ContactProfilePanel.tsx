@@ -1015,6 +1015,7 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
           contactId={contactId}
           contactName={conversation.contact?.name || 'Contacto'}
           propertyInterestId={contactData?.re_property_interest_id}
+          contactCreditType={contactData?.re_credit_type}
         />
       )}
     </ScrollArea>
