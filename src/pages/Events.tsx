@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { Plus, List, Calendar as CalendarIcon, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ const STATUS_OPTIONS = [
 export default function Events() {
   const [view, setView] = useState<'list' | 'agenda'>('agenda');
   const [filters, setFilters] = useState<EventFilters>({});
+  const [dateRange, setDateRange] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
@@ -45,6 +47,26 @@ export default function Events() {
 
   const handleTypeFilter = (value: string) => {
     setFilters(prev => ({ ...prev, event_type: value === 'all' ? undefined : value }));
+  };
+
+  const handleDateRangeFilter = (value: string) => {
+    setDateRange(value);
+    const now = new Date();
+    let from_date: string | undefined;
+    let to_date: string | undefined;
+
+    if (value === 'today') {
+      from_date = startOfDay(now).toISOString();
+      to_date = endOfDay(now).toISOString();
+    } else if (value === 'week') {
+      from_date = startOfWeek(now, { weekStartsOn: 1 }).toISOString();
+      to_date = endOfWeek(now, { weekStartsOn: 1 }).toISOString();
+    } else if (value === 'month') {
+      from_date = startOfMonth(now).toISOString();
+      to_date = endOfMonth(now).toISOString();
+    }
+
+    setFilters(prev => ({ ...prev, from_date, to_date }));
   };
 
   const handleEventClick = (event: Event) => {
@@ -106,6 +128,18 @@ export default function Events() {
                   {getEventTypeLabel(type)}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={dateRange} onValueChange={handleDateRangeFilter}>
+            <SelectTrigger className="w-[130px] md:w-[160px] text-xs md:text-sm h-9">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todo</SelectItem>
+              <SelectItem value="today">Hoy</SelectItem>
+              <SelectItem value="week">Esta semana</SelectItem>
+              <SelectItem value="month">Este mes</SelectItem>
             </SelectContent>
           </Select>
 
