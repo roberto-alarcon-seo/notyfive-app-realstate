@@ -95,9 +95,11 @@ export function LeadContextPanel({ data }: LeadContextPanelProps) {
     const labels: Record<string, string> = {
       'INFONAVIT': 'Infonavit',
       'COFINAVIT': 'Cofinavit',
+      'FOVISSSTE': 'Fovissste',
+      'ISFAM': 'ISFAM',
+      'CFE': 'CFE',
       'BANK': 'Bancario',
       'CASH': 'Contado',
-      'MIXED': 'Mixto',
     };
     return type ? labels[type] || type : '—';
   };

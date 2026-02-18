@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 
 export interface RealEstateCreditData {
   re_budget_estimated_mxn: number | null;
-  re_credit_type: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'MIXED' | null;
+  re_credit_type: 'INFONAVIT' | 'COFINAVIT' | 'BANK' | 'CASH' | 'FOVISSSTE' | 'ISFAM' | 'CFE' | null;
   re_credit_preapproved: boolean;
   re_down_payment_mxn: number | null;
   re_monthly_income_mxn: number | null;
@@ -19,9 +19,11 @@ interface RealEstateCreditCardProps {
 const CREDIT_TYPE_LABELS: Record<string, string> = {
   INFONAVIT: 'Infonavit',
   COFINAVIT: 'Cofinavit',
+  FOVISSSTE: 'Fovissste',
+  ISFAM: 'ISFAM',
+  CFE: 'CFE',
   BANK: 'Bancario',
   CASH: 'Contado',
-  MIXED: 'Mixto',
 };
 
 export function RealEstateCreditCard({ data, onChange }: RealEstateCreditCardProps) {

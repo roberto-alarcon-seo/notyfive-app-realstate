@@ -185,7 +185,9 @@ export function SegmentRuleBuilder({
       COFINAVIT: "COFINAVIT",
       BANK: "Bancario",
       CASH: "Contado",
-      MIXED: "Mixto",
+      FOVISSSTE: "Fovissste",
+      ISFAM: "ISFAM",
+      CFE: "CFE",
       // RE Reason
       BUY: "Comprar",
       RENT: "Rentar",
