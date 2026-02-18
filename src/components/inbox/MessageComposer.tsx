@@ -17,7 +17,7 @@ import { EmojiPicker } from "./EmojiPicker";
 import { TemplateSelectorSheet } from "./TemplateSelectorSheet";
 import { MediaUploadButton, type MediaFile } from "./MediaUploadButton";
 import { MediaPreviewOverlay } from "./MediaPreviewOverlay";
-import { RewritePreviewModal } from "./RewritePreviewModal";
+import { RewritePreviewModal, getStoredTone, type RewriteTone } from "./RewritePreviewModal";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Contact {
@@ -203,6 +203,7 @@ export function MessageComposer({
       const result = await rewriteText.mutateAsync({
         originalText: currentText,
         contactName: contact?.name,
+        tone: getStoredTone(),
       });
       setRewriteSuggestedText(result.improved_text);
     } catch (error) {
@@ -217,6 +218,22 @@ export function MessageComposer({
     setShowRewriteModal(false);
     // Focus textarea after using suggestion
     setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
+  const handleToneChange = async (tone: RewriteTone) => {
+    if (!rewriteOriginalText) return;
+    setRewriteSuggestedText("");
+    try {
+      const result = await rewriteText.mutateAsync({
+        originalText: rewriteOriginalText,
+        contactName: contact?.name,
+        tone,
+      });
+      setRewriteSuggestedText(result.improved_text);
+    } catch (error) {
+      const err = error as { message?: string };
+      toast.error('Error al mejorar el texto', { description: err.message });
+    }
   };
 
   // Render wallet blocked / no credits state
@@ -551,6 +568,7 @@ export function MessageComposer({
         originalText={rewriteOriginalText}
         suggestedText={rewriteSuggestedText}
         onUseSuggestion={handleUseSuggestion}
+        onToneChange={handleToneChange}
         isLoading={rewriteText.isPending}
       />
     </>
