@@ -499,15 +499,14 @@ export default function Inbox() {
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{selectedConversation.customer_whatsapp}</p>
                 </div>
-                {/* Pipeline Stage Select - hide on mobile */}
-                {!isMobile && selectedContactId && headerContactData?.pipeline_stage && (
-                  <PipelineHeaderSelect
-                    contactId={selectedContactId}
-                    currentStage={headerContactData.pipeline_stage}
-                  />
-                )}
               </div>
-              
+              {/* Pipeline Stage Select - hide on mobile */}
+              {!isMobile && selectedContactId && headerContactData?.pipeline_stage && (
+                <PipelineHeaderSelect
+                  contactId={selectedContactId}
+                  currentStage={headerContactData.pipeline_stage}
+                />
+              )}
               <div className="flex items-center gap-2 shrink-0">
                 {isMobile ? (
                   <Button
