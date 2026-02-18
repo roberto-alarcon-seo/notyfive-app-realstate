@@ -500,6 +500,7 @@ export default function Inbox() {
                   <p className="text-xs text-muted-foreground truncate">{selectedConversation.customer_whatsapp}</p>
                 </div>
               </div>
+              <div className="flex items-center gap-2 shrink-0">
               {/* Pipeline Stage Select - hide on mobile */}
               {!isMobile && selectedContactId && headerContactData?.pipeline_stage && (
                 <PipelineHeaderSelect
@@ -507,7 +508,6 @@ export default function Inbox() {
                   currentStage={headerContactData.pipeline_stage}
                 />
               )}
-              <div className="flex items-center gap-2 shrink-0">
                 {isMobile ? (
                   <Button
                     variant="ghost"
