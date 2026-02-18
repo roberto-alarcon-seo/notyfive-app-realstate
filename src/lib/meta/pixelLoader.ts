@@ -23,7 +23,6 @@ export function initMetaPixel(pixelId: string): void {
     return;
   }
 
-  // Facebook Pixel base code - simplified version
   const script = document.createElement('script');
   script.async = true;
   script.src = 'https://connect.facebook.net/en_US/fbevents.js';
@@ -43,39 +42,51 @@ export function initMetaPixel(pixelId: string): void {
 }
 
 /**
- * Track a standard Meta event (Lead, ViewContent, Purchase, etc.)
+ * Track a standard Meta event with optional eventID for deduplication
  */
 export function trackStandardEvent(
   eventName: string,
-  customData?: Record<string, unknown>
+  customData?: Record<string, unknown>,
+  eventId?: string
 ): void {
   if (!window.fbq) {
     console.warn('Meta Pixel not initialized');
     return;
   }
 
-  window.fbq('track', eventName, customData);
-  console.log('Meta Pixel event tracked:', eventName, customData);
+  const options = eventId ? { eventID: eventId } : undefined;
+  if (options) {
+    window.fbq('track', eventName, customData, options);
+  } else {
+    window.fbq('track', eventName, customData);
+  }
+  console.log('Meta Pixel event tracked:', eventName, customData, eventId ? `eventID: ${eventId}` : '');
 }
 
 /**
- * Track a custom Meta event
+ * Track a custom Meta event with optional eventID for deduplication
  */
 export function trackCustomEvent(
   eventName: string,
-  customData?: Record<string, unknown>
+  customData?: Record<string, unknown>,
+  eventId?: string
 ): void {
   if (!window.fbq) {
     console.warn('Meta Pixel not initialized');
     return;
   }
 
-  window.fbq('trackCustom', eventName, customData);
-  console.log('Meta Pixel custom event tracked:', eventName, customData);
+  const options = eventId ? { eventID: eventId } : undefined;
+  if (options) {
+    window.fbq('trackCustom', eventName, customData, options);
+  } else {
+    window.fbq('trackCustom', eventName, customData);
+  }
+  console.log('Meta Pixel custom event tracked:', eventName, customData, eventId ? `eventID: ${eventId}` : '');
 }
 
 /**
- * Track a pipeline stage change event
+ * Track a pipeline stage change event with deduplication eventID
  */
 export function trackPipelineEvent(
   eventType: 'STANDARD' | 'CUSTOM',
@@ -85,7 +96,8 @@ export function trackPipelineEvent(
     pipelineStage: string;
     propertyId?: string;
     leadScore?: number;
-  }
+  },
+  eventId?: string
 ): void {
   const customData = {
     pipeline_stage: data.pipelineStage,
@@ -95,9 +107,9 @@ export function trackPipelineEvent(
   };
 
   if (eventType === 'CUSTOM') {
-    trackCustomEvent(eventName, customData);
+    trackCustomEvent(eventName, customData, eventId);
   } else {
-    trackStandardEvent(eventName, customData);
+    trackStandardEvent(eventName, customData, eventId);
   }
 }
 

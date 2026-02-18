@@ -12,6 +12,7 @@ interface RequestBody {
   contact_id: string;
   event_name: string;
   event_type: string;
+  event_id?: string;
   custom_data: Record<string, unknown>;
   user_data: {
     phone?: string | null;
@@ -22,6 +23,7 @@ interface RequestBody {
     client_ip_address?: string;
     client_user_agent?: string;
   };
+  is_test?: boolean;
 }
 
 serve(async (req) => {
@@ -35,9 +37,9 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: RequestBody = await req.json();
-    const { tenant_id, contact_id, event_name, event_type, custom_data, user_data } = body;
+    const { tenant_id, contact_id, event_name, event_type, event_id, custom_data, user_data, is_test } = body;
 
-    // Fetch tenant settings to get access token and pixel ID
+    // Fetch tenant settings
     const { data: settings, error: settingsError } = await supabase
       .from("tenant_settings")
       .select("meta_pixel_id, meta_capi_access_token, meta_test_event_code")
@@ -56,7 +58,7 @@ serve(async (req) => {
       throw new Error("Meta Pixel ID not configured");
     }
 
-    // Get client IP and user agent from request headers
+    // Get client IP and user agent
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || 
                      req.headers.get("cf-connecting-ip") || 
                      user_data.client_ip_address;
@@ -69,7 +71,6 @@ serve(async (req) => {
       hashedUserData.em = await hashValue(user_data.email.toLowerCase().trim());
     }
     if (user_data.phone) {
-      // Normalize phone number (remove non-numeric except +)
       const normalizedPhone = user_data.phone.replace(/[^\d+]/g, "");
       hashedUserData.ph = await hashValue(normalizedPhone);
     }
@@ -89,9 +90,9 @@ serve(async (req) => {
       hashedUserData.client_user_agent = clientUserAgent;
     }
 
-    // Prepare event data
+    // Prepare event data with event_id for deduplication
     const eventTime = Math.floor(Date.now() / 1000);
-    const eventData = {
+    const eventData: Record<string, unknown> = {
       event_name: event_name,
       event_time: eventTime,
       action_source: "system_generated",
@@ -99,61 +100,83 @@ serve(async (req) => {
       custom_data: custom_data,
     };
 
+    // Include event_id for deduplication
+    if (event_id) {
+      eventData.event_id = event_id;
+    }
+
     // Build request payload
     const payload: Record<string, unknown> = {
       data: [eventData],
     };
 
-    // Add test event code if configured
+    // Add test event code if configured or if this is a test event
     if (settings.meta_test_event_code) {
       payload.test_event_code = settings.meta_test_event_code;
     }
 
-    // Send to Meta Conversions API
+    // Send to Meta Conversions API with retry for 5xx errors
     const metaUrl = `https://graph.facebook.com/v18.0/${settings.meta_pixel_id}/events`;
-    const metaResponse = await fetch(`${metaUrl}?access_token=${settings.meta_capi_access_token}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    let metaResponse: Response;
+    let metaResult: Record<string, unknown>;
+    let attempt = 0;
+    const maxAttempts = 2;
 
-    const metaResult = await metaResponse.json();
+    while (attempt < maxAttempts) {
+      attempt++;
+      metaResponse = await fetch(`${metaUrl}?access_token=${settings.meta_capi_access_token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (!metaResponse.ok) {
+      metaResult = await metaResponse.json();
+
+      if (metaResponse.ok) {
+        break; // success
+      }
+
+      // Retry only on 5xx errors
+      if (metaResponse.status >= 500 && attempt < maxAttempts) {
+        console.warn(`Meta CAPI 5xx error (attempt ${attempt}), retrying...`, metaResult);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+
+      // Non-retryable error or max attempts reached
       console.error("Meta CAPI error:", metaResult);
-      
-      // Log the failed event
+
       await supabase.from("conversion_event_logs").insert({
         tenant_id,
         contact_id,
         source: "META_CAPI",
-        pipeline_stage: custom_data.pipeline_stage as string,
+        pipeline_stage: custom_data.pipeline_stage as string || null,
         event_name,
         status: "FAILED",
-        payload: { event_data: eventData, meta_response: metaResult },
-        error_message: metaResult.error?.message || "Unknown Meta API error",
+        payload: { event_data: eventData, meta_response: metaResult, attempts: attempt },
+        error_message: (metaResult! as { error?: { message?: string } }).error?.message || "Unknown Meta API error",
+        event_id: event_id || null,
       });
 
-      throw new Error(metaResult.error?.message || "Meta CAPI request failed");
+      throw new Error((metaResult! as { error?: { message?: string } }).error?.message || "Meta CAPI request failed");
     }
 
-    console.log("Meta CAPI success:", metaResult);
+    console.log("Meta CAPI success:", metaResult!);
 
     // Log the successful event
     await supabase.from("conversion_event_logs").insert({
       tenant_id,
       contact_id,
       source: "META_CAPI",
-      pipeline_stage: custom_data.pipeline_stage as string,
+      pipeline_stage: custom_data.pipeline_stage as string || null,
       event_name,
       status: "SENT",
-      payload: { event_data: eventData, meta_response: metaResult },
+      payload: { event_data: eventData, meta_response: metaResult!, attempts: attempt },
+      event_id: event_id || null,
     });
 
     return new Response(
-      JSON.stringify({ success: true, result: metaResult }),
+      JSON.stringify({ success: true, result: metaResult! }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -174,7 +197,6 @@ serve(async (req) => {
   }
 });
 
-// Hash function for user data (SHA-256)
 async function hashValue(value: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(value);
