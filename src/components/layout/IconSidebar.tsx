@@ -23,7 +23,7 @@ const menuItems = [
   { icon: MessageSquare, label: "Inbox", path: "/inbox", showBadge: true },
   { icon: Kanban, label: "Pipeline", path: "/pipeline", showBadge: false },
   { icon: CalendarClock, label: "Seguimientos", path: "/followups", showBadge: false },
-  { icon: CalendarDays, label: "Eventos", path: "/events", showBadge: false },
+  { icon: CalendarDays, label: "Citas", path: "/events", showBadge: false },
   { icon: Users, label: "Contactos", path: "/contacts", showBadge: false },
   { icon: Filter, label: "Segmentos", path: "/segments", showBadge: false },
   { icon: FileText, label: "Plantillas", path: "/templates", showBadge: false },
