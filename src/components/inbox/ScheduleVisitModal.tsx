@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CalendarPlus, Building, User } from "lucide-react";
 import {
   Dialog,
@@ -48,6 +48,16 @@ export function ScheduleVisitModal({
   const [startAt, setStartAt] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState(propertyInterestId || "none");
   const [notes, setNotes] = useState("");
+
+  // Sync property interest when modal opens or prop changes
+  useEffect(() => {
+    if (open) {
+      setClientName(contactName);
+      setSelectedPropertyId(propertyInterestId || "none");
+      setStartAt("");
+      setNotes("");
+    }
+  }, [open, contactName, propertyInterestId]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
