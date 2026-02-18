@@ -98,20 +98,21 @@ serve(async (req) => {
     }> = [];
 
     // 4) Use Twilio Content v2 API to get approval status with channel eligibility
-    // This is more reliable than the v1 ApprovalRequests endpoint
-    const contentListResponse = await fetch(
-      'https://content.twilio.com/v2/ContentAndApprovals',
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${twilioAuth}`,
-        },
-      }
-    );
-
+    // Paginate through all results
     let twilioContentMap = new Map<string, { status: string; rejection_reason?: string }>();
+    let nextPageUrl: string | null = 'https://content.twilio.com/v2/ContentAndApprovals?PageSize=100';
 
-    if (contentListResponse.ok) {
+    while (nextPageUrl) {
+      const contentListResponse = await fetch(nextPageUrl, {
+        method: 'GET',
+        headers: { 'Authorization': `Basic ${twilioAuth}` },
+      });
+
+      if (!contentListResponse.ok) {
+        console.warn('⚠️ Failed to fetch v2 ContentAndApprovals:', contentListResponse.status);
+        break;
+      }
+
       const contentListData = await contentListResponse.json();
       const contents = contentListData.contents || [];
       
@@ -119,7 +120,6 @@ serve(async (req) => {
         const sid = content.sid;
         if (!sid) continue;
         
-        // Check WhatsApp channel eligibility from approval_requests
         const approvalRequests = content.approval_requests || {};
         const whatsapp = approvalRequests.whatsapp;
         
@@ -131,9 +131,13 @@ serve(async (req) => {
           console.log(`📋 Twilio v2 status for ${sid}: ${whatsapp.status}`);
         }
       }
-    } else {
-      console.warn('⚠️ Failed to fetch v2 ContentAndApprovals, falling back to v1');
+
+      // Check for next page
+      const meta = contentListData.meta;
+      nextPageUrl = meta?.next_page_url || null;
     }
+
+    console.log(`📋 Total templates fetched from Twilio v2: ${twilioContentMap.size}`);
 
     // 5) Sync each template
     for (const template of templates || []) {
@@ -149,26 +153,49 @@ serve(async (req) => {
           approvalStatus = v2Data.status;
           rejectionReason = v2Data.rejection_reason;
         } else {
-          // Fallback to v1 ApprovalRequests
-          console.log(`🔍 Falling back to v1 for template: ${template.name} (${template.twilio_template_sid})`);
+          // Fallback: fetch individual content via v2 API
+          console.log(`🔍 Falling back to individual fetch for: ${template.name} (${template.twilio_template_sid})`);
 
-          const approvalResponse = await fetch(
-            `https://content.twilio.com/v1/Content/${template.twilio_template_sid}/ApprovalRequests`,
+          // Try v2 individual endpoint
+          const individualResponse = await fetch(
+            `https://content.twilio.com/v2/ContentAndApprovals/${template.twilio_template_sid}`,
             {
               method: 'GET',
-              headers: {
-                'Authorization': `Basic ${twilioAuth}`,
-                'Content-Type': 'application/json',
-              },
+              headers: { 'Authorization': `Basic ${twilioAuth}` },
             }
           );
 
-          if (approvalResponse.ok) {
-            const approvalData = await approvalResponse.json();
-            const whatsappApproval = approvalData.whatsapp || approvalData;
-            approvalStatus = whatsappApproval.status;
-            rejectionReason = whatsappApproval.rejection_reason;
-            console.log(`📋 v1 status for ${template.name}: ${approvalStatus}`);
+          if (individualResponse.ok) {
+            const individualData = await individualResponse.json();
+            console.log(`📋 Individual v2 keys: ${JSON.stringify(Object.keys(individualData))}`);
+            const whatsapp = individualData.approval_requests?.whatsapp;
+            if (whatsapp?.status) {
+              approvalStatus = whatsapp.status;
+              rejectionReason = whatsapp.rejection_reason || undefined;
+              console.log(`📋 Individual v2 status: ${approvalStatus}`);
+            }
+          } else {
+            console.log(`⚠️ Individual v2 failed: ${individualResponse.status}`);
+          }
+
+          // Try v1 ApprovalRequests  
+          if (!approvalStatus) {
+            const approvalResponse = await fetch(
+              `https://content.twilio.com/v1/Content/${template.twilio_template_sid}/ApprovalRequests`,
+              {
+                method: 'GET',
+                headers: { 'Authorization': `Basic ${twilioAuth}` },
+              }
+            );
+
+            if (approvalResponse.ok) {
+              const approvalData = await approvalResponse.json();
+              console.log(`📋 v1 full response: ${JSON.stringify(approvalData)}`);
+              const whatsappApproval = approvalData.whatsapp || approvalData;
+              approvalStatus = whatsappApproval.status;
+              rejectionReason = whatsappApproval.rejection_reason;
+              console.log(`📋 v1 status: ${approvalStatus}`);
+            }
           }
         }
 
