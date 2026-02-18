@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { FileText, Download, MapPin, Volume2, Image, File, X, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { ImageLightbox } from "@/components/support/ImageLightbox";
 
 interface MediaProps {
   type: string | null;
@@ -145,7 +145,8 @@ function useProxiedMediaUrl(originalUrl: string | null) {
 }
 
 export function MessageMediaRenderer({ media, className }: MessageMediaRendererProps) {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const { url: proxiedUrl, isLoading: mediaLoading } = useProxiedMediaUrl(media.url);
 
   // Handle multiple images (media_urls array with more than 1 item)
@@ -159,15 +160,20 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
       <div className={cn("space-y-1", className)}>
         <div className={cn("grid gap-1.5", gridCols)}>
           {urls.map((url, idx) => (
-            <ImagePreview
+            <MultiImagePreview
               key={idx}
               url={url}
-              onExpand={() => setImagePreview(url)}
+              onExpand={() => { setLightboxIndex(idx); setLightboxOpen(true); }}
               className="!max-w-full"
             />
           ))}
         </div>
-        <ImageDialog url={imagePreview} onClose={() => setImagePreview(null)} />
+        <ImageLightbox
+          images={urls.map((u, i) => ({ url: u, name: `imagen-${i + 1}` }))}
+          initialIndex={lightboxIndex}
+          open={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+        />
       </div>
     );
   }
@@ -178,10 +184,14 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
       <>
         <ImagePreview
           url={media.mediaUrls[0]}
-          onExpand={() => setImagePreview(media.mediaUrls![0])}
+          onExpand={() => { setLightboxIndex(0); setLightboxOpen(true); }}
           className={className}
         />
-        <ImageDialog url={imagePreview} onClose={() => setImagePreview(null)} />
+        <ImageLightbox
+          images={[{ url: media.mediaUrls[0], name: 'imagen' }]}
+          open={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+        />
       </>
     );
   }
@@ -205,10 +215,14 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
       <>
         <ImagePreview
           url={proxiedUrl || media.url!}
-          onExpand={() => setImagePreview(proxiedUrl || media.url)}
+          onExpand={() => { setLightboxIndex(0); setLightboxOpen(true); }}
           className={className}
         />
-        <ImageDialog url={imagePreview} onClose={() => setImagePreview(null)} />
+        <ImageLightbox
+          images={[{ url: proxiedUrl || media.url!, name: media.filename || 'imagen' }]}
+          open={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+        />
       </>
     );
   }
@@ -539,27 +553,52 @@ function ImagePreview({
   );
 }
 
-// Full-screen image dialog
-function ImageDialog({ url, onClose }: { url: string | null; onClose: () => void }) {
-  const { url: proxiedUrl } = useProxiedMediaUrl(url);
+// Multi-image preview (uses proxy internally)
+function MultiImagePreview({
+  url,
+  onExpand,
+  className
+}: {
+  url: string;
+  onExpand: () => void;
+  className?: string;
+}) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const { url: proxiedUrl, isLoading: proxyLoading } = useProxiedMediaUrl(url);
 
-  if (!url) return null;
+  if (hasError) {
+    return (
+      <div className={cn("w-48 h-32 bg-muted rounded-lg flex items-center justify-center", className)}>
+        <Image className="h-8 w-8 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const displayUrl = proxiedUrl || url;
 
   return (
-    <Dialog open={!!url} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-4xl w-auto p-0 bg-transparent border-none">
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-2 z-50 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-        >
-          <X className="h-5 w-5 text-white" />
-        </button>
-        <img
-          src={proxiedUrl || url}
-          alt="Imagen completa"
-          className="max-w-full max-h-[90vh] rounded-lg"
-        />
-      </DialogContent>
-    </Dialog>
+    <div className={cn("relative max-w-xs cursor-pointer group", className)}>
+      {(isLoading || proxyLoading) && (
+        <div className="absolute inset-0 bg-muted rounded-lg flex items-center justify-center min-w-32 min-h-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      <img
+        src={displayUrl}
+        alt="Imagen"
+        className={cn(
+          "max-w-full max-h-64 rounded-lg transition-opacity",
+          (isLoading || proxyLoading) ? "opacity-0" : "opacity-100"
+        )}
+        onClick={() => onExpand()}
+        onLoad={() => setIsLoading(false)}
+        onError={() => {
+          setIsLoading(false);
+          setHasError(true);
+        }}
+      />
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors" />
+    </div>
   );
 }
