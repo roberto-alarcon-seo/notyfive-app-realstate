@@ -1014,6 +1014,7 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
           onOpenChange={setShowVisitModal}
           contactId={contactId}
           contactName={conversation.contact?.name || 'Contacto'}
+          conversationId={conversation.id}
           propertyInterestId={contactData?.re_property_interest_id}
           contactCreditType={contactData?.re_credit_type}
         />

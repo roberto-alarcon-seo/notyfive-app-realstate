@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateEvent } from "@/hooks/useEvents";
+import { useCreateFollowup } from "@/hooks/useFollowups";
 import { useProperties } from "@/hooks/useProperties";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ interface ScheduleVisitModalProps {
   onOpenChange: (open: boolean) => void;
   contactId: string;
   contactName: string;
+  conversationId: string;
   propertyInterestId?: string | null;
   contactCreditType?: string | null;
 }
@@ -48,10 +50,12 @@ export function ScheduleVisitModal({
   onOpenChange,
   contactId,
   contactName,
+  conversationId,
   propertyInterestId,
   contactCreditType,
 }: ScheduleVisitModalProps) {
   const createEvent = useCreateEvent();
+  const createFollowup = useCreateFollowup();
   const { data: properties = [] } = useProperties();
 
   const [clientName, setClientName] = useState(contactName);
@@ -107,8 +111,10 @@ export function ScheduleVisitModal({
       }
     }
 
-    // Update contact fields if changed (name and/or credit type)
-    const contactUpdates: Record<string, unknown> = {};
+    // Update contact fields if changed (name, credit type) + always set pipeline to visit_scheduled
+    const contactUpdates: Record<string, unknown> = {
+      pipeline_stage: 'visit_scheduled',
+    };
     if (trimmedName !== contactName) {
       contactUpdates.name = trimmedName;
     }
@@ -117,19 +123,17 @@ export function ScheduleVisitModal({
       contactUpdates.re_credit_type = newCreditType;
     }
 
-    if (Object.keys(contactUpdates).length > 0) {
-      const { error: updateError } = await supabase
-        .from("contacts")
-        .update(contactUpdates)
-        .eq("id", contactId);
+    const { error: updateError } = await supabase
+      .from("contacts")
+      .update(contactUpdates)
+      .eq("id", contactId);
 
-      if (updateError) {
-        toast.error(`Error al actualizar contacto: ${updateError.message}`);
-        return;
-      }
+    if (updateError) {
+      toast.error(`Error al actualizar contacto: ${updateError.message}`);
+      return;
     }
 
-    // 2.2 Create the appointment
+    // Create the appointment
     await createEvent.mutateAsync({
       contact_id: contactId,
       event_type: "visita",
@@ -141,6 +145,23 @@ export function ScheduleVisitModal({
       notes: notes || undefined,
       metadata,
     });
+
+    // Create followup 24hrs before the visit
+    const followupDate = new Date(startDate.getTime() - 24 * 60 * 60 * 1000);
+    // If the followup would be in the past, set it to now
+    const followupDueAt = followupDate > new Date() ? followupDate.toISOString() : new Date().toISOString();
+
+    try {
+      await createFollowup.mutateAsync({
+        conversation_id: conversationId,
+        contact_id: contactId,
+        due_at: followupDueAt,
+        note: "Confirmar visita del cliente",
+      });
+    } catch {
+      // Don't block the flow if followup creation fails
+      console.warn("No se pudo crear el seguimiento automático");
+    }
 
     onOpenChange(false);
   };
