@@ -4,7 +4,7 @@ import {
   Loader2, Users, 
   Calendar, TrendingUp, AlertTriangle,
   Filter, Search, RefreshCw, X, ChevronDown, 
-  DollarSign, Tag, Thermometer, AlertCircle
+  DollarSign, Tag, Thermometer, AlertCircle, Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,6 +204,7 @@ interface FilterState {
   scoreRange: [number, number];
   creditPreapproved: boolean | null;
   engagementLevels: string[];
+  propertyId: string | null;
 }
 
 const defaultFilters: FilterState = {
@@ -216,6 +217,7 @@ const defaultFilters: FilterState = {
   scoreRange: [0, 100],
   creditPreapproved: null,
   engagementLevels: [],
+  propertyId: null,
 };
 
 // Credit types for filter
@@ -270,6 +272,23 @@ export default function Pipeline() {
     enabled: !!tenantId,
   });
 
+  // Fetch properties for filter
+  const { data: properties = [] } = useQuery({
+    queryKey: ['pipeline-properties', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, title, property_code')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('title');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
   // Extract unique sources and tags from contacts
   const availableSources = useMemo(() => {
     const sources = new Set<string>();
@@ -291,6 +310,7 @@ export default function Pipeline() {
     if (filters.scoreRange[0] > 0 || filters.scoreRange[1] < 100) count++;
     if (filters.creditPreapproved !== null) count++;
     if (filters.engagementLevels.length > 0) count++;
+    if (filters.propertyId) count++;
     return count;
   }, [filters]);
 
@@ -354,6 +374,11 @@ export default function Pipeline() {
     // Engagement level filter
     if (filters.engagementLevels.length > 0) {
       result = result.filter(c => filters.engagementLevels.includes(c.engagement_level));
+    }
+    
+    // Property filter
+    if (filters.propertyId) {
+      result = result.filter(c => c.re_property_interest_id === filters.propertyId);
     }
     
     return result;
@@ -671,6 +696,32 @@ export default function Pipeline() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Property */}
+                  {properties.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium flex items-center gap-2">
+                        <Building2 className="h-3 w-3" />
+                        Propiedad de interés
+                      </Label>
+                      <Select
+                        value={filters.propertyId || 'all'}
+                        onValueChange={(v) => updateFilter('propertyId', v === 'all' ? null : v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Todas las propiedades" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all" className="text-xs">Todas las propiedades</SelectItem>
+                          {properties.map((p) => (
+                            <SelectItem key={p.id} value={p.id} className="text-xs">
+                              {p.property_code} — {p.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* Source */}
                   {availableSources.length > 0 && (
