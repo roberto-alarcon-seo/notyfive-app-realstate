@@ -726,7 +726,7 @@ export default function Inbox() {
           "border-l border-border bg-card animate-in slide-in-from-right-5 duration-200",
           isMobile 
             ? "fixed inset-0 z-50 w-full border-l-0 overflow-auto" 
-            : "w-72"
+            : "w-72 pr-3"
         )}>
           <ContactProfilePanel 
             conversation={selectedConversation}
