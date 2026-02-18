@@ -26,7 +26,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function Events() {
-  const [view, setView] = useState<'list' | 'agenda'>('list');
+  const [view, setView] = useState<'list' | 'agenda'>('agenda');
   const [filters, setFilters] = useState<EventFilters>({});
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -60,10 +60,10 @@ export default function Events() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-4 md:p-6 border-b border-border">
-        <h1 className="text-xl md:text-2xl font-semibold text-foreground">Eventos</h1>
+        <h1 className="text-xl md:text-2xl font-semibold text-foreground">Citas</h1>
         <Button onClick={() => setIsCreateOpen(true)} size="sm">
           <Plus className="w-4 h-4 mr-1 md:mr-2" />
-          Crear evento
+          Crear cita
         </Button>
       </div>
 
