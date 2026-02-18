@@ -300,8 +300,16 @@ serve(async (req) => {
       'authentication': 'AUTHENTICATION'
     };
     
+    // Twilio requires lowercase alphanumeric + underscores only for the approval name
+    const approvalName = template.name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '');
+
     const approvalPayload = {
-      name: template.name,
+      name: approvalName,
       category: categoryMap[template.category] || 'UTILITY'
     };
 
