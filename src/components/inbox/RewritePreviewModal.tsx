@@ -1,7 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, Check, Edit3, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -11,12 +18,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+export type RewriteTone = 'formal' | 'informal';
+
+const TONE_STORAGE_KEY = 'rewrite-tone-preference';
+
+export function getStoredTone(): RewriteTone {
+  return (localStorage.getItem(TONE_STORAGE_KEY) as RewriteTone) || 'formal';
+}
+
 interface RewritePreviewModalProps {
   open: boolean;
   onClose: () => void;
   originalText: string;
   suggestedText: string;
   onUseSuggestion: (text: string) => void;
+  onToneChange?: (tone: RewriteTone) => void;
   isLoading?: boolean;
 }
 
@@ -26,10 +42,18 @@ export function RewritePreviewModal({
   originalText,
   suggestedText,
   onUseSuggestion,
+  onToneChange,
   isLoading = false,
 }: RewritePreviewModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(suggestedText);
+  const [tone, setTone] = useState<RewriteTone>(getStoredTone());
+
+  const handleToneChange = (value: RewriteTone) => {
+    setTone(value);
+    localStorage.setItem(TONE_STORAGE_KEY, value);
+    onToneChange?.(value);
+  };
 
   // Reset state when modal opens with new suggestion
   const handleOpenChange = (open: boolean) => {
@@ -63,6 +87,20 @@ export function RewritePreviewModal({
             Revisa la sugerencia de IA y decide si usarla
           </DialogDescription>
         </DialogHeader>
+
+        {/* Tone selector */}
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Tono:</label>
+          <Select value={tone} onValueChange={(v) => handleToneChange(v as RewriteTone)}>
+            <SelectTrigger className="w-[160px] h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="formal">Formal (usted)</SelectItem>
+              <SelectItem value="informal">Informal (tú)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-8 gap-3">

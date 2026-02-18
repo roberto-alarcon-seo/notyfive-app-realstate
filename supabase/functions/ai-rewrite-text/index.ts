@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { originalText, contactName, companyName } = await req.json();
+    const { originalText, contactName, companyName, tone } = await req.json();
 
     if (!originalText || originalText.length < 10) {
       return new Response(
@@ -29,6 +29,10 @@ serve(async (req) => {
       );
     }
 
+    const toneInstruction = tone === 'informal'
+      ? '- Usa un tono informal, tutea al cliente (habla de "tú"), sé cercano y amigable pero profesional'
+      : '- Usa un tono formal, trata al cliente de "usted", sé profesional y respetuoso';
+
     const systemPrompt = `Eres un asistente de redacción para agentes humanos de atención al cliente.
 Tu tarea es mejorar la claridad, ortografía y tono del mensaje, manteniendo EXACTAMENTE la intención original.
 No agregues información nueva ni promesas.
@@ -36,7 +40,7 @@ No agregues información nueva ni promesas.
 Instrucciones:
 - Corrige errores ortográficos y gramaticales
 - Mejora la claridad del mensaje
-- Usa un tono profesional, claro y empático
+${toneInstruction}
 - Mantén el idioma original del texto
 - No inventes datos
 - No hagas preguntas adicionales

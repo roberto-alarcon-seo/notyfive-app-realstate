@@ -5,6 +5,7 @@ interface RewriteTextParams {
   originalText: string;
   contactName?: string;
   companyName?: string;
+  tone?: 'formal' | 'informal';
 }
 
 interface RewriteTextResponse {
@@ -13,9 +14,9 @@ interface RewriteTextResponse {
 
 export function useRewriteText() {
   return useMutation({
-    mutationFn: async ({ originalText, contactName, companyName }: RewriteTextParams): Promise<RewriteTextResponse> => {
+    mutationFn: async ({ originalText, contactName, companyName, tone }: RewriteTextParams): Promise<RewriteTextResponse> => {
       const { data, error } = await supabase.functions.invoke('ai-rewrite-text', {
-        body: { originalText, contactName, companyName },
+        body: { originalText, contactName, companyName, tone },
       });
 
       if (error) {
