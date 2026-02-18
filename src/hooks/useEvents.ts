@@ -379,6 +379,32 @@ export function useCancelEvent() {
   });
 }
 
+export function useDeleteEvent() {
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!profile?.tenant_id) throw new Error('No tenant');
+
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id)
+        .eq('tenant_id', profile.tenant_id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast.success('Cita eliminada');
+    },
+    onError: (error) => {
+      toast.error(`Error al eliminar: ${error.message}`);
+    },
+  });
+}
+
 // Tipos de evento por defecto en español
 export const DEFAULT_EVENT_TYPES = [
   { value: 'cita', label: 'Cita' },
