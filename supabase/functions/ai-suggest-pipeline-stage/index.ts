@@ -99,7 +99,7 @@ REGLAS:
 6. Si no hay evidencia suficiente para cambiar de etapa, usa should_change: false.
 
 SEÑALES CLAVE:
-- new_lead → interest_confirmed: El cliente pregunta por precios, ubicación, fotos, detalles de una propiedad específica.
+- new_lead → interest_confirmed: IMPORTANTE — una sola pregunta inicial del cliente sobre una propiedad NO es suficiente. Cuando un lead llega preguntando por un inmueble, eso es comportamiento normal de "nuevo lead". Solo sugiere "interest_confirmed" cuando el cliente demuestra interés SOSTENIDO: hace múltiples preguntas sobre la propiedad (precio, crédito, ubicación, fotos, disponibilidad), responde a la información que le das pidiendo más detalles, o manifiesta explícitamente que le interesa (ej: "me interesa", "quiero agendar visita"). Una conversación de solo 1-2 mensajes del cliente NUNCA debe sugerir interest_confirmed.
 - interest_confirmed → financial_validation: El cliente menciona crédito, presupuesto, enganche, tipo de financiamiento.
 - financial_validation → searching: El cliente pide ver más opciones, comparar propiedades, no encuentra algo que le guste.
 - searching → visit_scheduled: El cliente quiere agendar una visita, pide fecha/hora para conocer un inmueble.
