@@ -620,14 +620,9 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
           )}
         </div>
 
-        <Separator />
-
         {/* AI Pipeline Suggestion */}
         {contactId && (
-          <>
-            <PipelineSuggestionBadge conversationId={conversation.id} />
-            <Separator />
-          </>
+          <PipelineSuggestionBadge conversationId={conversation.id} />
         )}
 
         {/* Needs Human Alert Section */}
