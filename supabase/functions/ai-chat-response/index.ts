@@ -373,6 +373,65 @@ serve(async (req) => {
       }
     }
 
+    // Check for visit/appointment request — escalate immediately without AI response
+    const visitTriggers = [
+      'agendar visita', 'agendar cita', 'agendar una visita', 'agendar una cita',
+      'quiero visitar', 'quiero ver el', 'quiero ver la', 'quiero conocer el', 'quiero conocer la',
+      'puedo ir a ver', 'puedo visitarla', 'puedo visitarlo', 'puedo verla', 'puedo verlo',
+      'ir a verla', 'ir a verlo', 'ir a conocer',
+      'espacio para ver', 'espacio para visitar',
+      'visitar el inmueble', 'visitar la propiedad', 'visitar la casa', 'visitar el depa',
+      'ver el inmueble', 'ver la propiedad', 'ver la casa', 'ver el departamento',
+      'conocer el inmueble', 'conocer la propiedad', 'conocer la casa',
+      'tendrias espacio', 'tendrías espacio', 'tendrian espacio', 'tendrían espacio',
+      'tienen espacio', 'tienen disponibilidad',
+      'cuando puedo ir', 'cuándo puedo ir', 'cuando puedo pasar', 'cuándo puedo pasar',
+      'me gustaria visitarla', 'me gustaría visitarla', 'me gustaria verla', 'me gustaría verla',
+      'horario para visita', 'horario para ver',
+      'dia para visitar', 'día para visitar', 'dia para ver', 'día para ver',
+      'podemos agendar', 'podríamos agendar', 'podriamos agendar',
+      'hacer una cita', 'programar una visita', 'programar visita',
+      'quiero ir a ver', 'quisiera visitar', 'quisiera ver',
+    ];
+    const wantsVisit = visitTriggers.some(t => lowerMessage.includes(t));
+    if (wantsVisit) {
+      console.log('🏠 Visit request detected pre-AI, escalating immediately');
+      
+      await supabase
+        .from('conversations')
+        .update({
+          ai_enabled: false,
+          ai_state: 'escalated',
+          needs_human: true,
+          ai_pause_reason: 'visit_request',
+          ai_paused_at: new Date().toISOString()
+        })
+        .eq('id', conversation_id);
+
+      await supabase.from('ai_interaction_logs').insert({
+        tenant_id,
+        conversation_id,
+        contact_id,
+        inbound_message,
+        was_escalated: true,
+        escalation_reason: 'visit_request',
+        wallet_debited: false,
+      });
+
+      const visitMessage = aiSettings.use_customer_name && contact_name
+        ? `¡Con gusto, ${contact_name}! Un asesor se pondrá en contacto contigo en breve para coordinar tu visita. 🏠`
+        : '¡Con gusto! Un asesor se pondrá en contacto contigo en breve para coordinar tu visita. 🏠';
+
+      return new Response(JSON.stringify({
+        action: 'escalate',
+        reason: 'visit_request',
+        message: visitMessage,
+        delay_seconds: aiSettings.response_delay_seconds,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Build the AI prompt
     const toneInstructions = {
       cordial: 'Sé amable y respetuoso en todo momento.',
