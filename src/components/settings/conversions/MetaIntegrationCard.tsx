@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface MetaIntegrationCardProps {
   settings: TenantSettings;
@@ -30,6 +31,7 @@ export function MetaIntegrationCard({
   onResetMappings 
 }: MetaIntegrationCardProps) {
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const tenantId = profile?.tenant_id;
 
   const [localSettings, setLocalSettings] = useState({
@@ -123,6 +125,10 @@ export function MetaIntegrationCard({
       });
 
       if (error) throw error;
+      // Refetch event logs so the panel shows the new event
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['conversion-event-logs'] });
+      }, 1500);
       toast.success('Evento de prueba enviado exitosamente. Revisa el historial de eventos abajo.');
     } catch (error) {
       toast.error(`Error al enviar evento de prueba: ${error instanceof Error ? error.message : 'Error desconocido'}`);
