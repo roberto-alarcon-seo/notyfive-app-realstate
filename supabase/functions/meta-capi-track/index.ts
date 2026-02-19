@@ -100,6 +100,11 @@ serve(async (req) => {
       custom_data: custom_data,
     };
 
+    // For website action_source, Meta requires event_source_url
+    if (is_test) {
+      eventData.event_source_url = "https://notyfive-app-realstate.lovable.app";
+    }
+
     // Include event_id for deduplication
     if (event_id) {
       eventData.event_id = event_id;
