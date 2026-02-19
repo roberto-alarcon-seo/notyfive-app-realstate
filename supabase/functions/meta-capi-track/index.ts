@@ -146,34 +146,43 @@ serve(async (req) => {
       // Non-retryable error or max attempts reached
       console.error("Meta CAPI error:", metaResult);
 
-      await supabase.from("conversion_event_logs").insert({
-        tenant_id,
-        contact_id,
-        source: "META_CAPI",
-        pipeline_stage: custom_data.pipeline_stage as string || null,
-        event_name,
-        status: "FAILED",
-        payload: { event_data: eventData, meta_response: metaResult, attempts: attempt },
-        error_message: (metaResult! as { error?: { message?: string } }).error?.message || "Unknown Meta API error",
-        event_id: event_id || null,
-      });
+      const failContactId = is_test ? await getFirstContactId(supabase, tenant_id) : contact_id;
+      if (failContactId) {
+        await supabase.from("conversion_event_logs").insert({
+          tenant_id,
+          contact_id: failContactId,
+          source: "META_CAPI",
+          pipeline_stage: custom_data.pipeline_stage as string || null,
+          event_name,
+          status: "FAILED",
+          payload: { event_data: eventData, meta_response: metaResult, attempts: attempt, is_test: true },
+          error_message: (metaResult! as { error?: { message?: string } }).error?.message || "Unknown Meta API error",
+          event_id: event_id || null,
+        });
+      }
 
       throw new Error((metaResult! as { error?: { message?: string } }).error?.message || "Meta CAPI request failed");
     }
 
     console.log("Meta CAPI success:", metaResult!);
 
-    // Log the successful event
-    await supabase.from("conversion_event_logs").insert({
-      tenant_id,
-      contact_id,
-      source: "META_CAPI",
-      pipeline_stage: custom_data.pipeline_stage as string || null,
-      event_name,
-      status: "SENT",
-      payload: { event_data: eventData, meta_response: metaResult!, attempts: attempt },
-      event_id: event_id || null,
-    });
+    // Log the successful event - for test events, find a real contact or skip FK
+    const logContactId = is_test ? await getFirstContactId(supabase, tenant_id) : contact_id;
+    if (logContactId) {
+      const { error: logError } = await supabase.from("conversion_event_logs").insert({
+        tenant_id,
+        contact_id: logContactId,
+        source: "META_CAPI",
+        pipeline_stage: custom_data.pipeline_stage as string || null,
+        event_name,
+        status: "SENT",
+        payload: { event_data: eventData, meta_response: metaResult!, attempts: attempt, is_test: is_test || false },
+        event_id: event_id || null,
+      });
+      if (logError) {
+        console.error("Error logging conversion event:", logError);
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true, result: metaResult! }),
@@ -203,4 +212,14 @@ async function hashValue(value: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function getFirstContactId(supabase: ReturnType<typeof createClient>, tenantId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("contacts")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .limit(1)
+    .single();
+  return data?.id || null;
 }
