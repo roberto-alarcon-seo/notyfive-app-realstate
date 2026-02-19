@@ -95,7 +95,7 @@ serve(async (req) => {
     const eventData: Record<string, unknown> = {
       event_name: event_name,
       event_time: eventTime,
-      action_source: "system_generated",
+      action_source: is_test ? "website" : "system_generated",
       user_data: hashedUserData,
       custom_data: custom_data,
     };
