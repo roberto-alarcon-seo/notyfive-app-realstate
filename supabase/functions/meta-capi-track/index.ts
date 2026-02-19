@@ -116,7 +116,8 @@ serve(async (req) => {
     }
 
     // Send to Meta Conversions API with retry for 5xx errors
-    const metaUrl = `https://graph.facebook.com/v18.0/${settings.meta_pixel_id}/events`;
+    const metaUrl = `https://graph.facebook.com/v21.0/${settings.meta_pixel_id}/events`;
+    console.log("Sending to Meta CAPI:", JSON.stringify(payload, null, 2));
     let metaResponse: Response;
     let metaResult: Record<string, unknown>;
     let attempt = 0;
