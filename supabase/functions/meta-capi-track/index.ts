@@ -65,17 +65,17 @@ serve(async (req) => {
     const clientUserAgent = req.headers.get("user-agent") || user_data.client_user_agent;
 
     // Prepare user data for Meta
-    const hashedUserData: Record<string, string> = {};
+    const hashedUserData: Record<string, unknown> = {};
 
     if (user_data.email) {
-      hashedUserData.em = await hashValue(user_data.email.toLowerCase().trim());
+      hashedUserData.em = [await hashValue(user_data.email.toLowerCase().trim())];
     }
     if (user_data.phone) {
       const normalizedPhone = user_data.phone.replace(/[^\d+]/g, "");
-      hashedUserData.ph = await hashValue(normalizedPhone);
+      hashedUserData.ph = [await hashValue(normalizedPhone)];
     }
     if (user_data.external_id) {
-      hashedUserData.external_id = await hashValue(user_data.external_id);
+      hashedUserData.external_id = [await hashValue(user_data.external_id)];
     }
     if (user_data.fbp) {
       hashedUserData.fbp = user_data.fbp;
