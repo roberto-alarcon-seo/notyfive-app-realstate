@@ -189,6 +189,8 @@ serve(async (req) => {
         to_number: conversation.customer_whatsapp,
         body: messageBody,
         status: 'queued',
+        template_id: template_id,
+        source: 'template',
       })
       .select('id')
       .single();

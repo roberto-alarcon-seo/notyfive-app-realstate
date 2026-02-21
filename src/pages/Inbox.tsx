@@ -659,6 +659,23 @@ export default function Inbox() {
                           />
                         )}
                         
+                        {/* Template buttons */}
+                        {msg.template?.buttons && Array.isArray(msg.template.buttons) && (msg.template.buttons as Array<{type: string; text: string; url?: string}>).length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-white/20 space-y-1.5">
+                            {(msg.template.buttons as Array<{type: string; text: string; url?: string}>).map((btn, idx) => (
+                              <div
+                                key={idx}
+                                className={cn(
+                                  "text-center text-sm font-medium py-1.5 rounded-md",
+                                  msg.direction === 'outbound' ? "text-white/90 bg-white/10" : "text-primary bg-primary/10"
+                                )}
+                              >
+                                {btn.text}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
                         {/* Campaign badge */}
                         {msg.source === 'campaign' && msg.campaign && (
                           <div className={cn(
