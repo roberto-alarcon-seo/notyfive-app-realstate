@@ -35,7 +35,8 @@ export function usePaginatedMessages(conversationId: string | null): UsePaginate
         .from('messages')
         .select(`
           *,
-          campaign:campaigns(id, name)
+          campaign:campaigns(id, name),
+          template:templates(id, buttons)
         `)
         .eq('conversation_id', convId)
         .order('created_at', { ascending: false })
@@ -73,7 +74,8 @@ export function usePaginatedMessages(conversationId: string | null): UsePaginate
         .from('messages')
         .select(`
           *,
-          campaign:campaigns(id, name)
+          campaign:campaigns(id, name),
+          template:templates(id, buttons)
         `)
         .eq('conversation_id', conversationId)
         .lt('created_at', oldestMessageRef.current)
@@ -143,7 +145,8 @@ export function usePaginatedMessages(conversationId: string | null): UsePaginate
             .from('messages')
             .select(`
               *,
-              campaign:campaigns(id, name)
+              campaign:campaigns(id, name),
+              template:templates(id, buttons)
             `)
             .eq('id', payload.new.id)
             .single();

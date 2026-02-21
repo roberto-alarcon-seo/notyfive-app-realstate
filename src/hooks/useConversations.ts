@@ -70,6 +70,10 @@ export interface Message {
     id: string;
     name: string;
   };
+  template?: {
+    id: string;
+    buttons: unknown;
+  } | null;
 }
 
 export function useConversations() {
