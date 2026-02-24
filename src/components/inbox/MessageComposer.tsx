@@ -48,7 +48,7 @@ export function MessageComposer({
   const [text, setText] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState<MediaFile | null>(null);
+  const [selectedMediaFiles, setSelectedMediaFiles] = useState<MediaFile[]>([]);
   const [showMediaPreview, setShowMediaPreview] = useState(false);
   const [showRewriteModal, setShowRewriteModal] = useState(false);
   const [rewriteOriginalText, setRewriteOriginalText] = useState("");
@@ -116,7 +116,51 @@ export function MessageComposer({
 
   const handleSend = async (mediaCaption?: string) => {
     const messageText = mediaCaption !== undefined ? mediaCaption : text.trim();
-    if ((!messageText && !selectedMedia) || isDisabled) return;
+    
+    // Multi-file send: send each file as separate message with 300ms delay
+    if (selectedMediaFiles.length > 0) {
+      setLocalError(null);
+      try {
+        for (let i = 0; i < selectedMediaFiles.length; i++) {
+          const media = selectedMediaFiles[i];
+          // Only first message gets the caption/text
+          const msgText = i === 0 ? (messageText || undefined) : undefined;
+          await sendMessage.mutateAsync({
+            conversationId,
+            text: msgText,
+            media: {
+              url: media.url,
+              type: media.type,
+              mimeType: media.mimeType,
+              filename: media.filename,
+              sizeBytes: media.sizeBytes,
+            },
+          });
+          // WhatsApp rate limit: 300ms delay between messages
+          if (i < selectedMediaFiles.length - 1) {
+            await new Promise(r => setTimeout(r, 300));
+          }
+        }
+        setText("");
+        setSelectedMediaFiles([]);
+        setShowMediaPreview(false);
+        refetchWallet();
+        onMessageSent?.();
+      } catch (error: unknown) {
+        const err = error as { code?: string; message?: string };
+        if (err.code === 'INSUFFICIENT_BALANCE') {
+          setLocalError('Saldo agotado. Recarga mensajes para continuar.');
+          refetchWallet();
+        } else if (err.code === 'SEND_FAILED') {
+          toast.error('Error al enviar', { description: err.message });
+        } else {
+          toast.error('Error al enviar mensaje', { description: err.message });
+        }
+      }
+      return;
+    }
+
+    if (!messageText || isDisabled) return;
 
     setLocalError(null);
 
@@ -124,17 +168,8 @@ export function MessageComposer({
       await sendMessage.mutateAsync({
         conversationId,
         text: messageText || undefined,
-        media: selectedMedia ? {
-          url: selectedMedia.url,
-          type: selectedMedia.type,
-          mimeType: selectedMedia.mimeType,
-          filename: selectedMedia.filename,
-          sizeBytes: selectedMedia.sizeBytes,
-        } : undefined,
       });
       setText("");
-      setSelectedMedia(null);
-      setShowMediaPreview(false);
       refetchWallet();
       onMessageSent?.();
     } catch (error: unknown) {
@@ -153,14 +188,28 @@ export function MessageComposer({
     }
   };
 
-  const handleMediaSelected = (media: MediaFile) => {
-    setSelectedMedia(media);
+  const handleMediaSelected = (mediaFiles: MediaFile[]) => {
+    setSelectedMediaFiles(prev => [...prev, ...mediaFiles]);
     setShowMediaPreview(true);
   };
 
   const handleMediaPreviewClose = () => {
     setShowMediaPreview(false);
-    setSelectedMedia(null);
+    setSelectedMediaFiles([]);
+  };
+
+  const handleAddMoreMedia = (files: MediaFile[]) => {
+    setSelectedMediaFiles(prev => [...prev, ...files]);
+  };
+
+  const handleRemoveMediaFile = (index: number) => {
+    setSelectedMediaFiles(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length === 0) {
+        setShowMediaPreview(false);
+      }
+      return next;
+    });
   };
 
   const handleSendTemplate = async (templateId: string, variables: Record<string, string>) => {
@@ -344,7 +393,7 @@ export function MessageComposer({
             <div className="flex items-center gap-1">
               <MediaUploadButton
                 onMediaSelected={handleMediaSelected}
-                onMediaRemoved={() => setSelectedMedia(null)}
+                onMediaRemoved={() => setSelectedMediaFiles([])}
                 selectedMedia={null}
                 disabled={isDisabled}
                 tenantId={profile?.tenant_id || undefined}
@@ -423,7 +472,7 @@ export function MessageComposer({
           <div className="flex items-end gap-2">
             <MediaUploadButton
               onMediaSelected={handleMediaSelected}
-              onMediaRemoved={() => setSelectedMedia(null)}
+              onMediaRemoved={() => setSelectedMediaFiles([])}
               selectedMedia={null}
               disabled={isDisabled}
               tenantId={profile?.tenant_id || undefined}
@@ -552,12 +601,15 @@ export function MessageComposer({
       </div>
 
       {/* Media Preview Overlay */}
-      {showMediaPreview && selectedMedia && (
+      {showMediaPreview && selectedMediaFiles.length > 0 && (
         <MediaPreviewOverlay
-          media={selectedMedia}
+          mediaFiles={selectedMediaFiles}
           onClose={handleMediaPreviewClose}
           onSend={handleSend}
+          onAddMore={handleAddMoreMedia}
+          onRemoveFile={handleRemoveMediaFile}
           isSending={sendMessage.isPending}
+          tenantId={profile?.tenant_id || undefined}
         />
       )}
 

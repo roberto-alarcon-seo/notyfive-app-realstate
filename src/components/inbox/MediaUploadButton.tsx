@@ -22,11 +22,13 @@ export interface MediaFile {
 }
 
 interface MediaUploadButtonProps {
-  onMediaSelected: (media: MediaFile) => void;
+  onMediaSelected: (media: MediaFile[]) => void;
   onMediaRemoved: () => void;
   selectedMedia: MediaFile | null;
   disabled?: boolean;
   tenantId?: string;
+  /** Allow selecting multiple files (only for images) */
+  multiple?: boolean;
 }
 
 const MAX_FILE_SIZES: Record<string, number> = {
@@ -66,90 +68,94 @@ const getMediaType = (mimeType: string): 'image' | 'video' | 'audio' | 'document
   return 'document';
 };
 
+const MAX_MULTI_FILES = 10;
+
 export function MediaUploadButton({
   onMediaSelected,
   onMediaRemoved,
   selectedMedia,
   disabled,
   tenantId,
+  multiple = false,
 }: MediaUploadButtonProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [acceptType, setAcceptType] = useState<string>('*/*');
+  const [isMultiple, setIsMultiple] = useState(false);
 
-  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setError(null);
-    
+  const uploadSingleFile = async (file: File): Promise<MediaFile | null> => {
     const mediaType = getMediaType(file.type);
     const maxSize = MAX_FILE_SIZES[mediaType];
     const acceptedTypes = ACCEPTED_TYPES[mediaType];
 
-    // Validate file type
     if (!acceptedTypes.some(type => file.type === type || file.type.startsWith(type.split('/')[0]))) {
-      setError(`Tipo de archivo no soportado: ${file.type}`);
-      toast.error('Tipo de archivo no soportado');
-      return;
+      toast.error(`Tipo de archivo no soportado: ${file.type}`);
+      return null;
     }
 
-    // Validate file size
     if (file.size > maxSize) {
-      setError(`El archivo es muy grande. Máximo: ${formatFileSize(maxSize)}`);
-      toast.error(`El archivo es muy grande. Máximo: ${formatFileSize(maxSize)}`);
-      return;
+      toast.error(`${file.name} es muy grande. Máximo: ${formatFileSize(maxSize)}`);
+      return null;
     }
 
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    const extension = file.name.split('.').pop() || 'bin';
+    const filename = `${tenantId || 'unknown'}/${timestamp}-${randomId}.${extension}`;
+
+    const { data, error: uploadError } = await supabase.storage
+      .from('inbox-media')
+      .upload(filename, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('inbox-media')
+      .getPublicUrl(data.path);
+
+    return {
+      url: publicUrl,
+      filename: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      type: mediaType,
+      file,
+    };
+  };
+
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setError(null);
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
-      // Generate unique filename
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(2, 8);
-      const extension = file.name.split('.').pop() || 'bin';
-      const filename = `${tenantId || 'unknown'}/${timestamp}-${randomId}.${extension}`;
-
-      // Simulate progress for better UX
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 100);
-
-      // Upload to Supabase storage
-      const { data, error: uploadError } = await supabase.storage
-        .from('inbox-media')
-        .upload(filename, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      clearInterval(progressInterval);
-
-      if (uploadError) {
-        throw uploadError;
+      const fileArray = Array.from(files).slice(0, MAX_MULTI_FILES);
+      const uploaded: MediaFile[] = [];
+      
+      for (let i = 0; i < fileArray.length; i++) {
+        setUploadProgress(Math.round(((i) / fileArray.length) * 90));
+        const result = await uploadSingleFile(fileArray[i]);
+        if (result) {
+          uploaded.push(result);
+        }
       }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('inbox-media')
-        .getPublicUrl(data.path);
 
       setUploadProgress(100);
 
-      const mediaFile: MediaFile = {
-        url: publicUrl,
-        filename: file.name,
-        mimeType: file.type,
-        sizeBytes: file.size,
-        type: mediaType,
-        file,
-      };
-
-      onMediaSelected(mediaFile);
-      toast.success('Archivo adjuntado');
+      if (uploaded.length > 0) {
+        onMediaSelected(uploaded);
+        toast.success(uploaded.length === 1 ? 'Archivo adjuntado' : `${uploaded.length} archivos adjuntados`);
+      }
 
     } catch (err) {
       console.error('Upload error:', err);
@@ -158,15 +164,15 @@ export function MediaUploadButton({
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
-      // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   }, [tenantId, onMediaSelected]);
 
-  const triggerFileSelect = (accept: string) => {
+  const triggerFileSelect = (accept: string, allowMultiple: boolean = false) => {
     setAcceptType(accept);
+    setIsMultiple(allowMultiple);
     setTimeout(() => {
       fileInputRef.current?.click();
     }, 0);
@@ -242,6 +248,7 @@ export function MediaUploadButton({
         ref={fileInputRef}
         type="file"
         accept={acceptType}
+        multiple={isMultiple}
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -258,7 +265,7 @@ export function MediaUploadButton({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-48">
-          <DropdownMenuItem onClick={() => triggerFileSelect('image/*')}>
+          <DropdownMenuItem onClick={() => triggerFileSelect('image/*', true)}>
             <Image className="h-4 w-4 mr-2" />
             Imagen
           </DropdownMenuItem>
