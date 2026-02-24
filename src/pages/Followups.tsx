@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   CalendarClock, AlertTriangle, Calendar, Clock, 
-  User, MessageSquare, Check, ChevronRight, Loader2, RefreshCw
+  User, MessageSquare, Check, ChevronRight, Loader2, RefreshCw, StickyNote
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -250,15 +250,18 @@ function FollowupRow({ followup, onOpen, onComplete, isCompleting, getInitials }
           </div>
 
           {followup.conversation?.last_message_preview && (
-            <p className="text-xs md:text-sm text-muted-foreground truncate">
+            <p className="text-xs md:text-sm text-muted-foreground truncate italic">
               {followup.conversation.last_message_preview}
             </p>
           )}
 
           {followup.note && (
-            <p className="text-xs md:text-sm text-foreground/80 line-clamp-2">
-              {followup.note}
-            </p>
+            <div className="flex items-start gap-1.5 bg-primary/5 border border-primary/15 rounded-md px-2 py-1.5">
+              <StickyNote className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs md:text-sm text-foreground font-medium line-clamp-2">
+                {followup.note}
+              </p>
+            </div>
           )}
 
           <div className="flex items-center gap-3 md:gap-4 text-[11px] md:text-xs text-muted-foreground">
