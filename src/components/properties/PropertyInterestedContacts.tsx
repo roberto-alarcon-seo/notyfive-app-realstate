@@ -42,7 +42,7 @@ export default function PropertyInterestedContacts({
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="max-h-[calc(100vh-200px)] overflow-y-auto space-y-3">
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Cargando...</p>
         ) : !contacts || contacts.length === 0 ? (
