@@ -378,6 +378,17 @@ function emptyTwiml() {
   return new Response(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`, { headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/xml' } });
 }
 
+// Convert Supabase Storage URLs to Twilio-compatible format (JPEG)
+// WebP is not reliably supported by Twilio WhatsApp outbound
+function toTwilioCompatibleUrl(url: string): string {
+  // Only transform Supabase Storage public URLs with webp extension
+  if (url.includes('/storage/v1/object/public/') && url.toLowerCase().endsWith('.webp')) {
+    // Use Supabase image render/transform endpoint to serve as JPEG
+    return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?format=origin';
+  }
+  return url;
+}
+
 // Helper function to send AI-generated response via Twilio
 // deno-lint-ignore no-explicit-any
 async function sendAIResponse(
@@ -462,7 +473,7 @@ async function sendAIResponse(
     formData.append('Body', message);
     
     // WhatsApp only supports 1 media per message, so we send the first image with the text
-    const imagesToSend = mediaUrls?.slice(0, 5) || [];
+    const imagesToSend = (mediaUrls?.slice(0, 10) || []).map(toTwilioCompatibleUrl);
     if (imagesToSend.length > 0) {
       formData.append('MediaUrl', imagesToSend[0]);
     }
@@ -476,7 +487,9 @@ async function sendAIResponse(
       body: formData,
     });
 
-    // Send remaining images as separate messages (2nd through 5th)
+    console.log(`📤 Twilio first message sent. Status: ${twilioResponse.status}, MediaUrls: ${imagesToSend.length > 0 ? imagesToSend[0] : 'none'}`);
+
+    // Send remaining images as separate messages
     if (imagesToSend.length > 1) {
       for (let i = 1; i < imagesToSend.length; i++) {
         try {
@@ -485,7 +498,7 @@ async function sendAIResponse(
           imgForm.append('To', `whatsapp:${toNumber}`);
           imgForm.append('MediaUrl', imagesToSend[i]);
           
-          await fetch(twilioUrl, {
+          const imgResponse = await fetch(twilioUrl, {
             method: 'POST',
             headers: {
               'Authorization': authHeader,
@@ -493,6 +506,12 @@ async function sendAIResponse(
             },
             body: imgForm,
           });
+          if (!imgResponse.ok) {
+            const imgError = await imgResponse.json();
+            console.warn(`⚠️ Twilio error sending image ${i + 1}:`, imgError.message || imgError);
+          } else {
+            console.log(`📸 Image ${i + 1}/${imagesToSend.length} sent`);
+          }
           // Small delay between sends to avoid rate limits
           await delay(300);
         } catch (imgErr) {
