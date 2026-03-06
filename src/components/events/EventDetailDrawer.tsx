@@ -151,6 +151,15 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
                 </div>
                 <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               </div>
+              {event.contact.phone && (
+                <a
+                  href={`tel:${event.contact.phone}`}
+                  className="inline-flex items-center justify-center h-9 w-9 shrink-0 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+                  title="Llamar"
+                >
+                  <Phone className="w-4 h-4" />
+                </a>
+              )}
               <Button
                 size="icon"
                 variant="outline"
