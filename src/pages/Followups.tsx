@@ -193,8 +193,8 @@ export default function Followups() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <ScrollArea className="h-full">
-                  <div className="space-y-3 pr-4">
+              <div className="h-full overflow-y-auto overflow-x-hidden">
+                  <div className="w-full flex flex-col gap-3 pr-1">
                     {getCurrentFollowups().length === 0 ? (
                       <div className="text-center py-12">
                         <CalendarClock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -219,7 +219,7 @@ export default function Followups() {
                       ))
                     )}
                   </div>
-                </ScrollArea>
+                </div>
               )}
             </div>
           </Tabs>
@@ -374,10 +374,10 @@ function FollowupRow({ followup, onOpen, onComplete, onEdit, onDelete, isComplet
 
   return (
     <div className={`
-      rounded-lg border p-3 md:p-4 transition-colors hover:bg-muted/50
+      w-full max-w-full overflow-hidden rounded-lg border p-3 md:p-4 transition-colors hover:bg-muted/50
       ${isOverdue ? 'border-destructive/30 bg-destructive/5' : 'border-border'}
     `}>
-      <div className="flex items-start gap-3 md:gap-4">
+      <div className="flex items-start gap-3 md:gap-4 w-full max-w-full">
         {/* Avatar */}
         <Avatar className="h-9 w-9 md:h-10 md:w-10 shrink-0">
           <AvatarFallback className="bg-primary/20 text-primary text-xs md:text-sm">
