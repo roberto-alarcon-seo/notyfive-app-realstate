@@ -693,18 +693,18 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
                   </Button>
                 </DropdownMenuTrigger>
                  <DropdownMenuContent align="end">
-                   <DropdownMenuItem onClick={() => setShowAddNoteModal(true)}>
-                     <StickyNote className="h-4 w-4 mr-2" />
-                     Agregar nota
-                   </DropdownMenuItem>
-                   <DropdownMenuItem onClick={() => setShowVisitModal(true)}>
-                     <Calendar className="h-4 w-4 mr-2" />
-                     Agendar cita
-                   </DropdownMenuItem>
-                   <DropdownMenuItem onClick={() => setShowFollowupModal(true)}>
-                     <CalendarClock className="h-4 w-4 mr-2" />
-                     Programar seguimiento
-                   </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowVisitModal(true)}>
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Agendar cita
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowFollowupModal(true)}>
+                      <CalendarClock className="h-4 w-4 mr-2" />
+                      Programar seguimiento
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowAddNoteModal(true)}>
+                      <StickyNote className="h-4 w-4 mr-2" />
+                      Agregar nota
+                    </DropdownMenuItem>
                  </DropdownMenuContent>
               </DropdownMenu>
             </div>
