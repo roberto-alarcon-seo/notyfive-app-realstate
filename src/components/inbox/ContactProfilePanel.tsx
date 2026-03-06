@@ -6,7 +6,7 @@ import {
   ArrowDownLeft, ArrowUpRight, Bot, Ban, AlertCircle,
   Loader2, XCircle, Pencil, AlertTriangle, CheckCircle2,
   CalendarClock, RefreshCw, Building, DollarSign, Globe,
-  ChevronDown
+  ChevronDown, Pin, PinOff, Trash2, Send
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +42,8 @@ import { CompleteFollowupModal } from "./CompleteFollowupModal";
 import { PipelineStepper } from "./PipelineStepper";
 import { PipelineSuggestionBadge } from "./PipelineSuggestionBadge";
 import { ScheduleVisitModal } from "./ScheduleVisitModal";
+import { AddNoteModal } from "./AddNoteModal";
+import { useContactNotes, useCreateNote, useTogglePinNote, useDeleteNote } from "@/hooks/useContactNotes";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProperties } from "@/hooks/useProperties";
 import {
@@ -137,8 +139,9 @@ function SourceBadge({ source }: { source: string }) {
 
 export function ContactProfilePanel({ conversation, onClose }: ContactProfilePanelProps) {
   const navigate = useNavigate();
-  const [notes, setNotes] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
+  const [quickNote, setQuickNote] = useState("");
   const [contactName, setContactName] = useState(conversation.contact?.name || "");
   const [aiEnabled, setAiEnabled] = useState(conversation.ai_enabled ?? true);
   const [isTogglingAi, setIsTogglingAi] = useState(false);
@@ -234,6 +237,12 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
   
   // Activity timeline
   const { data: activityEvents = [] } = useConversationActivity(conversation.id);
+
+  // Contact Notes
+  const { data: contactNotes = [], isLoading: isLoadingNotes } = useContactNotes(contactId);
+  const createNote = useCreateNote();
+  const togglePinNote = useTogglePinNote();
+  const deleteNote = useDeleteNote();
   
   const handleEditContact = () => {
     if (contactId) {
@@ -612,16 +621,20 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
                     <ChevronDown className="h-3.5 w-3.5 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setShowVisitModal(true)}>
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Agendar cita
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowFollowupModal(true)}>
-                    <CalendarClock className="h-4 w-4 mr-2" />
-                    Programar seguimiento
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
+                 <DropdownMenuContent align="end">
+                   <DropdownMenuItem onClick={() => setShowAddNoteModal(true)}>
+                     <StickyNote className="h-4 w-4 mr-2" />
+                     Agregar nota
+                   </DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => setShowVisitModal(true)}>
+                     <Calendar className="h-4 w-4 mr-2" />
+                     Agendar cita
+                   </DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => setShowFollowupModal(true)}>
+                     <CalendarClock className="h-4 w-4 mr-2" />
+                     Programar seguimiento
+                   </DropdownMenuItem>
+                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           )}
@@ -968,21 +981,118 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
 
         <Separator />
 
-        {/* Internal Notes */}
+        {/* Internal Notes - Centralized */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
             <StickyNote className="h-4 w-4 text-muted-foreground" />
             Notas internas
           </h4>
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Agrega notas sobre este contacto..."
-            className="min-h-[80px] text-sm resize-none bg-muted/30 border-muted"
-          />
-          <p className="text-xs text-muted-foreground">
-            Solo visible para agentes
-          </p>
+
+          {/* Quick note input */}
+          <div className="flex gap-2">
+            <Textarea
+              value={quickNote}
+              onChange={(e) => setQuickNote(e.target.value)}
+              placeholder="Nota rápida..."
+              className="min-h-[40px] max-h-[80px] text-sm resize-none bg-muted/30 border-muted flex-1"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && quickNote.trim() && contactId) {
+                  e.preventDefault();
+                  createNote.mutate({
+                    contact_id: contactId,
+                    content: quickNote.trim(),
+                    conversation_id: conversation.id,
+                  }, {
+                    onSuccess: () => {
+                      setQuickNote("");
+                      toast.success("Nota guardada");
+                    },
+                    onError: () => toast.error("Error al guardar nota"),
+                  });
+                }
+              }}
+            />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="shrink-0 h-10 w-10"
+              disabled={!quickNote.trim() || createNote.isPending}
+              onClick={() => {
+                if (!contactId || !quickNote.trim()) return;
+                createNote.mutate({
+                  contact_id: contactId,
+                  content: quickNote.trim(),
+                  conversation_id: conversation.id,
+                }, {
+                  onSuccess: () => {
+                    setQuickNote("");
+                    toast.success("Nota guardada");
+                  },
+                  onError: () => toast.error("Error al guardar nota"),
+                });
+              }}
+            >
+              {createNote.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </Button>
+          </div>
+
+          {/* Notes list */}
+          {isLoadingNotes ? (
+            <div className="flex justify-center py-3">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : contactNotes.length > 0 ? (
+            <div className="space-y-2">
+              {contactNotes.slice(0, 5).map((note) => (
+                <div
+                  key={note.id}
+                  className={cn(
+                    "p-2.5 rounded-lg text-sm space-y-1 group relative",
+                    note.is_pinned
+                      ? "bg-primary/10 border border-primary/20"
+                      : "bg-muted/30 border border-transparent"
+                  )}
+                >
+                  {note.is_pinned && (
+                    <Pin className="h-3 w-3 text-primary absolute top-2 right-2" />
+                  )}
+                  <p className="text-foreground whitespace-pre-wrap pr-6">{note.content}</p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{note.author?.name || 'Agente'}</span>
+                    <span>{format(new Date(note.created_at), "dd MMM HH:mm", { locale: es })}</span>
+                  </div>
+                  {/* Actions on hover */}
+                  <div className="absolute top-1.5 right-1.5 hidden group-hover:flex gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => togglePinNote.mutate({ noteId: note.id, isPinned: note.is_pinned, contactId: note.contact_id })}
+                    >
+                      {note.is_pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-destructive"
+                      onClick={() => deleteNote.mutate({ noteId: note.id, contactId: note.contact_id })}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {contactNotes.length > 5 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  +{contactNotes.length - 5} notas más — ver en perfil del contacto
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-2">
+              Sin notas · Escribe una arriba o usa Acciones → Agregar nota
+            </p>
+          )}
         </div>
       </div>
       
@@ -1022,7 +1132,28 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
           propertyInterestId={contactData?.re_property_interest_id}
           contactCreditType={contactData?.re_credit_type}
         />
-      )}
+       )}
+
+      {/* Add Note Modal */}
+      <AddNoteModal
+        open={showAddNoteModal}
+        onOpenChange={setShowAddNoteModal}
+        onSave={(content) => {
+          if (!contactId) return;
+          createNote.mutate({
+            contact_id: contactId,
+            content,
+            conversation_id: conversation.id,
+          }, {
+            onSuccess: () => {
+              setShowAddNoteModal(false);
+              toast.success("Nota guardada");
+            },
+            onError: () => toast.error("Error al guardar nota"),
+          });
+        }}
+        isLoading={createNote.isPending}
+      />
     </ScrollArea>
   );
 }
