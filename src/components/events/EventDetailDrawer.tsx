@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { es } from "date-fns/locale";
 import { 
   Calendar, 
@@ -60,6 +61,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
   const updateEvent = useUpdateEvent();
   const deleteEvent = useDeleteEvent();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { data: auditLogs = [], isLoading: isLoadingLogs } = useEventAuditLogs(event?.id);
 
   if (!event) return null;
@@ -102,9 +104,12 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
+      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl p-0 flex flex-col" : "w-full sm:max-w-lg p-0 flex flex-col"}>
         {/* Header */}
-        <SheetHeader className="p-6 pb-4 border-b border-border">
+        <SheetHeader className="p-4 sm:p-6 pb-4 border-b border-border">
+          {isMobile && (
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-2" />
+          )}
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
@@ -121,7 +126,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
         </SheetHeader>
 
         <ScrollArea className="flex-1">
-          <div className="p-6 space-y-5">
+          <div className="p-4 sm:p-6 space-y-5">
             {/* Date & Time Card */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/15">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -245,7 +250,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Acciones rápidas
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {event.status === 'scheduled' && (
                       <Button
                         size="sm"
