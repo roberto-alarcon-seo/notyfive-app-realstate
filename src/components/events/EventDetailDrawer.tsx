@@ -250,7 +250,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Acciones rápidas
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {event.status === 'scheduled' && (
                       <Button
                         size="sm"
