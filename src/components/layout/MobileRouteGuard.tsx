@@ -8,6 +8,9 @@ const MOBILE_ALLOWED_PATHS = [
   "/followups",
   "/events",
   "/contacts",
+  "/auth",
+  "/admin",
+  "/support",
 ];
 
 interface MobileRouteGuardProps {
