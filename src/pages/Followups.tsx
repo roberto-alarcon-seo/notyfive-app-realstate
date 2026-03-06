@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   CalendarClock, AlertTriangle, Calendar, Clock, 
-  User, MessageSquare, Check, ChevronRight, Loader2, RefreshCw, StickyNote
+  User, MessageSquare, Check, ChevronRight, Loader2, StickyNote,
+  MoreVertical, Pencil, Trash2
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { format, isPast, isToday, isTomorrow, startOfDay, endOfDay, isAfter } from "date-fns";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { format, isPast, isToday, endOfDay, isAfter } from "date-fns";
 import { es } from "date-fns/locale";
-import { useFollowups, useCompleteFollowup, useRescheduleFollowup, type Followup } from "@/hooks/useFollowups";
+import { useFollowups, useCompleteFollowup, useRescheduleFollowup, useUpdateFollowup, useDeleteFollowup, type Followup } from "@/hooks/useFollowups";
 import { CompleteFollowupModal } from "@/components/inbox/CompleteFollowupModal";
 import { toast } from "sonner";
 
@@ -23,14 +30,17 @@ export default function Followups() {
   const [activeTab, setActiveTab] = useState<TabValue>("today");
   const [selectedFollowup, setSelectedFollowup] = useState<Followup | null>(null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [editFollowup, setEditFollowup] = useState<Followup | null>(null);
+  const [deleteFollowup, setDeleteFollowup] = useState<Followup | null>(null);
   
   const { data: followups = [], isLoading } = useFollowups();
   const completeFollowup = useCompleteFollowup();
   const rescheduleFollowup = useRescheduleFollowup();
+  const updateFollowup = useUpdateFollowup();
+  const deleteFollowupMutation = useDeleteFollowup();
 
   // Filter followups by tab
   const now = new Date();
-  const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
 
   const overdueFollowups = followups.filter(f => {
@@ -106,6 +116,19 @@ export default function Followups() {
         },
       }
     );
+  };
+
+  const handleDelete = () => {
+    if (!deleteFollowup) return;
+    deleteFollowupMutation.mutate(deleteFollowup.id, {
+      onSuccess: () => {
+        toast.success("Seguimiento eliminado");
+        setDeleteFollowup(null);
+      },
+      onError: () => {
+        toast.error("Error al eliminar seguimiento");
+      },
+    });
   };
 
   const getInitials = (name: string | undefined) => {
@@ -188,6 +211,8 @@ export default function Followups() {
                           followup={followup}
                           onOpen={() => handleOpenConversation(followup.conversation_id)}
                           onComplete={() => handleOpenCompleteModal(followup)}
+                          onEdit={() => setEditFollowup(followup)}
+                          onDelete={() => setDeleteFollowup(followup)}
                           isCompleting={completeFollowup.isPending || rescheduleFollowup.isPending}
                           getInitials={getInitials}
                         />
@@ -209,19 +234,141 @@ export default function Followups() {
         onReschedule={handleReschedule}
         isLoading={completeFollowup.isPending || rescheduleFollowup.isPending}
       />
+
+      {/* Edit Dialog */}
+      <EditFollowupDialog
+        followup={editFollowup}
+        open={!!editFollowup}
+        onOpenChange={(open) => !open && setEditFollowup(null)}
+        onSave={(data) => {
+          if (!editFollowup) return;
+          updateFollowup.mutate(
+            { followupId: editFollowup.id, due_at: data.due_at, note: data.note },
+            {
+              onSuccess: () => {
+                toast.success("Seguimiento actualizado");
+                setEditFollowup(null);
+              },
+              onError: () => toast.error("Error al actualizar"),
+            }
+          );
+        }}
+        isLoading={updateFollowup.isPending}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteFollowup} onOpenChange={(open) => !open && setDeleteFollowup(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar seguimiento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará permanentemente el seguimiento de{" "}
+              <span className="font-medium text-foreground">
+                {deleteFollowup?.contact?.name || "este contacto"}
+              </span>. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteFollowupMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-1" />
+              )}
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
 
+// --- Edit Dialog ---
+function EditFollowupDialog({
+  followup,
+  open,
+  onOpenChange,
+  onSave,
+  isLoading,
+}: {
+  followup: Followup | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (data: { due_at: string; note: string | null }) => void;
+  isLoading: boolean;
+}) {
+  const [dueAt, setDueAt] = useState("");
+  const [note, setNote] = useState("");
+
+  // Sync state when followup changes
+  const prevId = useState<string | null>(null);
+  if (followup && followup.id !== prevId[0]) {
+    prevId[1](followup.id);
+    const d = new Date(followup.due_at);
+    // Format as datetime-local value
+    setDueAt(format(d, "yyyy-MM-dd'T'HH:mm"));
+    setNote(followup.note || "");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Editar seguimiento</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Fecha y hora</Label>
+            <Input
+              type="datetime-local"
+              value={dueAt}
+              onChange={(e) => setDueAt(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Nota</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Nota del seguimiento..."
+              rows={3}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => onSave({ due_at: new Date(dueAt).toISOString(), note: note || null })}
+            disabled={isLoading || !dueAt}
+          >
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+            Guardar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// --- Followup Row ---
 interface FollowupRowProps {
   followup: Followup;
   onOpen: () => void;
   onComplete: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
   isCompleting: boolean;
   getInitials: (name: string | undefined) => string;
 }
 
-function FollowupRow({ followup, onOpen, onComplete, isCompleting, getInitials }: FollowupRowProps) {
+function FollowupRow({ followup, onOpen, onComplete, onEdit, onDelete, isCompleting, getInitials }: FollowupRowProps) {
   const dueDate = new Date(followup.due_at);
   const isOverdue = isPast(dueDate) && !isToday(dueDate);
 
@@ -278,8 +425,27 @@ function FollowupRow({ followup, onOpen, onComplete, isCompleting, getInitials }
           </div>
         </div>
 
-        {/* Actions - desktop inline, mobile: just complete */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Actions */}
+        <div className="flex items-center gap-1 md:gap-2 shrink-0">
+          {/* Three-dots menu for edit/delete */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onEdit}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button
             variant="outline"
             size="sm"

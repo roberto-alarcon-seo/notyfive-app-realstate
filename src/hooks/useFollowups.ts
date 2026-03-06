@@ -325,6 +325,44 @@ export function useCancelFollowup() {
   });
 }
 
+// Update a followup (edit due_at and/or note)
+export function useUpdateFollowup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ followupId, due_at, note }: { followupId: string; due_at: string; note: string | null }) => {
+      const { error } = await supabase
+        .from('conversation_followups')
+        .update({ due_at, note })
+        .eq('id', followupId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['followups'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-followup'] });
+    },
+  });
+}
+
+// Delete a followup permanently
+export function useDeleteFollowup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (followupId: string) => {
+      const { error } = await supabase
+        .from('conversation_followups')
+        .delete()
+        .eq('id', followupId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['followups'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-followup'] });
+    },
+  });
+}
+
 // Reschedule a follow-up
 export function useRescheduleFollowup() {
   const queryClient = useQueryClient();
