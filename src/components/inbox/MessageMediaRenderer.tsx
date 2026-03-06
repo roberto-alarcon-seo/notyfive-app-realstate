@@ -315,7 +315,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
 
     return (
       <DocumentPreview
-        url={proxiedUrl || media.url!}
+        url={safeUrl}
         originalUrl={media.url!}
         displayFilename={displayFilename}
         extension={extension}
