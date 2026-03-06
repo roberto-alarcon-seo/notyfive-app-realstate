@@ -199,15 +199,19 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
   if (!media.url && !media.locationLat) return null;
 
   const mediaType = media.type?.toLowerCase() || 'unknown';
+  const isTwilio = isTwilioUrl(media.url || '');
 
-  // Show loading state for Twilio media
-  if (mediaLoading && isTwilioUrl(media.url || '')) {
+  // Show loading state for Twilio media — never render raw Twilio URLs
+  if (isTwilio && (mediaLoading || !proxiedUrl)) {
     return (
       <div className={cn("flex items-center justify-center p-4 bg-muted/50 rounded-lg min-w-32 min-h-20", className)}>
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
+
+  // Safe URL: use proxied for Twilio, original for everything else
+  const safeUrl = isTwilio ? proxiedUrl! : media.url!;
 
   // Image
   if (mediaType === 'image' || media.mimeType?.startsWith('image/')) {
