@@ -1,5 +1,4 @@
 import { format } from "date-fns";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { es } from "date-fns/locale";
 import { 
   Calendar, 
@@ -15,23 +14,15 @@ import {
   ExternalLink,
   MessageCircle,
   Trash2,
-  X,
 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Event, useCancelEvent, useUpdateEvent, useDeleteEvent, useEventAuditLogs, getEventTypeLabel } from "@/hooks/useEvents";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -105,32 +96,32 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
   return (
     <>
       {/* Header */}
-      <div className="p-5 pb-4 border-b border-border shrink-0">
-        <div className="flex items-center gap-2 mb-2">
-          <Badge variant="outline" className="capitalize text-xs">
+      <div className="px-4 pt-4 pb-3 border-b border-border shrink-0">
+        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+          <Badge variant="outline" className="capitalize text-[11px] px-2 py-0.5">
             {getEventTypeLabel(event.event_type)}
           </Badge>
-          <Badge className={statusConfig.className}>
+          <Badge className={`${statusConfig.className} text-[11px] px-2 py-0.5`}>
             {statusConfig.label}
           </Badge>
         </div>
-        <h2 className="text-lg font-semibold text-foreground leading-tight">{event.title}</h2>
+        <h2 className="text-base font-semibold text-foreground leading-tight break-words">{event.title}</h2>
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="p-5 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="px-4 py-3 space-y-3">
           {/* Date & Time */}
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/15">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Calendar className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-primary/5 border border-primary/15">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Calendar className="w-4 h-4 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-sm capitalize">
+              <p className="font-medium text-sm capitalize break-words">
                 {format(new Date(event.start_at), "EEEE, d 'de' MMMM yyyy", { locale: es })}
               </p>
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                <Clock className="w-3.5 h-3.5 shrink-0" />
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                <Clock className="w-3 h-3 shrink-0" />
                 {format(new Date(event.start_at), "HH:mm")}
                 {event.end_at && ` – ${format(new Date(event.end_at), "HH:mm")}`}
               </p>
@@ -139,13 +130,13 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
 
           {/* Contact */}
           {event.contact && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full max-w-full">
               <div 
-                className="flex-1 flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border/50 cursor-pointer hover:bg-muted/60 transition-colors min-w-0"
+                className="flex-1 min-w-0 flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/40 border border-border/50 cursor-pointer hover:bg-muted/60 transition-colors"
                 onClick={() => navigate(`/contacts/${event.contact!.id}`)}
               >
-                <Avatar className="h-10 w-10 shrink-0">
-                  <AvatarFallback className="bg-primary/20 text-primary text-sm font-semibold">
+                <Avatar className="h-9 w-9 shrink-0">
+                  <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
                     {contactInitials}
                   </AvatarFallback>
                 </Avatar>
@@ -158,12 +149,12 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
                     </p>
                   )}
                 </div>
-                <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               </div>
               <Button
                 size="icon"
                 variant="outline"
-                className="h-10 w-10 shrink-0"
+                className="h-9 w-9 shrink-0"
                 title="Ir al chat"
                 onClick={() => navigate(`/inbox?contact_id=${event.contact!.id}`)}
               >
@@ -175,16 +166,16 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
           {/* Property */}
           {hasProperty && (
             <div 
-              className="p-3 rounded-lg border border-border/50 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+              className="p-2.5 rounded-lg border border-border/50 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors w-full max-w-full overflow-hidden"
               onClick={() => navigate(`/properties/${propertyId}`)}
             >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                  <Building className="w-5 h-5 text-accent-foreground" />
+              <div className="flex items-start gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                  <Building className="w-4 h-4 text-accent-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
-                    <MapPin className="w-3 h-3" />
+                    <MapPin className="w-3 h-3 shrink-0" />
                     Inmueble a visitar
                   </p>
                   <p className="font-medium text-sm truncate">{propertyTitle || 'Propiedad'}</p>
@@ -194,7 +185,7 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
                     </Badge>
                   )}
                 </div>
-                <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
+                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-1" />
               </div>
             </div>
           )}
@@ -208,7 +199,7 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
                   <FileText className="w-3.5 h-3.5" />
                   Comentarios
                 </p>
-                <p className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3 border border-border/30 break-words">
+                <p className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3 border border-border/30 break-words whitespace-normal">
                   {event.notes}
                 </p>
               </div>
@@ -223,11 +214,11 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Campos adicionales
                 </p>
-                <div className="rounded-lg border border-border/50 divide-y divide-border/30">
+                <div className="rounded-lg border border-border/50 divide-y divide-border/30 w-full overflow-hidden">
                   {otherMetadata.map(([key, value]) => (
-                    <div key={key} className="flex justify-between items-center px-3 py-2 text-sm gap-2">
+                    <div key={key} className="flex justify-between items-center px-3 py-2 text-xs gap-2">
                       <span className="text-muted-foreground capitalize shrink-0">{key.replace(/_/g, ' ')}</span>
-                      <span className="font-medium text-foreground truncate">{String(value)}</span>
+                      <span className="font-medium text-foreground truncate text-right">{String(value)}</span>
                     </div>
                   ))}
                 </div>
@@ -313,32 +304,37 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border flex gap-2 shrink-0">
+      <div className="px-4 py-3 border-t border-border flex gap-2 shrink-0">
         <Button
           variant="outline"
-          className="flex-1"
+          size="sm"
+          className="flex-1 text-xs"
           onClick={() => onEdit(event)}
         >
-          <Edit className="w-4 h-4 mr-2" />
+          <Edit className="w-3.5 h-3.5 mr-1.5" />
           Editar
         </Button>
         {isActive && (
           <Button
             variant="destructive"
+            size="sm"
+            className="flex-1 text-xs"
             onClick={handleCancel}
             disabled={cancelEvent.isPending}
           >
-            <XCircle className="w-4 h-4 mr-2" />
+            <XCircle className="w-3.5 h-3.5 mr-1.5" />
             Cancelar
           </Button>
         )}
         {event.status === 'canceled' && (
           <Button
             variant="destructive"
+            size="sm"
+            className="flex-1 text-xs"
             onClick={handleDelete}
             disabled={deleteEvent.isPending}
           >
-            <Trash2 className="w-4 h-4 mr-2" />
+            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
             Eliminar
           </Button>
         )}
@@ -352,7 +348,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[600px] p-0 !flex !flex-col max-h-[85vh] overflow-hidden gap-0">
+      <DialogContent className="max-w-[92vw] sm:max-w-[550px] p-0 !flex !flex-col max-h-[85vh] overflow-hidden gap-0 rounded-xl">
         <DialogTitle className="sr-only">{event.title}</DialogTitle>
         <EventDetailContent event={event} onOpenChange={onOpenChange} onEdit={onEdit} />
       </DialogContent>
