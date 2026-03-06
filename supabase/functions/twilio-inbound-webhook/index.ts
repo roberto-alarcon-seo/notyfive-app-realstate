@@ -81,7 +81,7 @@ serve(async (req) => {
     let contactId: string;
     const { data: existingContact } = await supabase
       .from('contacts')
-      .select('id, name')
+      .select('id, name, pipeline_stage')
       .eq('tenant_id', tenantId)
       .eq('phone', customerPhone)
       .maybeSingle();
@@ -92,6 +92,16 @@ serve(async (req) => {
       if (profileName && existingContact.name === 'WhatsApp Lead') {
         await supabase.from('contacts').update({ name: profileName }).eq('id', existingContact.id);
         console.log(`📝 Updated contact name from "WhatsApp Lead" to "${profileName}"`);
+      }
+      // Reactivate closed_lost contacts: reset pipeline to new_lead
+      if (existingContact.pipeline_stage === 'closed_lost') {
+        await supabase.from('contacts').update({
+          pipeline_stage: 'new_lead',
+          status: 'active',
+          operational_status: 'active',
+          lead_temperature: 'cold',
+        }).eq('id', existingContact.id);
+        console.log(`🔄 Reactivated closed_lost contact ${existingContact.id} → new_lead`);
       }
     } else {
       const contactName = profileName || 'WhatsApp Lead';
