@@ -283,7 +283,7 @@ serve(async (req) => {
   ${p.address ? `Dirección: ${p.address}` : ''}
   ${creditText}${maintenanceText ? ` | ${maintenanceText}` : ''}
   ${visitText ? `Disponibilidad de visitas: ${visitText}` : ''}
-  ${p.youtube_url ? `Video: ${p.youtube_url}` : ''}${aiPromptText}${photosText}${faqText}`;
+  ${p.youtube_url ? `Video de YouTube disponible: Sí — Enlace: ${p.youtube_url}` : 'Video de YouTube disponible: No'}${aiPromptText}${photosText}${faqText}`;
       }).join('\n\n');
 
       propertiesContext = `\nPROPIEDADES DISPONIBLES:\n${propertyDetails}`;
