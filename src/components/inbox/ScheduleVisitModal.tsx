@@ -136,7 +136,7 @@ export function ScheduleVisitModal({
     }
 
     // Create the appointment
-    await createEvent.mutateAsync({
+    const event = await createEvent.mutateAsync({
       contact_id: contactId,
       event_type: "visita",
       title: `Visita - ${trimmedName}`,
@@ -147,6 +147,36 @@ export function ScheduleVisitModal({
       notes: notes || undefined,
       metadata,
     });
+
+    // Log visit_scheduled activity
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user?.id ?? '')
+        .single();
+
+      if (profile?.tenant_id) {
+        await supabase.from('conversation_activity').insert({
+          tenant_id: profile.tenant_id,
+          conversation_id: conversationId,
+          contact_id: contactId,
+          actor_user_id: user?.id ?? null,
+          actor_type: 'user',
+          event_type: 'visit_scheduled',
+          payload: {
+            event_id: event.id,
+            start_at: startISO,
+            title: `Visita - ${trimmedName}`,
+            property_id: selectedPropertyId !== "none" ? selectedPropertyId : null,
+            notes: notes || null,
+          },
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to log visit_scheduled activity:', e);
+    }
 
     // Create followup 24hrs before the visit
     const followupDate = new Date(startDate.getTime() - 24 * 60 * 60 * 1000);

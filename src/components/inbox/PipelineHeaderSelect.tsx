@@ -47,6 +47,45 @@ export function PipelineHeaderSelect({ contactId, currentStage }: PipelineHeader
       setLocalStage(newStage);
       await handlePipelineStageChange(contactId, oldStage, newStage);
       
+      // Log pipeline_stage_changed activity
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('tenant_id')
+          .eq('id', user?.id ?? '')
+          .single();
+
+        if (profile?.tenant_id) {
+          const { data: conv } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('contact_id', contactId)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (conv) {
+            await supabase.from('conversation_activity').insert({
+              tenant_id: profile.tenant_id,
+              conversation_id: conv.id,
+              contact_id: contactId,
+              actor_user_id: user?.id ?? null,
+              actor_type: 'user',
+              event_type: 'pipeline_stage_changed',
+              payload: {
+                old_stage: oldStage,
+                new_stage: newStage,
+                old_label: PIPELINE_STAGES.find(s => s.value === oldStage)?.label,
+                new_label: PIPELINE_STAGES.find(s => s.value === newStage)?.label,
+              },
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to log pipeline_stage_changed activity:', e);
+      }
+
       // Invalidate queries to sync UI
       queryClient.invalidateQueries({ queryKey: ['contact-pipeline', contactId] });
       queryClient.invalidateQueries({ queryKey: ['contacts'] });

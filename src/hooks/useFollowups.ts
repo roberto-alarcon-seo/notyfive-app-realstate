@@ -277,9 +277,19 @@ export function useCompleteFollowup() {
 // Cancel a followup
 export function useCancelFollowup() {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
   return useMutation({
     mutationFn: async (followupId: string) => {
+      // Get the followup first for activity logging
+      const { data: followup, error: fetchError } = await supabase
+        .from('conversation_followups')
+        .select('*')
+        .eq('id', followupId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('conversation_followups')
         .update({ 
@@ -289,6 +299,22 @@ export function useCancelFollowup() {
         .eq('id', followupId);
 
       if (error) throw error;
+
+      // Log followup_canceled activity
+      if (profile?.tenant_id && followup) {
+        await supabase.from('conversation_activity').insert({
+          tenant_id: followup.tenant_id,
+          conversation_id: followup.conversation_id,
+          contact_id: followup.contact_id,
+          actor_user_id: profile.id,
+          actor_type: 'user',
+          event_type: 'followup_canceled',
+          payload: {
+            followup_id: followupId,
+            note: followup.note,
+          },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['followups'] });

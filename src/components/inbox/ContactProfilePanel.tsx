@@ -6,7 +6,8 @@ import {
   ArrowDownLeft, ArrowUpRight, Bot, Ban, AlertCircle,
   Loader2, XCircle, Pencil, AlertTriangle, CheckCircle2,
   CalendarClock, RefreshCw, Building, DollarSign, Globe,
-  ChevronDown, Pin, PinOff, Trash2, Send
+  ChevronDown, Pin, PinOff, Trash2, Send,
+  CalendarPlus, CalendarX, ArrowRightLeft, PauseCircle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -61,7 +62,7 @@ interface ContactProfilePanelProps {
 
 interface ActivityEvent {
   id: string;
-  type: 'inbound' | 'outbound' | 'campaign' | 'ai' | 'blocked' | 'window_expired' | 'followup_scheduled' | 'followup_completed' | 'followup_rescheduled' | 'human_marked_attended' | 'ai_escalated' | 'ai_reactivated';
+  type: 'inbound' | 'outbound' | 'campaign' | 'ai' | 'blocked' | 'window_expired' | 'followup_scheduled' | 'followup_completed' | 'followup_rescheduled' | 'followup_canceled' | 'human_marked_attended' | 'ai_escalated' | 'ai_reactivated' | 'ai_paused' | 'visit_scheduled' | 'visit_canceled' | 'pipeline_stage_changed';
   description: string;
   timestamp: string;
 }
@@ -331,6 +332,31 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
       if (error) throw error;
 
       setAiEnabled(enabled);
+
+      // Log AI toggle activity
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('tenant_id')
+          .eq('id', user?.id ?? '')
+          .single();
+
+        if (profile?.tenant_id && contactId) {
+          await supabase.from('conversation_activity').insert({
+            tenant_id: profile.tenant_id,
+            conversation_id: conversation.id,
+            contact_id: contactId,
+            actor_user_id: user?.id ?? null,
+            actor_type: 'user',
+            event_type: enabled ? 'ai_reactivated' : 'ai_paused',
+            payload: enabled ? null : { reason: 'manual_disable' },
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to log AI toggle activity:', e);
+      }
+
       toast.success(enabled ? 'IA activada para esta conversación' : 'IA desactivada para esta conversación');
     } catch (error) {
       console.error('Error toggling AI:', error);
@@ -501,6 +527,46 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
         description: 'IA reactivada',
         timestamp: event.created_at,
       });
+    } else if (event.event_type === 'ai_paused') {
+      activities.push({
+        id: event.id,
+        type: 'ai_paused',
+        description: 'IA pausada manualmente',
+        timestamp: event.created_at,
+      });
+    } else if (event.event_type === 'visit_scheduled') {
+      const payload = event.payload as Record<string, unknown> | null;
+      activities.push({
+        id: event.id,
+        type: 'visit_scheduled',
+        description: payload?.title ? `Cita: ${payload.title}` : 'Cita agendada',
+        timestamp: event.created_at,
+      });
+    } else if (event.event_type === 'visit_canceled') {
+      const payload = event.payload as Record<string, unknown> | null;
+      activities.push({
+        id: event.id,
+        type: 'visit_canceled',
+        description: payload?.title ? `Cancelada: ${payload.title}` : 'Cita cancelada',
+        timestamp: event.created_at,
+      });
+    } else if (event.event_type === 'pipeline_stage_changed') {
+      const payload = event.payload as Record<string, unknown> | null;
+      activities.push({
+        id: event.id,
+        type: 'pipeline_stage_changed',
+        description: payload?.old_label && payload?.new_label 
+          ? `${payload.old_label} → ${payload.new_label}` 
+          : 'Cambio de etapa',
+        timestamp: event.created_at,
+      });
+    } else if (event.event_type === 'followup_canceled') {
+      activities.push({
+        id: event.id,
+        type: 'followup_canceled',
+        description: 'Seguimiento cancelado',
+        timestamp: event.created_at,
+      });
     }
   });
   
@@ -521,6 +587,11 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
       case 'human_marked_attended': return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />;
       case 'ai_escalated': return <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />;
       case 'ai_reactivated': return <Bot className="h-3.5 w-3.5 text-purple-500" />;
+      case 'ai_paused': return <PauseCircle className="h-3.5 w-3.5 text-amber-500" />;
+      case 'visit_scheduled': return <CalendarPlus className="h-3.5 w-3.5 text-primary" />;
+      case 'visit_canceled': return <CalendarX className="h-3.5 w-3.5 text-destructive" />;
+      case 'pipeline_stage_changed': return <ArrowRightLeft className="h-3.5 w-3.5 text-primary" />;
+      case 'followup_canceled': return <XCircle className="h-3.5 w-3.5 text-muted-foreground" />;
       default: return <Activity className="h-3.5 w-3.5" />;
     }
   };
