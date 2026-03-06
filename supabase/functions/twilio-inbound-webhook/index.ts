@@ -95,13 +95,17 @@ serve(async (req) => {
       }
       // Reactivate closed_lost contacts: reset pipeline to new_lead
       if (existingContact.pipeline_stage === 'closed_lost') {
-        await supabase.from('contacts').update({
+        const { error: reactivateError } = await supabase.from('contacts').update({
           pipeline_stage: 'new_lead',
           status: 'active',
-          operational_status: 'active',
+          operational_status: 'ACTIVE',
           lead_temperature: 'cold',
         }).eq('id', existingContact.id);
-        console.log(`🔄 Reactivated closed_lost contact ${existingContact.id} → new_lead`);
+        if (reactivateError) {
+          console.error(`❌ Failed to reactivate closed_lost contact ${existingContact.id}:`, reactivateError);
+        } else {
+          console.log(`🔄 Reactivated closed_lost contact ${existingContact.id} → new_lead`);
+        }
       }
     } else {
       const contactName = profileName || 'WhatsApp Lead';
@@ -166,14 +170,29 @@ serve(async (req) => {
     if (existingConv) {
       conversationId = existingConv.id;
       aiEnabled = existingConv.ai_enabled ?? true;
-      await supabase.from('conversations').update({
+      
+      // Build update payload - reopen conversation if contact was reactivated from closed_lost
+      const convUpdate: Record<string, unknown> = {
         last_customer_message_at: new Date().toISOString(),
         last_message_preview: messagePreview,
         last_message_direction: 'inbound',
         last_message_source: 'customer',
         unread_count: (existingConv.unread_count || 0) + 1,
         updated_at: new Date().toISOString(),
-      }).eq('id', conversationId);
+      };
+      
+      // If contact was closed_lost, reopen conversation and reactivate AI
+      if (existingContact?.pipeline_stage === 'closed_lost') {
+        convUpdate.status = 'open';
+        convUpdate.ai_enabled = true;
+        convUpdate.ai_state = 'active';
+        convUpdate.needs_human = false;
+        convUpdate.ai_pause_reason = null;
+        aiEnabled = true;
+        console.log(`🔄 Reopening conversation for reactivated contact`);
+      }
+      
+      await supabase.from('conversations').update(convUpdate).eq('id', conversationId);
     } else {
       const { data: newConv, error: convError } = await supabase
         .from('conversations')
