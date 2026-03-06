@@ -104,14 +104,14 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl p-0 flex flex-col max-w-[100vw] overflow-x-hidden" : "!w-[480px] !max-w-[480px] p-0 flex flex-col overflow-hidden"}>
+      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl p-0 flex flex-col max-w-[100vw] overflow-x-hidden" : "sm:!max-w-[480px] p-0 flex flex-col overflow-hidden"}>
         {/* Header */}
-        <SheetHeader className="p-4 sm:p-6 pb-4 border-b border-border">
+        <SheetHeader className="p-4 sm:p-6 pb-4 border-b border-border box-border w-full">
           {isMobile && (
             <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-2" />
           )}
           <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="capitalize text-xs">
                   {getEventTypeLabel(event.event_type)}
@@ -120,13 +120,13 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
                   {statusConfig.label}
                 </Badge>
               </div>
-              <SheetTitle className="text-lg leading-tight">{event.title}</SheetTitle>
+              <SheetTitle className="text-lg leading-tight truncate">{event.title}</SheetTitle>
             </div>
           </div>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 w-full">
-          <div className="p-4 sm:p-6 space-y-5 min-w-0 overflow-hidden">
+        <ScrollArea className="flex-1 w-full overflow-hidden">
+          <div className="p-4 sm:p-6 space-y-5 w-full box-border overflow-hidden">
             {/* Date & Time Card */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/15 min-w-0">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
