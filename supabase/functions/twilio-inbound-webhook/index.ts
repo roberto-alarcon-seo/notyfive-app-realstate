@@ -327,9 +327,10 @@ serve(async (req) => {
             const aiResult = await aiResponse.json();
             console.log('🤖 AI response:', aiResult.action);
             
-            if (aiResult.action === 'respond' && aiResult.response) {
+            if ((aiResult.action === 'respond' || aiResult.action === 'escalate') && (aiResult.response || aiResult.message)) {
+              const textToSend = aiResult.response || aiResult.message;
               if (aiResult.delay_seconds > 0) await delay(aiResult.delay_seconds * 1000);
-              await sendAIResponse(supabase, tenantId, conversationId, businessPhone, customerPhone, aiResult.response, newMessage.id, aiResult.media_urls);
+              await sendAIResponse(supabase, tenantId, conversationId, businessPhone, customerPhone, textToSend, newMessage.id, aiResult.media_urls);
             }
             break;
           } catch (e) {
