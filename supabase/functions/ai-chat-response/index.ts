@@ -93,7 +93,7 @@ serve(async (req) => {
         console.log('No AI settings found, creating default settings with AI enabled');
         const { data: newSettings, error: createError } = await supabase
           .from('tenant_ai_settings')
-          .insert({
+          .upsert({
             tenant_id,
             enabled: true,
             agent_name: 'Asistente',
@@ -108,21 +108,33 @@ serve(async (req) => {
             escalate_on_frustration: true,
             escalate_on_no_answer: true,
             escalate_on_human_request: true,
-          })
+          }, { onConflict: 'tenant_id' })
           .select()
           .single();
 
         if (createError) {
           console.error('Error creating AI settings:', createError);
-          return new Response(JSON.stringify({ 
-            action: 'error',
-            reason: 'settings_creation_failed' 
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          // Retry fetching in case another request created it concurrently
+          const { data: retryData } = await supabase
+            .from('tenant_ai_settings')
+            .select('*')
+            .eq('tenant_id', tenant_id)
+            .single();
+          if (retryData) {
+            settings = retryData as AISettings;
+            console.log('Retrieved AI settings on retry after conflict');
+          } else {
+            return new Response(JSON.stringify({ 
+              action: 'error',
+              reason: 'settings_creation_failed' 
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+        } else {
+          settings = newSettings as AISettings;
+          console.log('Created default AI settings for tenant');
         }
-        settings = newSettings as AISettings;
-        console.log('Created default AI settings for tenant');
       } else {
         settings = data as AISettings;
       }
