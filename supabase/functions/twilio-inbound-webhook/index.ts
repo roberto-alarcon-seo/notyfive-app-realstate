@@ -394,6 +394,28 @@ serve(async (req) => {
       console.warn('Lead scoring trigger error:', e);
     }
 
+    // ========== SEND PUSH NOTIFICATION (fire-and-forget) ==========
+    try {
+      const contactName = existingContact
+        ? (profileName && existingContact.name !== 'WhatsApp Lead' ? existingContact.name : profileName || existingContact.name)
+        : (profileName || 'Nuevo lead');
+      const pushTitle = `💬 ${contactName}`;
+      const pushBody = messagePreview || 'Nuevo mensaje recibido';
+      fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          title: pushTitle,
+          body: pushBody,
+          url: '/inbox',
+          badge_count: 1,
+        }),
+      }).catch(e => console.warn('Push notification fire-and-forget error:', e));
+    } catch (e) {
+      console.warn('Push notification trigger error:', e);
+    }
+
     console.log(`✅ Webhook completed in ${Date.now() - startTime}ms`);
     return emptyTwiml();
 

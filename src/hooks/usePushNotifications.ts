@@ -24,14 +24,53 @@ export function usePushNotifications() {
       setPermission('unsupported');
       return;
     }
-    setPermission(Notification.permission as PushPermissionState);
+    const perm = Notification.permission as PushPermissionState;
+    setPermission(perm);
 
     // Check existing subscription
     navigator.serviceWorker.ready.then((reg) => {
       reg.pushManager.getSubscription().then((sub) => {
-        setIsSubscribed(!!sub);
+        if (sub) {
+          setIsSubscribed(true);
+          // Ensure it's synced to the database
+          syncSubscription(sub);
+        } else if (perm === 'granted') {
+          // Permission granted but no active push subscription — re-subscribe
+          subscribe();
+        }
       });
     });
+  }, []);
+
+  const syncSubscription = useCallback(async (subscription: PushSubscription) => {
+    try {
+      const subJson = subscription.toJSON();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile?.tenant_id) return;
+
+      await supabase.from('push_subscriptions').upsert(
+        {
+          user_id: user.id,
+          tenant_id: profile.tenant_id,
+          endpoint: subJson.endpoint!,
+          p256dh: subJson.keys!.p256dh!,
+          auth: subJson.keys!.auth!,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'endpoint' }
+      );
+      console.log('[Push] Subscription synced to DB');
+    } catch (err) {
+      console.error('[Push] Sync failed:', err);
+    }
   }, []);
 
   const subscribe = useCallback(async () => {
@@ -53,44 +92,18 @@ export function usePushNotifications() {
 
       const reg = await navigator.serviceWorker.ready;
       const subscription = await reg.pushManager.subscribe({
-        userVisuallyIndicatesUserIsActive: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      } as any);
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey).buffer as ArrayBuffer,
+      });
 
-      const subJson = subscription.toJSON();
-
-      // Get current user & tenant
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile?.tenant_id) throw new Error('No tenant');
-
-      // Upsert subscription
-      await supabase.from('push_subscriptions').upsert(
-        {
-          user_id: user.id,
-          tenant_id: profile.tenant_id,
-          endpoint: subJson.endpoint!,
-          p256dh: subJson.keys!.p256dh!,
-          auth: subJson.keys!.auth!,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'endpoint' }
-      );
-
+      await syncSubscription(subscription);
       setIsSubscribed(true);
     } catch (err) {
       console.error('Push subscription failed:', err);
     } finally {
       setLoading(false);
     }
-  }, [permission]);
+  }, [permission, syncSubscription]);
 
   const clearBadge = useCallback(() => {
     if ('clearAppBadge' in navigator) {
