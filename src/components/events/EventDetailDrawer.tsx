@@ -104,7 +104,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl p-0 flex flex-col max-w-[100vw] overflow-x-hidden" : "!w-[28rem] !max-w-[28rem] p-0 flex flex-col overflow-hidden"}>
+      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl p-0 flex flex-col max-w-[100vw] overflow-x-hidden" : "!w-[480px] !max-w-[480px] p-0 flex flex-col overflow-hidden"}>
         {/* Header */}
         <SheetHeader className="p-4 sm:p-6 pb-4 border-b border-border">
           {isMobile && (
