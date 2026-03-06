@@ -218,7 +218,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
     return (
       <>
         <ImagePreview
-          url={proxiedUrl || media.url!}
+          url={safeUrl}
           onExpand={() => { setLightboxIndex(0); setLightboxOpen(true); }}
           className={className}
         />
