@@ -378,7 +378,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
           </p>
         )}
       </div>
-      <DownloadButton url={proxiedUrl || media.url!} filename={media.filename || 'archivo'} />
+      <DownloadButton url={safeUrl} filename={media.filename || 'archivo'} />
     </div>
   );
 }
