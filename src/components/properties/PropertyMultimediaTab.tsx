@@ -27,6 +27,8 @@ import { toast } from "sonner";
 
 interface PropertyMultimediaTabProps {
   propertyId?: string;
+  youtubeUrl?: string;
+  onYoutubeUrlChange?: (url: string) => void;
 }
 
 const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]+/;
@@ -36,7 +38,7 @@ function extractYoutubeId(url: string): string | null {
   return match ? match[1] : null;
 }
 
-export default function PropertyMultimediaTab({ propertyId }: PropertyMultimediaTabProps) {
+export default function PropertyMultimediaTab({ propertyId, youtubeUrl: externalYoutubeUrl, onYoutubeUrlChange }: PropertyMultimediaTabProps) {
   const { data: images, isLoading: loadingImages } = usePropertyImages(propertyId);
   const { data: documents, isLoading: loadingDocs } = usePropertyDocuments(propertyId);
   
@@ -44,7 +46,9 @@ export default function PropertyMultimediaTab({ propertyId }: PropertyMultimedia
   const imageMutations = usePropertyImageMutations(propertyId || "placeholder");
   const docMutations = usePropertyDocumentMutations(propertyId || "placeholder");
 
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [localYoutubeUrl, setLocalYoutubeUrl] = useState("");
+  const youtubeUrl = externalYoutubeUrl ?? localYoutubeUrl;
+  const setYoutubeUrl = onYoutubeUrlChange ?? setLocalYoutubeUrl;
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -154,15 +158,15 @@ export default function PropertyMultimediaTab({ propertyId }: PropertyMultimedia
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
+          <div>
             <Input
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               placeholder="https://youtube.com/watch?v=..."
             />
-            <Button variant="outline" disabled={!YOUTUBE_REGEX.test(youtubeUrl)}>
-              <Plus className="h-4 w-4" />
-            </Button>
+            <p className="text-xs text-muted-foreground mt-1">
+              Se guarda automáticamente al presionar "Guardar"
+            </p>
           </div>
           {youtubeId && (
             <div className="aspect-video rounded-lg overflow-hidden bg-muted">

@@ -176,7 +176,11 @@ export default function PropertyEditor() {
               </TabsContent>
 
               <TabsContent value="multimedia">
-                <PropertyMultimediaTab propertyId={isNew ? undefined : id} />
+                <PropertyMultimediaTab 
+                  propertyId={isNew ? undefined : id} 
+                  youtubeUrl={formData.youtube_url}
+                  onYoutubeUrlChange={(url) => updateField('youtube_url', url)}
+                />
               </TabsContent>
 
               <TabsContent value="faq">
