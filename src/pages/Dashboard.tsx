@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, Users, MessageSquare, Clock, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +20,7 @@ import { ConversionFunnelChart } from "@/components/dashboard/ConversionFunnelCh
 import { LeadTemperatureChart } from "@/components/dashboard/LeadTemperatureChart";
 import { ConversionTimeCard } from "@/components/dashboard/ConversionTimeCard";
 import { PropertyStatusChart } from "@/components/dashboard/PropertyStatusChart";
+import { PushNotificationPrompt } from "@/components/pwa/PushNotificationPrompt";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -39,6 +40,8 @@ export default function Dashboard() {
   return (
     <div className="h-full overflow-auto bg-background">
       <div ref={dashboardRef} className="p-4 lg:p-6 max-w-[1600px] mx-auto space-y-5">
+        {/* Push notification prompt */}
+        <PushNotificationPrompt />
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
