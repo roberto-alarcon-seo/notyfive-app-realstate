@@ -423,10 +423,50 @@ function FollowupRow({ followup, onOpen, onComplete, onEdit, onDelete, isComplet
               </span>
             )}
           </div>
+
+          {/* Mobile Actions - stacked below content */}
+          <div className="flex items-center gap-2 pt-1.5 md:hidden">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onOpen}
+              className="text-xs flex-1"
+            >
+              <MessageSquare className="h-3.5 w-3.5 mr-1" />
+              Abrir chat
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onComplete}
+              disabled={isCompleting}
+              className="text-xs flex-1"
+            >
+              <Check className="h-3.5 w-3.5 mr-1" />
+              Completar
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground shrink-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1 md:gap-2 shrink-0">
+        {/* Desktop Actions */}
+        <div className="hidden md:flex items-center gap-2 shrink-0">
           <Button
             variant="outline"
             size="sm"
@@ -441,14 +481,11 @@ function FollowupRow({ followup, onOpen, onComplete, onEdit, onDelete, isComplet
             variant="default"
             size="sm"
             onClick={onOpen}
-            className="hidden md:inline-flex"
           >
             <MessageSquare className="h-4 w-4 mr-1" />
             Abrir chat
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
-
-          {/* Three-dots menu for edit/delete */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
@@ -468,15 +505,6 @@ function FollowupRow({ followup, onOpen, onComplete, onEdit, onDelete, isComplet
           </DropdownMenu>
         </div>
       </div>
-
-      {/* Mobile: tap row to open chat */}
-      <button
-        onClick={onOpen}
-        className="md:hidden w-full mt-2 flex items-center justify-center gap-1 text-xs text-primary py-1.5 rounded-md border border-primary/20 hover:bg-primary/10 transition-colors"
-      >
-        <MessageSquare className="h-3.5 w-3.5" />
-        Abrir chat
-      </button>
     </div>
   );
 }
