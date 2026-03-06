@@ -105,7 +105,7 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
   return (
     <>
       {/* Header */}
-      <div className="p-5 pb-4 border-b border-border">
+      <div className="p-5 pb-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2 mb-2">
           <Badge variant="outline" className="capitalize text-xs">
             {getEventTypeLabel(event.event_type)}
@@ -118,7 +118,7 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
       </div>
 
       {/* Scrollable body */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="p-5 space-y-4">
           {/* Date & Time */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/15">
@@ -310,7 +310,7 @@ function EventDetailContent({ event, onOpenChange, onEdit }: { event: Event; onO
             )}
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Footer */}
       <div className="p-4 border-t border-border flex gap-2 shrink-0">
