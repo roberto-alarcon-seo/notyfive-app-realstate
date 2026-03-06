@@ -223,7 +223,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
           className={className}
         />
         <ImageLightbox
-          images={[{ url: proxiedUrl || media.url!, name: media.filename || 'imagen' }]}
+          images={[{ url: safeUrl, name: media.filename || 'imagen' }]}
           open={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
         />
