@@ -303,7 +303,9 @@ export default function Inbox() {
     const matchesSearch = contactName.includes(searchLower) || phone.includes(searchLower);
     const needsHuman = conv.needs_human === true || conv.ai_state === 'escalated';
     const matchesFilter = filterNeedsHuman ? needsHuman : true;
-    return matchesSearch && matchesFilter;
+    // Hide conversations where contact is in closed_lost stage
+    const isClosedLost = conv.contact?.pipeline_stage === 'closed_lost';
+    return matchesSearch && matchesFilter && !isClosedLost;
   }) || [];
 
   const needsHumanCount = conversations?.filter(c => c.needs_human === true || c.ai_state === 'escalated').length || 0;

@@ -34,6 +34,7 @@ export interface Conversation {
     phone: string | null;
     email: string | null;
     country: string | null;
+    pipeline_stage: string | null;
   };
 }
 
@@ -86,7 +87,7 @@ export function useConversations() {
         .from('conversations')
         .select(`
           *,
-          contact:contacts(id, name, phone, email, country)
+          contact:contacts(id, name, phone, email, country, pipeline_stage)
         `)
         .order('updated_at', { ascending: false });
 
