@@ -317,8 +317,8 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
               )}
             </div>
 
-            {/* Automation Placeholder */}
-            <div className="bg-muted/20 border border-dashed border-border/60 rounded-lg p-4 text-center">
+            {/* Automation Placeholder - desktop only */}
+            <div className="hidden sm:block bg-muted/20 border border-dashed border-border/60 rounded-lg p-4 text-center">
               <Zap className="w-5 h-5 text-muted-foreground mx-auto mb-1.5" />
               <p className="text-sm font-medium text-muted-foreground">Automatizaciones sugeridas</p>
               <p className="text-xs text-muted-foreground/70 mt-0.5">
