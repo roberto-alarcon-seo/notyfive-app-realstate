@@ -104,7 +104,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl p-0 flex flex-col" : "w-full sm:max-w-lg p-0 flex flex-col"}>
+      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl p-0 flex flex-col overflow-hidden" : "w-full sm:max-w-lg p-0 flex flex-col"}>
         {/* Header */}
         <SheetHeader className="p-4 sm:p-6 pb-4 border-b border-border">
           {isMobile && (
@@ -125,8 +125,8 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
           </div>
         </SheetHeader>
 
-        <ScrollArea className="flex-1">
-          <div className="p-4 sm:p-6 space-y-5">
+        <ScrollArea className="flex-1 w-full">
+          <div className="p-4 sm:p-6 space-y-5 min-w-0 overflow-hidden">
             {/* Date & Time Card */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/15">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
