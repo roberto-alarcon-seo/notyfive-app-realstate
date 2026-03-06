@@ -126,7 +126,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
         </SheetHeader>
 
         <ScrollArea className="flex-1 w-full overflow-hidden">
-          <div className="p-4 sm:p-6 space-y-5 w-full box-border overflow-hidden">
+          <div className="p-4 sm:p-6 sm:pr-8 space-y-5 w-full box-border overflow-hidden">
             {/* Date & Time Card */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/15 min-w-0">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
