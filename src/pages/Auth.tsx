@@ -91,7 +91,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       {/* Left Panel - Hero Image */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden">
         {/* Background Image */}
@@ -159,9 +159,9 @@ const Auth = () => {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col bg-background">
+      <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col bg-background overflow-y-auto">
         {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-border">
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <img 
               src={authLogo} 
@@ -173,14 +173,14 @@ const Auth = () => {
         </div>
 
         {/* Desktop Sign In Button */}
-        <div className="hidden lg:flex justify-end p-6">
+        <div className="hidden lg:flex justify-end p-6 shrink-0">
           <Button variant="outline" className="rounded-full px-6" disabled>
             Iniciar Sesión
           </Button>
         </div>
 
         {/* Form Container */}
-        <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div className="flex-1 flex items-center justify-center p-6 lg:p-12 min-h-0">
           <div className="w-full max-w-md animate-fade-in">
             {/* Logo & Header */}
             <div className="text-center mb-8 lg:mb-10">
