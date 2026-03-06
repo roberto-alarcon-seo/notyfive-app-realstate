@@ -104,7 +104,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl p-0 flex flex-col overflow-hidden" : "w-full sm:max-w-lg p-0 flex flex-col"}>
+      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl p-0 flex flex-col max-w-[100vw] overflow-x-hidden" : "w-full sm:max-w-lg p-0 flex flex-col"}>
         {/* Header */}
         <SheetHeader className="p-4 sm:p-6 pb-4 border-b border-border">
           {isMobile && (
@@ -128,16 +128,16 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
         <ScrollArea className="flex-1 w-full">
           <div className="p-4 sm:p-6 space-y-5 min-w-0 overflow-hidden">
             {/* Date & Time Card */}
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/15">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/15 min-w-0">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <Calendar className="w-5 h-5 text-primary" />
               </div>
-              <div>
-                <p className="font-medium text-sm capitalize">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm capitalize truncate">
                   {format(new Date(event.start_at), "EEEE, d 'de' MMMM yyyy", { locale: es })}
                 </p>
                 <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                  <Clock className="w-3.5 h-3.5" />
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
                   {format(new Date(event.start_at), "HH:mm")}
                   {event.end_at && ` – ${format(new Date(event.end_at), "HH:mm")}`}
                 </p>
