@@ -356,11 +356,26 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl p-0 flex flex-col max-w-[100vw] overflow-x-hidden">
+        <SheetContent 
+          side="bottom" 
+          className="h-[85vh] rounded-t-2xl !p-0 !gap-0 flex flex-col overflow-hidden [&>button.absolute]:hidden"
+        >
           <SheetHeader className="sr-only">
             <SheetTitle>{event.title}</SheetTitle>
           </SheetHeader>
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mt-3 mb-1" />
+          {/* Drag handle + close */}
+          <div className="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
+            <div className="flex-1" />
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+            <div className="flex-1 flex justify-end">
+              <button 
+                onClick={() => onOpenChange(false)} 
+                className="rounded-full p-1 hover:bg-muted transition-colors"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
           <EventDetailContent event={event} onOpenChange={onOpenChange} onEdit={onEdit} />
         </SheetContent>
       </Sheet>
