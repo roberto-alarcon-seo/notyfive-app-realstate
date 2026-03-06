@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { PWAUpdateBanner } from "@/components/pwa/PWAUpdateBanner";
 import { Toaster } from "@/components/ui/toaster";
 import AutomationWizard from "@/pages/AutomationWizard";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -78,6 +79,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <PWAUpdateBanner />
       <BrowserRouter>
         <RecoveryHashRedirector />
         <AuthProvider>

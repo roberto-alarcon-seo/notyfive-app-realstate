@@ -7,12 +7,19 @@ const PRECACHE_URLS = [
   '/pwa-icon-512.png',
 ];
 
-// Install — precache core assets
+// Install — precache core assets (do NOT skipWaiting automatically)
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.skipWaiting();
+  // Don't call skipWaiting() here — wait for the client to signal via message
+});
+
+// Listen for SKIP_WAITING message from the client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Activate — clean old caches
