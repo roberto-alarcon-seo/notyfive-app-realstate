@@ -199,9 +199,10 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
   if (!media.url && !media.locationLat) return null;
 
   const mediaType = media.type?.toLowerCase() || 'unknown';
+  const isTwilio = isTwilioUrl(media.url || '');
 
-  // Show loading state for Twilio media
-  if (mediaLoading && isTwilioUrl(media.url || '')) {
+  // Show loading state for Twilio media — never render raw Twilio URLs
+  if (isTwilio && (mediaLoading || !proxiedUrl)) {
     return (
       <div className={cn("flex items-center justify-center p-4 bg-muted/50 rounded-lg min-w-32 min-h-20", className)}>
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -209,17 +210,20 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
     );
   }
 
+  // Safe URL: use proxied for Twilio, original for everything else
+  const safeUrl = isTwilio ? proxiedUrl! : media.url!;
+
   // Image
   if (mediaType === 'image' || media.mimeType?.startsWith('image/')) {
     return (
       <>
         <ImagePreview
-          url={proxiedUrl || media.url!}
+          url={safeUrl}
           onExpand={() => { setLightboxIndex(0); setLightboxOpen(true); }}
           className={className}
         />
         <ImageLightbox
-          images={[{ url: proxiedUrl || media.url!, name: media.filename || 'imagen' }]}
+          images={[{ url: safeUrl, name: media.filename || 'imagen' }]}
           open={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
         />
@@ -232,7 +236,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
     return (
       <div className={cn("relative max-w-xs rounded-lg overflow-hidden bg-black/10", className)}>
         <video
-          src={proxiedUrl || media.url!}
+          src={safeUrl}
           controls
           preload="metadata"
           className="max-w-full max-h-64 rounded-lg"
@@ -256,7 +260,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
           <Volume2 className="h-5 w-5 text-primary" />
         </div>
         <audio
-          src={proxiedUrl || media.url!}
+          src={safeUrl}
           controls
           className="flex-1 h-8"
           style={{ minWidth: '150px' }}
@@ -311,7 +315,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
 
     return (
       <DocumentPreview
-        url={proxiedUrl || media.url!}
+        url={safeUrl}
         originalUrl={media.url!}
         displayFilename={displayFilename}
         extension={extension}
@@ -351,7 +355,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
   if (mediaType === 'sticker') {
     return (
       <img
-        src={proxiedUrl || media.url!}
+        src={safeUrl}
         alt="Sticker"
         className={cn("max-w-24 max-h-24", className)}
       />
@@ -374,7 +378,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
           </p>
         )}
       </div>
-      <DownloadButton url={proxiedUrl || media.url!} filename={media.filename || 'archivo'} />
+      <DownloadButton url={safeUrl} filename={media.filename || 'archivo'} />
     </div>
   );
 }
