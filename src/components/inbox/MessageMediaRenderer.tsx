@@ -355,7 +355,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
   if (mediaType === 'sticker') {
     return (
       <img
-        src={proxiedUrl || media.url!}
+        src={safeUrl}
         alt="Sticker"
         className={cn("max-w-24 max-h-24", className)}
       />
