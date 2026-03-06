@@ -9,7 +9,11 @@ import {
   Loader2,
   StickyNote,
   RefreshCw,
-  Pin
+  Pin,
+  ArrowRightLeft,
+  CalendarX,
+  CalendarPlus,
+  PauseCircle
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -58,8 +62,16 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
         return <AlertTriangle className="h-4 w-4 text-amber-500" />;
       case 'ai_reactivated':
         return <Bot className="h-4 w-4 text-purple-500" />;
+      case 'ai_paused':
+        return <PauseCircle className="h-4 w-4 text-amber-500" />;
       case 'note_added':
         return <StickyNote className="h-4 w-4 text-primary" />;
+      case 'visit_scheduled':
+        return <CalendarPlus className="h-4 w-4 text-primary" />;
+      case 'visit_canceled':
+        return <CalendarX className="h-4 w-4 text-destructive" />;
+      case 'pipeline_stage_changed':
+        return <ArrowRightLeft className="h-4 w-4 text-primary" />;
       default:
         return <Activity className="h-4 w-4 text-muted-foreground" />;
     }
@@ -74,7 +86,11 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
       case 'followup_canceled': return 'Seguimiento cancelado';
       case 'ai_escalated': return 'Escalado a humano';
       case 'ai_reactivated': return 'IA reactivada';
+      case 'ai_paused': return 'IA pausada manualmente';
       case 'note_added': return 'Nota agregada';
+      case 'visit_scheduled': return 'Cita agendada';
+      case 'visit_canceled': return 'Cita cancelada';
+      case 'pipeline_stage_changed': return 'Cambio de etapa';
       default: return eventType;
     }
   };
@@ -98,6 +114,8 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
           return text;
         }
         return payload?.note ? String(payload.note) : null;
+      case 'followup_canceled':
+        return payload?.note ? `Nota: ${payload.note}` : null;
       case 'ai_escalated': {
         const reason = payload?.reason as string;
         if (reason === 'human_request') return 'El cliente solicitó hablar con una persona';
@@ -105,6 +123,28 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
         if (reason === 'no_answer') return 'La IA no encontró respuesta adecuada';
         if (reason === 'no_balance') return 'Sin saldo disponible';
         if (reason === 'error') return 'Error en el servicio de IA';
+        return null;
+      }
+      case 'ai_paused':
+        return 'Desactivada manualmente por el agente';
+      case 'visit_scheduled': {
+        if (payload?.start_at) {
+          const visitDate = new Date(payload.start_at as string);
+          let text = `Para: ${format(visitDate, "dd MMM yyyy 'a las' HH:mm", { locale: es })}`;
+          if (payload?.title) text = `${payload.title} — ${text}`;
+          return text;
+        }
+        return payload?.title ? String(payload.title) : null;
+      }
+      case 'visit_canceled': {
+        let text = payload?.title ? String(payload.title) : 'Cita cancelada';
+        if (payload?.reason) text += ` — Motivo: ${payload.reason}`;
+        return text;
+      }
+      case 'pipeline_stage_changed': {
+        const oldLabel = payload?.old_label as string;
+        const newLabel = payload?.new_label as string;
+        if (oldLabel && newLabel) return `${oldLabel} → ${newLabel}`;
         return null;
       }
       default:

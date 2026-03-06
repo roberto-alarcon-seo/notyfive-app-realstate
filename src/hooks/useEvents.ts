@@ -366,11 +366,43 @@ export function useCancelEvent() {
       };
       await emitSystemEvent(profile.tenant_id, 'event.canceled', event.id, payload);
 
+      // Log visit_canceled activity in conversation_activity
+      try {
+        const { data: conv } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('contact_id', event.contact_id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (conv) {
+          await supabase.from('conversation_activity').insert({
+            tenant_id: profile.tenant_id,
+            conversation_id: conv.id,
+            contact_id: event.contact_id,
+            actor_user_id: user?.id ?? null,
+            actor_type: 'user',
+            event_type: 'visit_canceled',
+            payload: {
+              event_id: event.id,
+              title: event.title,
+              start_at: event.start_at,
+              reason: reason || null,
+            } as Json,
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to log visit_canceled activity:', e);
+      }
+
       return event as Event;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['event', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['contact-activity'] });
       toast.success('Evento cancelado');
     },
     onError: (error) => {

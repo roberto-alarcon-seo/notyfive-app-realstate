@@ -80,6 +80,46 @@ export function PipelineStepper({
       
       // Trigger conversion tracking and Meta events
       await handlePipelineStageChange(contactId, oldStage, stageValue);
+
+      // Log pipeline_stage_changed activity
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('tenant_id')
+          .eq('id', user?.id ?? '')
+          .single();
+
+        if (profile?.tenant_id) {
+          // Find the conversation for this contact
+          const { data: conv } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('contact_id', contactId)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (conv) {
+            await supabase.from('conversation_activity').insert({
+              tenant_id: profile.tenant_id,
+              conversation_id: conv.id,
+              contact_id: contactId,
+              actor_user_id: user?.id ?? null,
+              actor_type: 'user',
+              event_type: 'pipeline_stage_changed',
+              payload: {
+                old_stage: oldStage,
+                new_stage: stageValue,
+                old_label: PIPELINE_STAGES.find(s => s.value === oldStage)?.label,
+                new_label: PIPELINE_STAGES.find(s => s.value === stageValue)?.label,
+              },
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to log pipeline_stage_changed activity:', e);
+      }
       
       toast.success(`Etapa actualizada: ${PIPELINE_STAGES.find(s => s.value === stageValue)?.label}`);
     } catch (error) {
