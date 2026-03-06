@@ -236,7 +236,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
     return (
       <div className={cn("relative max-w-xs rounded-lg overflow-hidden bg-black/10", className)}>
         <video
-          src={proxiedUrl || media.url!}
+          src={safeUrl}
           controls
           preload="metadata"
           className="max-w-full max-h-64 rounded-lg"
