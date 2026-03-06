@@ -1136,6 +1136,77 @@ export type Database = {
           },
         ]
       }
+      contact_notes: {
+        Row: {
+          author_id: string
+          contact_id: string
+          content: string
+          conversation_id: string | null
+          created_at: string
+          id: string
+          is_pinned: boolean
+          note_type: string
+          source_entity_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          contact_id: string
+          content: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          note_type?: string
+          source_entity_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          contact_id?: string
+          content?: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          note_type?: string
+          source_entity_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_opt_out: {
         Row: {
           channel: string

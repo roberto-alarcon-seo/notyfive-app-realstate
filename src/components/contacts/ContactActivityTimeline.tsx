@@ -8,20 +8,39 @@ import {
   Activity,
   Loader2,
   StickyNote,
-  RefreshCw
+  RefreshCw,
+  Pin
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { useContactActivity, type ContactActivityEvent } from "@/hooks/useContactActivity";
+import { useContactNotes, type ContactNote } from "@/hooks/useContactNotes";
 import { cn } from "@/lib/utils";
 
 interface ContactActivityTimelineProps {
   contactId: string;
 }
 
+type TimelineItem = 
+  | { kind: 'activity'; data: ContactActivityEvent }
+  | { kind: 'note'; data: ContactNote };
+
 export function ContactActivityTimeline({ contactId }: ContactActivityTimelineProps) {
-  const { data: activities = [], isLoading } = useContactActivity(contactId);
+  const { data: activities = [], isLoading: isLoadingActivity } = useContactActivity(contactId);
+  const { data: notes = [], isLoading: isLoadingNotes } = useContactNotes(contactId);
+
+  const isLoading = isLoadingActivity || isLoadingNotes;
+
+  // Merge and sort
+  const timelineItems: TimelineItem[] = [
+    ...activities.map((a): TimelineItem => ({ kind: 'activity', data: a })),
+    ...notes.map((n): TimelineItem => ({ kind: 'note', data: n })),
+  ].sort((a, b) => {
+    const dateA = new Date(a.data.created_at).getTime();
+    const dateB = new Date(b.data.created_at).getTime();
+    return dateB - dateA;
+  });
 
   const getEventIcon = (eventType: string) => {
     switch (eventType) {
@@ -40,7 +59,7 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
       case 'ai_reactivated':
         return <Bot className="h-4 w-4 text-purple-500" />;
       case 'note_added':
-        return <StickyNote className="h-4 w-4 text-blue-500" />;
+        return <StickyNote className="h-4 w-4 text-primary" />;
       default:
         return <Activity className="h-4 w-4 text-muted-foreground" />;
     }
@@ -48,30 +67,20 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
 
   const getEventLabel = (eventType: string) => {
     switch (eventType) {
-      case 'human_marked_attended':
-        return 'Atendido';
-      case 'followup_scheduled':
-        return 'Seguimiento programado';
-      case 'followup_completed':
-        return 'Seguimiento completado';
-      case 'followup_rescheduled':
-        return 'Seguimiento reagendado';
-      case 'followup_canceled':
-        return 'Seguimiento cancelado';
-      case 'ai_escalated':
-        return 'Escalado a humano';
-      case 'ai_reactivated':
-        return 'IA reactivada';
-      case 'note_added':
-        return 'Nota agregada';
-      default:
-        return eventType;
+      case 'human_marked_attended': return 'Atendido';
+      case 'followup_scheduled': return 'Seguimiento programado';
+      case 'followup_completed': return 'Seguimiento completado';
+      case 'followup_rescheduled': return 'Seguimiento reagendado';
+      case 'followup_canceled': return 'Seguimiento cancelado';
+      case 'ai_escalated': return 'Escalado a humano';
+      case 'ai_reactivated': return 'IA reactivada';
+      case 'note_added': return 'Nota agregada';
+      default: return eventType;
     }
   };
 
   const getEventDescription = (event: ContactActivityEvent) => {
     const payload = event.payload as Record<string, unknown> | null;
-    
     switch (event.event_type) {
       case 'human_marked_attended':
         return payload?.note ? `Nota: ${payload.note}` : null;
@@ -85,13 +94,11 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
         if (payload?.new_due_at) {
           const newDueDate = new Date(payload.new_due_at as string);
           let text = `Nueva fecha: ${format(newDueDate, "dd MMM yyyy 'a las' HH:mm", { locale: es })}`;
-          if (payload?.note) {
-            text += ` - ${payload.note}`;
-          }
+          if (payload?.note) text += ` - ${payload.note}`;
           return text;
         }
         return payload?.note ? String(payload.note) : null;
-      case 'ai_escalated':
+      case 'ai_escalated': {
         const reason = payload?.reason as string;
         if (reason === 'human_request') return 'El cliente solicitó hablar con una persona';
         if (reason === 'frustration') return 'Se detectó frustración en el cliente';
@@ -99,6 +106,7 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
         if (reason === 'no_balance') return 'Sin saldo disponible';
         if (reason === 'error') return 'Error en el servicio de IA';
         return null;
+      }
       default:
         return payload?.note ? String(payload.note) : null;
     }
@@ -112,19 +120,60 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
     );
   }
 
-  if (activities.length === 0) {
+  if (timelineItems.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <Activity className="h-10 w-10 mx-auto mb-3 opacity-50" />
         <p>Sin actividad registrada</p>
-        <p className="text-sm mt-1">Las interacciones con este contacto aparecerán aquí</p>
+        <p className="text-sm mt-1">Las interacciones y notas de este contacto aparecerán aquí</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-1">
-      {activities.map((event, index) => {
+      {timelineItems.map((item, index) => {
+        if (item.kind === 'note') {
+          const note = item.data;
+          return (
+            <div
+              key={`note-${note.id}`}
+              className={cn(
+                "relative pl-6 pb-4",
+                index !== timelineItems.length - 1 && "border-l border-border ml-2"
+              )}
+            >
+              <div className="absolute left-0 -translate-x-1/2 bg-background p-1 rounded-full border border-primary/30">
+                <StickyNote className="h-4 w-4 text-primary" />
+              </div>
+              <div className="ml-4 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-sm text-foreground">Nota</span>
+                  {note.is_pinned && (
+                    <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
+                      <Pin className="h-3 w-3" />
+                      Fijada
+                    </Badge>
+                  )}
+                  <Badge variant="secondary" className="text-xs">
+                    <User className="h-3 w-3 mr-1" />
+                    {note.author?.name || 'Agente'}
+                  </Badge>
+                </div>
+                <p className="text-sm text-foreground bg-primary/5 rounded-md p-2 border border-primary/10">
+                  {note.content}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(note.created_at), "dd MMM yyyy 'a las' HH:mm", { locale: es })}
+                  {' · '}
+                  {formatDistanceToNow(new Date(note.created_at), { addSuffix: true, locale: es })}
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        const event = item.data;
         const description = getEventDescription(event);
         const actorName = event.actor_user?.name || (event.actor_type === 'ai' ? 'IA' : 'Sistema');
         
@@ -133,15 +182,12 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
             key={event.id}
             className={cn(
               "relative pl-6 pb-4",
-              index !== activities.length - 1 && "border-l border-border ml-2"
+              index !== timelineItems.length - 1 && "border-l border-border ml-2"
             )}
           >
-            {/* Timeline dot */}
             <div className="absolute left-0 -translate-x-1/2 bg-background p-1 rounded-full border border-border">
               {getEventIcon(event.event_type)}
             </div>
-            
-            {/* Event content */}
             <div className="ml-4 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm text-foreground">
@@ -160,13 +206,9 @@ export function ContactActivityTimeline({ contactId }: ContactActivityTimelinePr
                   </Badge>
                 )}
               </div>
-              
               {description && (
-                <p className="text-sm text-muted-foreground">
-                  {description}
-                </p>
+                <p className="text-sm text-muted-foreground">{description}</p>
               )}
-              
               <p className="text-xs text-muted-foreground">
                 {format(new Date(event.created_at), "dd MMM yyyy 'a las' HH:mm", { locale: es })}
                 {' · '}
