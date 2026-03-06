@@ -370,7 +370,7 @@ export function EventDetailDrawer({ event, open, onOpenChange, onEdit }: EventDe
   // Desktop: centered modal
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px] p-0 !flex !flex-col max-h-[85vh] overflow-hidden gap-0">
+      <DialogContent className="sm:max-w-[600px] p-0 !flex !flex-col max-h-[85vh] overflow-hidden gap-0">
         <DialogTitle className="sr-only">{event.title}</DialogTitle>
         <EventDetailContent event={event} onOpenChange={onOpenChange} onEdit={onEdit} />
       </DialogContent>
