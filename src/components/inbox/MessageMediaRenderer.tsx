@@ -260,7 +260,7 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
           <Volume2 className="h-5 w-5 text-primary" />
         </div>
         <audio
-          src={proxiedUrl || media.url!}
+          src={safeUrl}
           controls
           className="flex-1 h-8"
           style={{ minWidth: '150px' }}
