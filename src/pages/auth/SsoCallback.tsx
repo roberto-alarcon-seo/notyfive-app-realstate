@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * /auth/sso?token=<JWT>&redirect=<optional path>
@@ -14,8 +14,8 @@ import { useAuth } from "@/contexts/AuthContext";
 const SsoCallback = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
   const startedRef = useRef(false);
+  const [statusText, setStatusText] = useState("Validando tu acceso desde el sistema Core.");
 
   const token = params.get("token");
   const redirect = params.get("redirect") || "/";
@@ -28,29 +28,38 @@ const SsoCallback = () => {
       return;
     }
 
-    // Wait until the auth provider has resolved before deciding what to do.
-    if (isLoading) return;
-
-    // If a session already exists, skip the SSO round-trip and refresh state.
-    if (user) {
-      startedRef.current = true;
-      navigate(redirect, { replace: true });
-      return;
-    }
-
     startedRef.current = true;
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    const ssoUrl = new URL(
-      `https://${projectId}.supabase.co/functions/v1/auth-sso`,
-    );
-    ssoUrl.searchParams.set("token", token);
-    ssoUrl.searchParams.set("redirect", redirect);
 
-    // Full-page navigation: the Edge Function will respond with a 302 to the
-    // Supabase magic link, which in turn redirects back to `redirect` with a
-    // valid session in the URL hash.
-    window.location.replace(ssoUrl.toString());
-  }, [token, redirect, user, isLoading, navigate]);
+    (async () => {
+      try {
+        // CRITICAL: Always sign out the current session before starting the SSO
+        // flow. Otherwise the existing session (e.g. a super_admin) survives
+        // the magic-link redirect and the user lands back in the admin area.
+        setStatusText("Cerrando sesión actual…");
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          /* ignore — may already be invalidated */
+        }
+
+        setStatusText("Validando tu acceso desde el sistema Core.");
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const ssoUrl = new URL(
+          `https://${projectId}.supabase.co/functions/v1/auth-sso`,
+        );
+        ssoUrl.searchParams.set("token", token);
+        ssoUrl.searchParams.set("redirect", redirect);
+
+        // Full-page navigation: the Edge Function responds with a 302 to the
+        // Supabase magic link, which redirects back to `redirect` with a
+        // valid session in the URL hash.
+        window.location.replace(ssoUrl.toString());
+      } catch (err) {
+        console.error("SsoCallback failed", err);
+        navigate("/welcome?error=sso_denied&reason=client_error", { replace: true });
+      }
+    })();
+  }, [token, redirect, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -61,7 +70,7 @@ const SsoCallback = () => {
             Iniciando sesión segura…
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Validando tu acceso desde el sistema Core.
+            {statusText}
           </p>
         </div>
       </div>
