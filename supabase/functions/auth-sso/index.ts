@@ -144,8 +144,11 @@ Deno.serve(async (req) => {
   const tenantExternalId = typeof claims.tenant_external_id === "string"
     ? (claims.tenant_external_id as string).trim()
     : "";
+  const tenantIdClaim = typeof claims.tenant_id === "string"
+    ? (claims.tenant_id as string).trim()
+    : "";
 
-  if (!email || !tenantExternalId) {
+  if (!email || (!tenantExternalId && !tenantIdClaim)) {
     return denyRedirect(origin, "invalid_claims");
   }
 
@@ -153,15 +156,21 @@ Deno.serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // 1. Resolve tenant by external_id
-  const { data: tenant, error: tenantErr } = await supabase
+  // 1. Resolve tenant by external_id, with tenant_id fallback (impersonation)
+  let tenantQuery = supabase
     .from("tenants")
-    .select("id, name, status")
-    .eq("external_id", tenantExternalId)
-    .maybeSingle();
+    .select("id, name, status");
+  tenantQuery = tenantExternalId
+    ? tenantQuery.eq("external_id", tenantExternalId)
+    : tenantQuery.eq("id", tenantIdClaim);
+  const { data: tenant, error: tenantErr } = await tenantQuery.maybeSingle();
 
   if (tenantErr || !tenant) {
-    console.warn("auth-sso: tenant not found", { tenantExternalId, tenantErr });
+    console.warn("auth-sso: tenant not found", {
+      tenantExternalId,
+      tenantIdClaim,
+      tenantErr,
+    });
     return denyRedirect(origin, "tenant_not_found");
   }
 
