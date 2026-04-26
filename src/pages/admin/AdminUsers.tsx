@@ -524,22 +524,44 @@ const AdminUsers = () => {
                           : 'Nunca'}
                       </td>
                       <td className="p-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={sa.id === currentUser?.id}>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => setSaToDelete(sa)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Eliminar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {(() => {
+                          // Partner admins cannot manage Global super admins or
+                          // admins whose scope differs from their own.
+                          const outOfScope = !!currentPartnerScope && sa.partner_scope !== currentPartnerScope;
+                          const isSelf = sa.id === currentUser?.id;
+                          const disabled = isSelf || outOfScope;
+                          return (
+                            <TooltipProvider delayDuration={150}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" disabled={disabled}>
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={() => setSaToDelete(sa)}
+                                          className="text-destructive focus:text-destructive"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Eliminar
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </span>
+                                </TooltipTrigger>
+                                {outOfScope && !isSelf && (
+                                  <TooltipContent side="left" className="max-w-xs">
+                                    No puedes administrar super admins fuera de tu ámbito ({sa.partner_name || 'Global'}).
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))}
