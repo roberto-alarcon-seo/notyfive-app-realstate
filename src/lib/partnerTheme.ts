@@ -175,6 +175,8 @@ export const APP_BG_PRESETS: { value: string; label: string }[] = [
   { value: "0 0% 14%", label: "Gris Carbón" },
   { value: "220 13% 12%", label: "Azul Pizarra" },
   { value: "260 15% 8%", label: "Morado Nocturno" },
+  { value: "0 0% 100%", label: "Blanco Puro (Claro)" },
+  { value: "0 0% 98%", label: "Gris Suave (Claro)" },
 ];
 
 /** Sidebar style options. */
