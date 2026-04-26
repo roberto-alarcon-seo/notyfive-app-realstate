@@ -124,7 +124,7 @@ async function handleUpsertTenant(
   body: UpsertTenantBody,
   serviceName: string,
 ): Promise<Response> {
-  const { external_id, name, plan } = body;
+  const { external_id, name, plan, owner_email, owner_name } = body;
 
   // Validate input
   if (!external_id || typeof external_id !== 'string' || external_id.trim().length === 0) {
@@ -139,6 +139,11 @@ async function handleUpsertTenant(
       { error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` },
       400,
     );
+  }
+  if (owner_email !== undefined && owner_email !== null) {
+    if (typeof owner_email !== 'string' || !isValidEmail(owner_email)) {
+      return jsonResponse({ error: 'owner_email must be a valid email' }, 400);
+    }
   }
 
   // Check if tenant exists
@@ -175,12 +180,15 @@ async function handleUpsertTenant(
     return jsonResponse({
       success: true,
       operation: 'updated',
+      tenant_id: updated.id,
       tenant: updated,
       service: serviceName,
-    });
+    }, 200);
   }
 
-  // CREATE new tenant
+  // CREATE new tenant. Externally managed tenants do NOT trigger Stripe flows;
+  // they start in SUBSCRIBED_ACTIVE so Core can drive operations immediately.
+  // Credits remain 0 until Core tops up the wallet.
   const { data: created, error: createError } = await supabase
     .from('tenants')
     .insert({
@@ -188,9 +196,7 @@ async function handleUpsertTenant(
       plan: resolvedPlan,
       external_id: external_id.trim(),
       managed_externally: true,
-      // Externally managed tenants do NOT trigger Stripe flows.
-      // Initialize wallet with 0 credits; the Core system controls top-ups.
-      billing_state: 'CREDITS_EXHAUSTED',
+      billing_state: 'SUBSCRIBED_ACTIVE',
       message_credits: 0,
       monthly_credits_remaining: 0,
       accumulated_credits: 0,
@@ -220,10 +226,174 @@ async function handleUpsertTenant(
       { onConflict: 'tenant_id' },
     );
 
+  // Optionally provision the tenant owner if an owner_email was provided.
+  let owner: Record<string, unknown> | null = null;
+  let ownerError: string | null = null;
+  if (owner_email) {
+    const inviteResult = await inviteOwner(supabase, {
+      tenantId: created.id,
+      ownerEmail: owner_email.trim().toLowerCase(),
+      ownerName: (owner_name && owner_name.trim()) || owner_email.split('@')[0],
+    });
+    if (inviteResult.success) {
+      owner = {
+        user_id: inviteResult.userId,
+        email: owner_email.trim().toLowerCase(),
+        invite_email_sent: inviteResult.emailSent,
+      };
+    } else {
+      ownerError = inviteResult.error || 'Failed to invite owner';
+      console.error('sync-external-core: owner invite failed', ownerError);
+    }
+  }
+
   return jsonResponse({
     success: true,
     operation: 'created',
+    tenant_id: created.id,
     tenant: created,
+    owner,
+    owner_error: ownerError,
     service: serviceName,
-  });
+  }, 201);
+}
+
+// ---------------------------------------------------------------------------
+// Owner provisioning (inline; admin-invite-owner requires super_admin auth,
+// which is not available in service-to-service calls).
+// ---------------------------------------------------------------------------
+
+type InviteOwnerArgs = {
+  tenantId: string;
+  ownerEmail: string;
+  ownerName: string;
+};
+
+type InviteOwnerResult = {
+  success: boolean;
+  userId?: string;
+  emailSent?: boolean;
+  error?: string;
+};
+
+async function inviteOwner(
+  supabase: SupabaseClient,
+  { tenantId, ownerEmail, ownerName }: InviteOwnerArgs,
+): Promise<InviteOwnerResult> {
+  try {
+    // Find existing auth user by email (idempotency).
+    const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
+    if (listError) {
+      return { success: false, error: `listUsers failed: ${listError.message}` };
+    }
+    const existingUser = existingUsers?.users?.find((u) => u.email === ownerEmail);
+
+    let userId: string;
+    let createdNewAuthUser = false;
+
+    if (existingUser) {
+      userId = existingUser.id;
+    } else {
+      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+        email: ownerEmail,
+        email_confirm: true,
+        user_metadata: {
+          name: ownerName,
+          tenant_id: tenantId,
+          role_hint: 'owner',
+        },
+      });
+      if (createError || !newUser?.user) {
+        return { success: false, error: createError?.message || 'createUser failed' };
+      }
+      userId = newUser.user.id;
+      createdNewAuthUser = true;
+    }
+
+    // Upsert profile (inactive until first login).
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: userId,
+          tenant_id: tenantId,
+          name: ownerName,
+          email: ownerEmail,
+          status: 'inactive',
+          first_login_required: true,
+          invited_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' },
+      );
+    if (profileError) {
+      if (createdNewAuthUser) {
+        await supabase.auth.admin.deleteUser(userId);
+      }
+      return { success: false, error: `profile upsert failed: ${profileError.message}` };
+    }
+
+    // Upsert role as tenant owner.
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .upsert(
+        {
+          user_id: userId,
+          global_role: 'user',
+          tenant_role: 'owner',
+        },
+        { onConflict: 'user_id' },
+      );
+    if (roleError) {
+      if (createdNewAuthUser) {
+        await supabase.from('profiles').delete().eq('id', userId);
+        await supabase.auth.admin.deleteUser(userId);
+      }
+      return { success: false, error: `role upsert failed: ${roleError.message}` };
+    }
+
+    // Generate recovery link and send invite email (best-effort).
+    const appBaseUrl = Deno.env.get('APP_BASE_URL') || 'https://notyfive-app-realstate.lovable.app';
+    const redirectUrl = `${appBaseUrl.replace(/\/+$/, '')}/auth/complete-signup`;
+
+    let emailSent = false;
+    try {
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: ownerEmail,
+        options: { redirectTo: redirectUrl },
+      });
+
+      const activationLink = linkData?.properties?.action_link;
+      const resendApiKey = Deno.env.get('RESEND_API_KEY');
+      const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'NotyFive <no-reply@resend.dev>';
+
+      if (!linkError && activationLink && resendApiKey) {
+        const html = `
+          <p>Hola <strong>${ownerName}</strong>,</p>
+          <p>Tu cuenta ha sido creada por el sistema Core. Activa tu acceso aquí:</p>
+          <p><a href="${activationLink}">Activar cuenta</a></p>
+        `;
+        const emailRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [ownerEmail],
+            subject: 'Activa tu cuenta',
+            html,
+          }),
+        });
+        emailSent = emailRes.ok;
+      }
+    } catch (emailErr) {
+      console.warn('sync-external-core: email send failed', emailErr);
+    }
+
+    return { success: true, userId, emailSent };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
 }
