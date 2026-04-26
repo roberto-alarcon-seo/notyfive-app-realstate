@@ -108,7 +108,7 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
           .maybeSingle(),
         supabase
           .from('profiles')
-          .select('id, name, email, status, first_login_required, invited_at, status', { count: 'exact' })
+          .select('id, name, email, status, first_login_required, invited_at')
           .eq('tenant_id', tenant.id),
       ]);
 
