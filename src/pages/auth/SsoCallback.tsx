@@ -36,6 +36,12 @@ const SsoCallback = () => {
         // CRITICAL: Always sign out the current session before starting the SSO
         // flow. Otherwise the existing session (e.g. a super_admin) survives
         // the magic-link redirect and the user lands back in the admin area.
+        if (mode === "impersonation") {
+          sessionStorage.setItem("noty5_admin_impersonation", "1");
+        } else {
+          sessionStorage.removeItem("noty5_admin_impersonation");
+        }
+
         setStatusText("Cerrando sesión actual…");
         try {
           await supabase.auth.signOut();
