@@ -252,14 +252,24 @@ export function applyPartnerTheme(theme: PartnerTheme): void {
   // Sidebar
   let sidebarBg = theme.sidebar_bg;
   if (theme.sidebar_style === "contrast") {
-    sidebarBg = shiftLightness(theme.sidebar_bg, -3);
+    // Contrast = nudge sidebar away from the app surface. On dark themes that
+    // means darker; on light themes that means slightly darker too (so the
+    // sidebar looks like a separate panel rather than blending with cards).
+    sidebarBg = shiftLightness(theme.sidebar_bg, isLight ? -2 : -3);
   }
+  // Detect a light sidebar so accent/border shift downwards instead of up
+  // (otherwise white + lighten = invisible).
+  const sidebarLightnessMatch = sidebarBg.trim().match(/(\d+(?:\.\d+)?)%\s*$/);
+  const sidebarIsLight =
+    !!sidebarLightnessMatch && parseFloat(sidebarLightnessMatch[1]) >= 50;
+  const accentDelta = sidebarIsLight ? -5 : 4;
+  const borderDelta = sidebarIsLight ? -10 : 6;
   root.style.setProperty("--sidebar-background", sidebarBg);
   root.style.setProperty("--sidebar-foreground", theme.sidebar_text);
   root.style.setProperty("--sidebar-primary", theme.primary_color);
   root.style.setProperty("--sidebar-ring", theme.primary_color);
-  root.style.setProperty("--sidebar-accent", shiftLightness(sidebarBg, 4));
-  root.style.setProperty("--sidebar-border", shiftLightness(sidebarBg, 6));
+  root.style.setProperty("--sidebar-accent", shiftLightness(sidebarBg, accentDelta));
+  root.style.setProperty("--sidebar-border", shiftLightness(sidebarBg, borderDelta));
 
   // Optional gradient surface for the sidebar background
   if (theme.sidebar_style === "gradient") {
