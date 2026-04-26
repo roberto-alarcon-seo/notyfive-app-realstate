@@ -49,6 +49,7 @@ interface Tenant {
   accumulated_credits?: number;
   external_id?: string | null;
   managed_externally?: boolean;
+  max_users?: number;
 }
 
 const PLAN_CONFIG = {
