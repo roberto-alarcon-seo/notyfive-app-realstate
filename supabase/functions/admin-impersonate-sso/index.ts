@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
       tenant_external_id: tenant.external_id,
       target_email: targetEmail,
       // The front-end will redirect the browser to this path:
-      sso_path: `/auth/sso?token=${encodeURIComponent(token)}`,
+      sso_path: `/auth/sso?token=${encodeURIComponent(token)}&mode=impersonation`,
     });
   } catch (err) {
     console.error('admin-impersonate-sso error:', err);
