@@ -128,6 +128,7 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const token = url.searchParams.get("token");
   const finalRedirect = url.searchParams.get("redirect") || "/";
+  const mode = url.searchParams.get("mode") || "";
 
   if (!token) {
     return denyRedirect(origin, "missing_token");
@@ -187,7 +188,10 @@ Deno.serve(async (req) => {
     return denyRedirect(origin, "user_not_found");
   }
 
-  if (profile.status && profile.status !== "active") {
+  const isAdminImpersonation = mode === "impersonation"
+    || claims.purpose === "admin_impersonation";
+
+  if (profile.status && profile.status !== "active" && !isAdminImpersonation) {
     return denyRedirect(origin, "user_inactive");
   }
 
