@@ -20,7 +20,7 @@ const REMEMBERED_EMAIL_KEY = 'notyfive_remembered_email';
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { signIn, user, isSuperAdmin, isLoading: authLoading } = useAuth();
+  const { signIn, signOut, user, isSuperAdmin, isLoading: authLoading } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -68,9 +68,9 @@ const Auth = () => {
     if (!authLoading && user) {
       if (isSuperAdmin) {
         navigate('/admin', { replace: true });
-      } else {
-        navigate('/', { replace: true });
       }
+      // Non-super-admin users are not allowed to log in here.
+      // They must enter via SSO. We sign them out and show a clear error.
     }
   }, [user, isSuperAdmin, authLoading, navigate]);
 
@@ -100,6 +100,25 @@ const Auth = () => {
         return;
       }
 
+      // Verify global role: only super_admin may log in here.
+      const { data: { user: signedUser } } = await supabase.auth.getUser();
+      if (signedUser) {
+        const { data: roleRow } = await supabase
+          .from('user_roles')
+          .select('global_role')
+          .eq('user_id', signedUser.id)
+          .maybeSingle();
+
+        if (roleRow?.global_role !== 'super_admin') {
+          // Not allowed: kick them out immediately.
+          await signOut();
+          toast.error('Acceso restringido a administradores globales', {
+            description: 'Inicia sesión desde tu panel principal vía SSO.',
+          });
+          return;
+        }
+      }
+
       // Handle remember me - save or remove email from localStorage
       if (rememberMe) {
         localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
@@ -108,7 +127,7 @@ const Auth = () => {
       }
 
       toast.success('Inicio de sesión exitoso');
-      navigate('/');
+      navigate('/admin/tenants');
     } catch (error) {
       toast.error('Error al iniciar sesión. Intenta nuevamente.');
     } finally {
@@ -216,10 +235,10 @@ const Auth = () => {
                 className="h-16 w-16 object-contain mx-auto mb-4"
               />
               <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-3">
-                ¡Bienvenido de vuelta!
+                Acceso Administradores
               </h1>
               <p className="text-muted-foreground">
-                Inicia sesión en tu cuenta
+                Solo administradores globales del sistema
               </p>
             </div>
 
