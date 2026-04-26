@@ -27,8 +27,7 @@ import AutomationEditor from "./pages/AutomationEditor";
 import Events from "./pages/Events";
 import AutomationRuns from "./pages/AutomationRuns";
 import Pipeline from "./pages/Pipeline";
-import Properties from "./pages/Properties";
-import PropertyEditor from "./pages/PropertyEditor";
+import { toast } from "sonner";
 import SettingsCompany from "./pages/settings/SettingsCompany";
 import SettingsWhatsAppStatus from "./pages/settings/SettingsWhatsAppStatus";
 import SettingsUsersPage from "./pages/settings/SettingsUsersPage";
@@ -150,8 +149,8 @@ const App = () => (
               <Route path="/settings/security" element={<ProtectedRoute><MainLayout><SettingsSecurity /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/conversions" element={<ProtectedRoute><MainLayout><SettingsConversions /></MainLayout></ProtectedRoute>} />
               {/* Properties routes */}
-              <Route path="/properties" element={<ProtectedRoute><MainLayout><Properties /></MainLayout></ProtectedRoute>} />
-              <Route path="/properties/:id" element={<ProtectedRoute><MainLayout><PropertyEditor /></MainLayout></ProtectedRoute>} />
+              <Route path="/properties" element={<PropertiesRedirect />} />
+              <Route path="/properties/:id" element={<PropertiesRedirect />} />
               {/* Developer docs (public-style page, no sidebar) */}
               <Route path="/developers/api" element={<ProtectedRoute><ApiDocs /></ProtectedRoute>} />
               {/* Redirect old integration routes */}
