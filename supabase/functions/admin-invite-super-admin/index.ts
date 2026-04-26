@@ -97,11 +97,24 @@ Deno.serve(async (req) => {
     }
 
     // Invite flow
-    const { email, name } = body;
+    const { email, name, partnerScope } = body;
     if (!email || !name) {
       return new Response(JSON.stringify({ success: false, error: "Missing email or name" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Validate partnerScope if provided
+    let validatedPartnerScope: string | null = null;
+    if (partnerScope && partnerScope !== "global") {
+      const { data: partnerRow } = await supabaseAdmin
+        .from("partners").select("id").eq("id", partnerScope).maybeSingle();
+      if (!partnerRow) {
+        return new Response(JSON.stringify({ success: false, error: "Invalid partner" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      validatedPartnerScope = partnerScope;
     }
 
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
@@ -133,6 +146,7 @@ Deno.serve(async (req) => {
 
     await supabaseAdmin.from("user_roles").upsert({
       user_id: userId, global_role: "super_admin", tenant_role: null,
+      partner_scope: validatedPartnerScope,
     }, { onConflict: "user_id" });
 
     const requestOrigin = req.headers.get("origin");
