@@ -34,6 +34,8 @@ interface Tenant {
   billing_state?: string;
   message_credits?: number;
   initial_credits_granted?: boolean;
+  external_id?: string | null;
+  managed_externally?: boolean;
 }
 
 interface TenantIntegration {
@@ -266,6 +268,7 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
   };
 
   const canCompleteOnboarding = billingData?.billing_state === 'ONBOARDING_PAID' && !billingData?.initial_credits_granted;
+  const isExternallyManaged = !!tenant.managed_externally;
 
   if (loading) {
     return (
@@ -277,6 +280,44 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
 
   return (
     <div className="space-y-6">
+      {/* External management notice */}
+      {isExternallyManaged && (
+        <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 flex items-start gap-3">
+          <ExternalLink className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">Gestionado por Sistema Core</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Este tenant se sincroniza desde un sistema externo. Los flujos de suscripción
+              de Stripe están deshabilitados.
+            </p>
+            {tenant.external_id && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs text-muted-foreground">External ID:</span>
+                <code className="text-xs bg-background/60 px-2 py-0.5 rounded border border-border text-foreground">
+                  {tenant.external_id}
+                </code>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(tenant.external_id || '');
+                      toast.success('External ID copiado');
+                    } catch {
+                      toast.error('No se pudo copiar');
+                    }
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Status Cards Grid */}
       <div className="grid grid-cols-2 gap-4">
         {/* WhatsApp Status */}
@@ -366,19 +407,29 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
             </div>
           </div>
           {canCompleteOnboarding && (
-            <Button 
-              variant="default" 
-              size="sm"
-              onClick={() => setShowOnboardingConfirm(true)}
-              disabled={completingOnboarding}
-            >
-              {completingOnboarding ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Gift className="h-4 w-4 mr-2" />
-              )}
-              Completar Onboarding
-            </Button>
+            isExternallyManaged ? (
+              <div className="text-right">
+                <Button variant="outline" size="sm" disabled className="cursor-not-allowed">
+                  <Gift className="h-4 w-4 mr-2" />
+                  Configurar Suscripción
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">Gestionado por Sistema Core</p>
+              </div>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setShowOnboardingConfirm(true)}
+                disabled={completingOnboarding}
+              >
+                {completingOnboarding ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Gift className="h-4 w-4 mr-2" />
+                )}
+                Completar Onboarding
+              </Button>
+            )
           )}
         </div>
       </div>
