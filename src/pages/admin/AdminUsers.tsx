@@ -301,6 +301,15 @@ const AdminUsers = () => {
     );
   });
 
+  // A user falls outside the current admin's scope when the logged super admin
+  // has a partner_scope but the row belongs to a different partner. Global
+  // super admins (no scope) can act on everyone.
+  const isOutsideScope = (u: { tenant_partner_id: string | null; global_role: string }) => {
+    if (!currentPartnerScope) return false;
+    if (u.global_role === 'super_admin') return true; // partner admins never touch other super admins
+    return u.tenant_partner_id !== currentPartnerScope;
+  };
+
   const getRoleLabel = (u: TenantUserRow) => {
     if (u.global_role === 'super_admin') return 'Super Admin';
     return u.tenant_role || 'Usuario';

@@ -151,6 +151,9 @@ const AdminTenants = () => {
           monthly_credits_remaining: 0,
           accumulated_credits: 0,
           initial_credits_granted: false,
+          // Auto-assign to the logged super admin's partner scope (if any).
+          // Global admins (no scope) leave it null and can pick later.
+          ...(partnerScope ? { partner_id: partnerScope } : {}),
         })
         .select()
         .single();
