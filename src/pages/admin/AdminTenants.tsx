@@ -329,9 +329,10 @@ const AdminTenants = () => {
     }
   };
 
-  // Partner-scoped admins cannot create tenants manually — those must be
-  // provisioned via the API from their MLS/Responde Core.
-  const canCreateTenant = !partnerScope;
+  // Both global super admins and partner-scoped admins can create tenants.
+  // For partner-scoped admins, partner_id is auto-assigned to their scope
+  // (see handleCreateTenant) and cannot be changed from the UI.
+  const canCreateTenant = true;
 
   const headerActions = canCreateTenant ? (
     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
