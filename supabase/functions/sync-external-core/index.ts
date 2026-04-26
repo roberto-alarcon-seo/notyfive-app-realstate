@@ -730,6 +730,7 @@ async function handleSyncUser(
   supabase: SupabaseClient,
   body: SyncUserBody,
   serviceName: string,
+  partnerId: string,
 ): Promise<Response> {
   const { tenant_external_id, email, name, tenant_role, status } = body;
 
@@ -763,11 +764,12 @@ async function handleSyncUser(
   const resolvedName =
     (name && name.trim()) || normalizedEmail.split('@')[0];
 
-  // 1. Look up tenant by external_id (multi-tenancy boundary).
+  // 1. Look up tenant by composite key (partner_id, external_id).
   const { data: tenant, error: tenantErr } = await supabase
     .from('tenants')
     .select('id, external_id, managed_externally, max_users')
     .eq('external_id', tenant_external_id.trim())
+    .eq('partner_id', partnerId)
     .maybeSingle();
 
   if (tenantErr) {
@@ -1011,6 +1013,7 @@ async function handleSyncProperty(
   supabase: SupabaseClient,
   body: SyncPropertyBody,
   serviceName: string,
+  partnerId: string,
 ): Promise<Response> {
   const {
     tenant_external_id,
@@ -1053,11 +1056,12 @@ async function handleSyncProperty(
     );
   }
 
-  // ---- Locate tenant (multi-tenancy boundary) ----
+  // ---- Locate tenant via composite key (partner_id, external_id) ----
   const { data: tenant, error: tenantErr } = await supabase
     .from('tenants')
     .select('id, external_id, managed_externally')
     .eq('external_id', tenant_external_id.trim())
+    .eq('partner_id', partnerId)
     .maybeSingle();
 
   if (tenantErr) {
@@ -1410,6 +1414,7 @@ async function handleUpdateBilling(
   supabase: SupabaseClient,
   body: UpdateBillingBody,
   serviceName: string,
+  partnerId: string,
 ): Promise<Response> {
   const {
     tenant_external_id,
@@ -1476,13 +1481,14 @@ async function handleUpdateBilling(
     );
   }
 
-  // Resolve tenant.
+  // Resolve tenant via composite key (partner_id, external_id).
   const { data: tenant, error: fetchError } = await supabase
     .from('tenants')
     .select(
       'id, external_id, name, plan, billing_state, message_credits, monthly_credits_remaining, accumulated_credits, extra_credits, managed_externally',
     )
     .eq('external_id', tenant_external_id.trim())
+    .eq('partner_id', partnerId)
     .maybeSingle();
 
   if (fetchError) {
