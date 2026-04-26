@@ -193,6 +193,35 @@ serve(async (req) => {
 
       console.log(`Creating owner for tenant ${tenantId}: ${ownerEmail}`);
 
+      // Seat validation: every profile (incl. owner) counts. Block if at/over max_users.
+      const { data: tenantRow, error: tenantErr } = await supabaseAdmin
+        .from("tenants")
+        .select("max_users")
+        .eq("id", tenantId)
+        .maybeSingle();
+      if (tenantErr || !tenantRow) {
+        return new Response(JSON.stringify({ error: "Tenant not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { count: currentUsers } = await supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId);
+      const maxUsers = tenantRow.max_users ?? 0;
+      if ((currentUsers ?? 0) >= maxUsers) {
+        return new Response(JSON.stringify({
+          error: "Has alcanzado el límite de usuarios. Actualiza el plan para agregar más.",
+          code: "USER_LIMIT_REACHED",
+          max_users: maxUsers,
+          current_users: currentUsers ?? 0,
+        }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Find existing user by email (idempotency)
       // NOTE: listUsers is paginated; if you have many users, consider switching to a direct lookup strategy.
       const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();

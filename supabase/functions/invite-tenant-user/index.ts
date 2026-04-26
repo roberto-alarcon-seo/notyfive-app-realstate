@@ -210,43 +210,35 @@ serve(async (req) => {
 
     const tenantId = callerProfile.tenant_id;
 
-    // Check tenant user limits (only for non-admin roles)
-    if (tenantRole !== "administrador") {
-      const { data: tenant, error: tenantError } = await supabaseAdmin
-        .from("tenants")
-        .select("max_users")
-        .eq("id", tenantId)
-        .single();
+    // Check tenant user limits (every profile counts as a seat, including admins/owners).
+    const { data: tenant, error: tenantError } = await supabaseAdmin
+      .from("tenants")
+      .select("max_users")
+      .eq("id", tenantId)
+      .single();
 
-      if (tenantError || !tenant) {
-        return new Response(JSON.stringify({ error: "Tenant not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (tenantError || !tenant) {
+      return new Response(JSON.stringify({ error: "Tenant not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-      // Count current non-admin users
-      const { count: currentUsers, error: countError } = await supabaseAdmin
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenantId)
-        .eq("status", "active")
-        .not("id", "in", `(
-          SELECT user_id FROM user_roles 
-          WHERE tenant_role IN ('administrador', 'owner')
-        )`);
+    const { count: currentUsers } = await supabaseAdmin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId);
 
-      if ((currentUsers ?? 0) >= tenant.max_users) {
-        return new Response(JSON.stringify({ 
-          error: "Has alcanzado el límite de usuarios. Actualiza tu plan para agregar más.",
-          code: "USER_LIMIT_REACHED",
-          max_users: tenant.max_users,
-          current_users: currentUsers ?? 0,
-        }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if ((currentUsers ?? 0) >= (tenant.max_users ?? 0)) {
+      return new Response(JSON.stringify({
+        error: "Has alcanzado el límite de usuarios. Actualiza tu plan para agregar más.",
+        code: "USER_LIMIT_REACHED",
+        max_users: tenant.max_users,
+        current_users: currentUsers ?? 0,
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log(`Creating user for tenant ${tenantId}: ${email} with role ${tenantRole}`);
