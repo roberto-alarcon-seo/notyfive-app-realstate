@@ -2033,6 +2033,66 @@ export type Database = {
           },
         ]
       }
+      partners: {
+        Row: {
+          accent_color_hex: string | null
+          alt_domains: string[]
+          country_code: string
+          created_at: string
+          email_branding_logo: string | null
+          email_footer_text: string | null
+          email_sender_address: string
+          email_sender_name: string
+          id: string
+          is_active: boolean
+          logo_mark_url: string | null
+          logo_url: string
+          name: string
+          primary_color_hex: string
+          primary_color_hsl: string
+          primary_domain: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color_hex?: string | null
+          alt_domains?: string[]
+          country_code?: string
+          created_at?: string
+          email_branding_logo?: string | null
+          email_footer_text?: string | null
+          email_sender_address: string
+          email_sender_name: string
+          id: string
+          is_active?: boolean
+          logo_mark_url?: string | null
+          logo_url: string
+          name: string
+          primary_color_hex: string
+          primary_color_hsl: string
+          primary_domain: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color_hex?: string | null
+          alt_domains?: string[]
+          country_code?: string
+          created_at?: string
+          email_branding_logo?: string | null
+          email_footer_text?: string | null
+          email_sender_address?: string
+          email_sender_name?: string
+          id?: string
+          is_active?: boolean
+          logo_mark_url?: string | null
+          logo_url?: string
+          name?: string
+          primary_color_hex?: string
+          primary_color_hsl?: string
+          primary_domain?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       password_resets: {
         Row: {
           created_at: string
@@ -3387,6 +3447,7 @@ export type Database = {
           monthly_credits_remaining: number
           name: string
           next_refill_at: string | null
+          partner_id: string
           pending_plan: string | null
           pending_plan_effective_at: string | null
           pending_stripe_price_id: string | null
@@ -3423,6 +3484,7 @@ export type Database = {
           monthly_credits_remaining?: number
           name: string
           next_refill_at?: string | null
+          partner_id?: string
           pending_plan?: string | null
           pending_plan_effective_at?: string | null
           pending_stripe_price_id?: string | null
@@ -3459,6 +3521,7 @@ export type Database = {
           monthly_credits_remaining?: number
           name?: string
           next_refill_at?: string | null
+          partner_id?: string
           pending_plan?: string | null
           pending_plan_effective_at?: string | null
           pending_stripe_price_id?: string | null
@@ -3470,13 +3533,22 @@ export type Database = {
           subscription_status?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
           created_at: string
           global_role: Database["public"]["Enums"]["global_role"]
           id: string
+          partner_scope: string | null
           tenant_role: Database["public"]["Enums"]["tenant_role"] | null
           updated_at: string
           user_id: string
@@ -3485,6 +3557,7 @@ export type Database = {
           created_at?: string
           global_role?: Database["public"]["Enums"]["global_role"]
           id?: string
+          partner_scope?: string | null
           tenant_role?: Database["public"]["Enums"]["tenant_role"] | null
           updated_at?: string
           user_id: string
@@ -3493,11 +3566,20 @@ export type Database = {
           created_at?: string
           global_role?: Database["public"]["Enums"]["global_role"]
           id?: string
+          partner_scope?: string | null
           tenant_role?: Database["public"]["Enums"]["tenant_role"] | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_partner_scope_fkey"
+            columns: ["partner_scope"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallet_idempotency: {
         Row: {
@@ -3817,6 +3899,8 @@ export type Database = {
         }[]
       }
       get_plan_monthly_credits: { Args: { plan_name: string }; Returns: number }
+      get_tenant_partner_id: { Args: { _tenant_id: string }; Returns: string }
+      get_user_partner_scope: { Args: { _user_id: string }; Returns: string }
       get_user_tenant_id: { Args: { _user_id: string }; Returns: string }
       has_any_tenant_role: {
         Args: {
