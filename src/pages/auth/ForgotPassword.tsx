@@ -16,6 +16,7 @@ const ForgotPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
+  const { partner } = usePartnerBranding();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +66,8 @@ const ForgotPassword = () => {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <img 
-            src={authLogo} 
-            alt="NotyFive Logo" 
+            src={partner.logoUrl}
+            alt={`${partner.name} Logo`}
             className="h-24 w-24 object-contain" 
           />
         </div>
