@@ -292,7 +292,11 @@ const AdminTenants = () => {
     }
   };
 
-  const headerActions = (
+  // Partner-scoped admins cannot create tenants manually — those must be
+  // provisioned via the API from their MLS/Responde Core.
+  const canCreateTenant = !partnerScope;
+
+  const headerActions = canCreateTenant ? (
     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
       <DialogTrigger asChild>
         <Button className="gradient-primary">
@@ -362,7 +366,7 @@ const AdminTenants = () => {
         </form>
       </DialogContent>
     </Dialog>
-  );
+  ) : null;
 
   return (
     <AdminLayout

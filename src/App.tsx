@@ -11,6 +11,7 @@ import { PartnerBrandingProvider } from "@/contexts/PartnerBrandingContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MobileRouteGuard } from "@/components/layout/MobileRouteGuard";
+import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import Contacts from "./pages/Contacts";
@@ -87,6 +88,20 @@ const PropertiesRedirect = () => {
   return <Navigate to="/" replace />;
 };
 
+// Restricts global-admin-only routes (Users, Logs) when the logged super admin
+// has a partner_scope. Partner-scoped admins are bounced to /admin/tenants.
+const PartnerScopedAdminGuard = ({ children }: { children: JSX.Element }) => {
+  const { partnerScope, isLoading } = useAuth();
+  useEffect(() => {
+    if (!isLoading && partnerScope) {
+      toast.error("Acceso denegado: esta sección está reservada al Super Admin Global.");
+    }
+  }, [isLoading, partnerScope]);
+  if (isLoading) return null;
+  if (partnerScope) return <Navigate to="/admin/tenants" replace />;
+  return children;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <PartnerBrandingProvider>
@@ -112,8 +127,8 @@ const App = () => (
               <Route path="/admin" element={<Navigate to="/admin/tenants" replace />} />
               <Route path="/admin/tenants" element={<ProtectedRoute requireSuperAdmin><AdminTenants /></ProtectedRoute>} />
               <Route path="/admin/tenants/:id" element={<ProtectedRoute requireSuperAdmin><TenantAdminDetail /></ProtectedRoute>} />
-              <Route path="/admin/users" element={<ProtectedRoute requireSuperAdmin><AdminUsers /></ProtectedRoute>} />
-              <Route path="/admin/logs" element={<ProtectedRoute requireSuperAdmin><AdminLogs /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminUsers /></PartnerScopedAdminGuard></ProtectedRoute>} />
+              <Route path="/admin/logs" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminLogs /></PartnerScopedAdminGuard></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
               <Route path="/inbox" element={<ProtectedRoute><MainLayout><Inbox /></MainLayout></ProtectedRoute>} />
               <Route path="/contacts" element={<ProtectedRoute><MainLayout><Contacts /></MainLayout></ProtectedRoute>} />

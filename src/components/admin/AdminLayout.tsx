@@ -34,6 +34,12 @@ function AdminSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
+  const { partnerScope } = useAuth();
+
+  // Partner-scoped admins only see Tenants. Global super admin sees everything.
+  const visibleItems = partnerScope
+    ? navItems.filter((item) => item.url === "/admin/tenants")
+    : navItems;
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
@@ -61,7 +67,7 @@ function AdminSidebar() {
           <SidebarGroupLabel>Gestión</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
+              {visibleItems.map((item) => {
                 const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.url}>
