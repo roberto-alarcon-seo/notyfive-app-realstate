@@ -238,9 +238,12 @@ serve(async (req) => {
 
       if ((currentUsers ?? 0) >= tenant.max_users) {
         return new Response(JSON.stringify({ 
-          error: "Has alcanzado el límite de usuarios. Actualiza tu plan para agregar más." 
+          error: "Has alcanzado el límite de usuarios. Actualiza tu plan para agregar más.",
+          code: "USER_LIMIT_REACHED",
+          max_users: tenant.max_users,
+          current_users: currentUsers ?? 0,
         }), {
-          status: 400,
+          status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

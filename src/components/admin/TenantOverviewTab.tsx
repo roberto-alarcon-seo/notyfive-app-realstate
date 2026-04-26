@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MessageSquare, Phone, Crown, CheckCircle2, XCircle, AlertCircle, Loader2, Gift, CreditCard, Mail, User, RefreshCw, ExternalLink, Copy } from 'lucide-react';
+import { MessageSquare, Phone, Crown, CheckCircle2, XCircle, AlertCircle, Loader2, Gift, CreditCard, Mail, User, RefreshCw, ExternalLink, Copy, Users, Lock, Save } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,7 @@ interface Tenant {
   initial_credits_granted?: boolean;
   external_id?: string | null;
   managed_externally?: boolean;
+  max_users?: number;
 }
 
 interface TenantIntegration {
@@ -77,6 +78,9 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
   } | null>(null);
   const [showOnboardingConfirm, setShowOnboardingConfirm] = useState(false);
   const [completingOnboarding, setCompletingOnboarding] = useState(false);
+  const [maxUsersValue, setMaxUsersValue] = useState<string>(String(tenant.max_users ?? 1));
+  const [activeUsersCount, setActiveUsersCount] = useState<number>(0);
+  const [savingMaxUsers, setSavingMaxUsers] = useState(false);
 
   const fetchBillingData = async () => {
     const { data, error } = await supabase
@@ -125,6 +129,23 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
           const ownerUserIds = new Set(roles?.map(r => r.user_id) || []);
           setOwners(ownersResult.data.filter(p => ownerUserIds.has(p.id)) as TenantOwner[]);
         }
+        // Count active non-owner/non-admin users (matches limit logic)
+        const ownerIdsAll = ownersResult.data.map(p => p.id);
+        if (ownerIdsAll.length > 0) {
+          const { data: rolesAll } = await supabase
+            .from('user_roles')
+            .select('user_id, tenant_role')
+            .in('user_id', ownerIdsAll);
+          const exemptIds = new Set(
+            (rolesAll || [])
+              .filter((r) => r.tenant_role === 'owner' || r.tenant_role === 'administrador')
+              .map((r) => r.user_id),
+          );
+          const activeCount = ownersResult.data.filter(
+            (p) => p.status === 'active' && !exemptIds.has(p.id),
+          ).length;
+          setActiveUsersCount(activeCount);
+        }
       }
 
       setLoading(false);
@@ -133,6 +154,36 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
     fetchData();
     fetchBillingData();
   }, [tenant.id]);
+
+  useEffect(() => {
+    setMaxUsersValue(String(tenant.max_users ?? 1));
+  }, [tenant.max_users]);
+
+  const handleSaveMaxUsers = async () => {
+    const parsed = parseInt(maxUsersValue, 10);
+    if (Number.isNaN(parsed) || parsed < 1 || parsed > 1000) {
+      toast.error('El límite debe ser un entero entre 1 y 1000');
+      return;
+    }
+    setSavingMaxUsers(true);
+    try {
+      const { error } = await supabase
+        .from('tenants')
+        .update({ max_users: parsed })
+        .eq('id', tenant.id);
+      if (error) {
+        toast.error(error.message || 'Error al actualizar límite de usuarios');
+        return;
+      }
+      toast.success('Límite de usuarios actualizado');
+      onTenantUpdate?.();
+    } catch (err) {
+      console.error('Error updating max_users:', err);
+      toast.error('Error inesperado');
+    } finally {
+      setSavingMaxUsers(false);
+    }
+  };
 
   const handleResendInvite = async (userId: string) => {
     setResendingInvite(userId);
@@ -450,6 +501,60 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
             </Badge>
           </div>
         </div>
+      </div>
+
+      {/* Seats / Max Users */}
+      <div className="bg-secondary/30 border border-border rounded-xl p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Límite de Usuarios (Seats)</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Activos no-admin: <span className="text-foreground font-medium">{activeUsersCount}</span>
+                {' / '}
+                <span className="text-foreground font-medium">{tenant.max_users ?? '—'}</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={1000}
+              value={maxUsersValue}
+              onChange={(e) => setMaxUsersValue(e.target.value)}
+              disabled={isExternallyManaged || savingMaxUsers}
+              className="w-24"
+            />
+            {isExternallyManaged ? (
+              <Badge variant="outline" className="gap-1 text-xs">
+                <Lock className="h-3 w-3" />
+                Solo lectura
+              </Badge>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleSaveMaxUsers}
+                disabled={savingMaxUsers || maxUsersValue === String(tenant.max_users ?? 1)}
+              >
+                {savingMaxUsers ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Save className="h-3 w-3" />
+                )}
+                <span className="ml-1">Guardar</span>
+              </Button>
+            )}
+          </div>
+        </div>
+        {isExternallyManaged && (
+          <p className="text-xs text-muted-foreground mt-3">
+            Este límite se gestiona desde el sistema Core. Para modificarlo, actualízalo en el sistema externo.
+          </p>
+        )}
       </div>
 
       {/* Owner Users */}
