@@ -1,221 +1,165 @@
-# Plan: White Label Multimarca (Partner Level)
 
-Arquitectura para que la misma instancia sirva múltiples marcas (Brokia24, MLS Latam, Responde) detectando el `hostname` y el `partner_id` del tenant/super-admin para inyectar branding, emails y restricciones de acceso.
+## Objetivo
 
----
+Generar un documento `.docx` editable, **únicamente blanco y negro** (sin colores), con la documentación técnica REAL del endpoint `sync-external-core` para MLS Latam, basada en una inspección línea por línea del código fuente (`supabase/functions/sync-external-core/index.ts`).
 
-## 1. Esquema de base de datos
+## Hallazgos clave de la inspección del código (correcciones vs. PDF anterior)
 
-### 1.1 Nueva tabla `partners`
-Fuente de verdad del branding y configuración por marca.
+1. **El endpoint SÍ acepta el envoltorio `data`** (líneas 257–270): tanto `{ "action": "...", "data": { ... } }` como el formato plano funcionan. El código hace merge dando prioridad a las claves dentro de `data`. Por lo tanto los ejemplos del usuario con `data: { ... }` son válidos. El manual usará el formato `data: { ... }` como recomendado, ya que es el que envía el Core.
+2. **Header de autenticación**: `x-api-key: <API_KEY>` (NO `Authorization: Bearer`). Esto es un error que tenía el manual previo.
+3. **Método HTTP**: solo `POST`. Cualquier otro devuelve `405 Method not allowed`.
+4. **Campos universalmente obligatorios**: `action` y `partner_id` en cada solicitud.
 
-```sql
-CREATE TABLE public.partners (
-  id text PRIMARY KEY,                    -- 'brokia', 'mls_latam', 'responde'
-  name text NOT NULL,                     -- 'Brokia24', 'MLS Latam', 'Responde'
-  primary_domain text NOT NULL UNIQUE,    -- 'app.brokia24.com'
-  alt_domains text[] DEFAULT '{}',        -- dominios alternos (preview, lovable.app)
-  country_code text NOT NULL DEFAULT 'MX',
-  -- Branding visual
-  logo_url text NOT NULL,
-  logo_mark_url text,                     -- icono cuadrado para favicons/PWA
-  primary_color_hex text NOT NULL,        -- '#7C3AED'
-  primary_color_hsl text NOT NULL,        -- '262 83% 58%' (para CSS vars)
-  accent_color_hex text,
-  -- Branding email
-  email_sender_name text NOT NULL,        -- 'Responde'
-  email_sender_address text NOT NULL,     -- 'no-reply@notifications.responde.mx'
-  email_branding_logo text,               -- logo para HTML del email
-  email_footer_text text,
-  -- Metadata
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+## Estructura del documento .docx
 
--- Seed inicial
-INSERT INTO public.partners VALUES
-  ('brokia', 'Brokia24', 'app.brokia24.com', ARRAY['linkasa.brokia24.com','notyfive-app-realstate.lovable.app'],
-   'MX', 'https://...brokia-logo.png', NULL,
-   '#942CCC', '279 65% 49%', NULL,
-   'Brokia24', 'no-reply@notifications.brokia24.com', NULL, NULL, true, now(), now()),
-  ('mls_latam', 'MLS Latam', 'app.mlslatam.com', '{}',
-   'CO', 'https://.../6d226a31-...png', NULL,
-   '#00A884', '162 100% 33%', NULL,
-   'MLS Latam', 'no-reply@notifications.mlslatam.com', NULL, NULL, true, now(), now()),
-  ('responde', 'Responde', 'app.responde.mx', '{}',
-   'MX', 'https://.../270634a4-...png', NULL,
-   '#7C3AED', '262 83% 58%', NULL,
-   'Responde', 'no-reply@notifications.responde.mx', NULL, NULL, true, now(), now());
+**Configuración global**: US Letter, márgenes 1", fuente Arial 11pt, tablas con bordes negros 1pt, sombreado de cabeceras `F2F2F2` (gris claro permitido en B/N), texto siempre negro, sin colores de marca.
 
-ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
--- Lectura pública (necesaria para branding pre-login)
-CREATE POLICY "Anyone can read active partners" ON public.partners
-  FOR SELECT USING (is_active = true);
--- Escritura solo super_admin global (sin partner_id)
-CREATE POLICY "Global super admins manage partners" ON public.partners
-  FOR ALL USING (is_super_admin(auth.uid()));
-```
+### Secciones
 
-### 1.2 Vincular `tenants` a un partner
-```sql
-ALTER TABLE public.tenants
-  ADD COLUMN partner_id text REFERENCES public.partners(id) DEFAULT 'brokia' NOT NULL;
-CREATE INDEX idx_tenants_partner_id ON public.tenants(partner_id);
-```
+1. **Portada** — Título "Manual de Integración Técnica · Motor de Gestión Inmobiliaria MLS Latam", subtítulo "Endpoint sync-external-core · v1.2", fecha de generación.
 
-### 1.3 Vincular Super Admins a un partner (segregación)
-```sql
-ALTER TABLE public.user_roles
-  ADD COLUMN partner_scope text REFERENCES public.partners(id);
--- NULL = super admin global (ve todos los partners)
--- 'mls_latam' = super admin restringido a tenants de MLS
-COMMENT ON COLUMN public.user_roles.partner_scope IS
-  'Scope del super_admin. NULL = global. Valor = solo ve ese partner.';
-```
+2. **1. Información general**
+   - Descripción del motor.
+   - Endpoint base: `https://ozsgtszxvojvqszpphmj.supabase.co/functions/v1/sync-external-core`
+   - Método único: `POST`
+   - Content-Type: `application/json`
 
-### 1.4 Helper SQL para RLS
-```sql
-CREATE OR REPLACE FUNCTION public.get_user_partner_scope(_user_id uuid)
-RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT partner_scope FROM user_roles WHERE user_id = _user_id LIMIT 1;
-$$;
-```
+3. **2. Autenticación**
+   - Header obligatorio: `x-api-key: <EXTERNAL_CORE_API_KEY_MLS_LATAM>`
+   - Aclaración: el sistema asocia la API key con `partner_id = mls_latam`. Cualquier intento de operar con otro `partner_id` retorna `403 partner_mismatch`.
+   - Ejemplo de cabeceras completas.
 
-Actualizar políticas SELECT de `tenants` para que un super admin con `partner_scope` solo vea tenants de ese partner (filtro adicional, no reemplazo del `is_super_admin`).
+4. **3. Estructura general de las solicitudes**
+   - Formato recomendado (envoltorio `data`):
+     ```json
+     {
+       "action": "<nombre_de_acción>",
+       "data": {
+         "partner_id": "mls_latam",
+         "...": "..."
+       }
+     }
+     ```
+   - Nota: el campo `partner_id` es obligatorio en TODAS las acciones.
 
----
+5. **4. Acciones disponibles**
 
-## 2. Frontend: branding dinámico
+   **4.1 `upsert_tenant` — Alta/actualización de inmobiliaria**
+   - Descripción: crea o actualiza una inmobiliaria por clave compuesta `(partner_id, external_id)`.
+   - Tabla de campos:
+     | Campo | Tipo | Obligatorio | Validación |
+     |---|---|---|---|
+     | `external_id` | string | Sí | No vacío, ID único de MLS |
+     | `name` | string | Sí | Mínimo 2 caracteres |
+     | `partner_id` | string | Sí | Fijo: `mls_latam` |
+     | `plan` | string | No | ≤64 chars, regex `[A-Za-z0-9 _.\-]+`. Default: `trial` |
+     | `max_users` | integer | No | Entre 1 y 1000 |
+     | `country_code` | string | No | ISO 3166-1 alpha-2 (`CO`, `MX`, `AR`...) |
+     | `owner_email` | string | No | Email válido. Si se envía, provisiona al dueño |
+     | `owner_name` | string | No | Nombre del dueño |
+   - Ejemplo JSON cURL completo (basado en imagen 213).
+   - Códigos de respuesta: `201` creado · `200` actualizado.
+   - Errores específicos: `MAX_SEATS_REACHED` si `owner_email` excede asientos.
 
-### 2.1 `src/config/partnerConfig.ts`
-- Fallback estático con los 3 partners (brokia, mls_latam, responde) por si la DB no responde antes del primer paint.
-- Mapa `hostname → partner_id` que cubre dominios primarios + previews (`*.lovable.app` → 'brokia' por default).
+   **4.2 `sync_user` — Gestión de agentes**
+   - Descripción: crea/actualiza un usuario dentro del tenant. Aislamiento por tenant: si el email ya existe en otra inmobiliaria → `EMAIL_IN_OTHER_TENANT` (409).
+   - Tabla de campos:
+     | Campo | Tipo | Obligatorio | Validación |
+     |---|---|---|---|
+     | `tenant_external_id` | string | Sí | Debe existir en MLS |
+     | `email` | string | Sí | Email válido |
+     | `partner_id` | string | Sí | `mls_latam` |
+     | `name` | string | No | Default: parte local del email |
+     | `tenant_role` | string | No | `owner` \| `administrador` \| `manager` \| `marketer` \| `asesor`. Default: `asesor` |
+     | `status` | string | No | `active` \| `inactive` \| `suspended`. Default: `active` |
+   - Ejemplo cURL (basado en imagen 214).
+   - Errores: `TENANT_NOT_FOUND` (404), `EMAIL_IN_OTHER_TENANT` (409), `MAX_SEATS_REACHED` (403).
 
-### 2.2 Hook `src/hooks/usePartnerBranding.ts`
-- Detecta `window.location.hostname` al montar.
-- Resuelve partner: 1) cache estático, 2) fetch a `partners` table.
-- Inyecta CSS variables en `:root`:
-  ```ts
-  document.documentElement.style.setProperty('--primary', partner.primary_color_hsl);
-  document.documentElement.style.setProperty('--ring', partner.primary_color_hsl);
-  document.documentElement.style.setProperty('--sidebar-primary', partner.primary_color_hsl);
-  ```
-- Actualiza `<title>`, favicon, meta theme-color y manifest.
-- Expone `{ partner, logoUrl, brandName, isLoading }` vía Context.
+   **4.3 `update_billing` — Facturación y créditos**
+   - Descripción: actualiza estado de suscripción, plan o saldo total de créditos. Sincroniza `wallets` y registra movimiento en `wallet_ledger`.
+   - Reglas: debe enviarse al menos uno de `billing_state`, `plan` o `message_credits`.
+   - Tabla de campos:
+     | Campo | Tipo | Obligatorio | Validación |
+     |---|---|---|---|
+     | `tenant_external_id` | string | Sí | — |
+     | `partner_id` | string | Sí | `mls_latam` |
+     | `billing_state` | string | Condicional | `ONBOARDING_PAID` \| `ACTIVE_WITH_CREDITS` \| `CREDITS_EXHAUSTED` \| `SUBSCRIPTION_REQUIRED` \| `SUBSCRIBED_ACTIVE` \| `SUSPENDED` |
+     | `plan` | string | Condicional | Mismas reglas que en `upsert_tenant` |
+     | `message_credits` | integer | Condicional | Entero ≥ 0 (saldo TOTAL, no incremento) |
+     | `external_id` | string | No | ID del movimiento en Core (para reconciliación) |
+     | `description` | string | No | Descripción del movimiento en el ledger |
+     | `reason` | string | No | Motivo (auditoría) |
+   - Ejemplo cURL (basado en imagen 215). Nota explícita de que `message_credits` SUSTITUYE el saldo, no lo incrementa.
 
-### 2.3 `PartnerBrandingProvider`
-- Wrapper en `App.tsx` (envuelve `AuthProvider`).
-- Inicializa branding ANTES de cualquier render para evitar flash de marca incorrecta.
+   **4.4 `sync_property` — Inventario inmobiliario**
+   - Descripción: crea/actualiza una propiedad por `(tenant_id, property_code)`. Multimedia y FAQs gestionadas por Core: al enviarlas se reemplazan SOLO las entradas con `source='core'`; las creadas manualmente en la plataforma se conservan.
+   - Tabla de campos raíz:
+     | Campo | Tipo | Obligatorio | Validación |
+     |---|---|---|---|
+     | `tenant_external_id` | string | Sí | — |
+     | `property_code` | string | Sí | Único dentro del tenant |
+     | `partner_id` | string | Sí | `mls_latam` |
+     | `title` | string | No (sí en INSERT) | Default: `property_code` |
+     | `zone` | string | No (sí en INSERT) | Default: `""` |
+     | `address` | string\|null | No | — |
+     | `operation_type` | string | No | `sale` \| `rent`. Default: `sale` |
+     | `property_type` | string | No | Texto libre (`Apartamento`, `Departamento`, etc.) |
+     | `price` | number | No | Default: 0 |
+     | `currency` | string | No | Default: `MXN` |
+     | `status` | string | No | `available` \| `reserved` \| `sold` \| `rented` \| `inactive` |
+     | `is_active` | boolean | No | Default: `true` |
+     | `ai_description_template` | string\|null | No | — |
+     | `youtube_url` | string\|null | No | Puede ir en raíz o en `metadata` |
+     | `images` | string[] | No | URLs; primera = portada |
+     | `documents` | object[] | No | `{url, name?, type?}` |
+     | `faqs` | object[] | No | `{question, answer}` |
+   - Tabla de campos `metadata` (técnicos): `bedrooms` (int), `bathrooms` (number), `parking_spots` (int), `sq_meters` (number), `maintenance_fee` (number), `accepted_credits` (string[]), `visit_availability` (string), `youtube_url`, `images`, `documents`, `faqs` (alternativos a la raíz).
+   - Nota: multimedia/FAQs a nivel raíz tienen prioridad sobre los de `metadata`.
+   - Ejemplo cURL (basado en imagen 216).
 
-### 2.4 Reemplazar logos hardcodeados
-- `Auth.tsx`, `Landing.tsx`, `IconSidebar.tsx`, `MobileLayout.tsx`, `SsoCallback.tsx`: usar `usePartnerBranding().logoUrl` y `brandName` en lugar de `import logo from '@/assets/...'`.
-- Mantener fallback al logo Brokia si el partner no carga.
+6. **5. Acceso transparente vía SSO (JWT HS256)**
+   - URL destino: `https://app.mlslatam.com/auth/sso?token=<JWT>`
+   - Algoritmo: `HS256` con secreto compartido `SSO_SECRET`.
+   - Payload requerido: `email`, `name`, `tenant_external_id`, `partner_id` (`mls_latam`), `tenant_role`, `exp` (Unix seconds).
+   - Comportamiento: usuarios SSO acceden directo al Dashboard sin pasar por `/auth/complete-signup`.
+   - Ejemplo de generación de JWT en Node.js.
 
----
+7. **6. Gestión de errores**
+   - Tabla EXHAUSTIVA basada en el código real:
+     | HTTP | code/error | Causa | Acción del Core |
+     |---|---|---|---|
+     | 400 | `Invalid JSON body` | Body no parseable | Validar JSON |
+     | 400 | `Missing action` | Falta `action` | Incluir campo |
+     | 400 | `Unknown action: X` | Acción no soportada | Revisar nombre |
+     | 400 | `partner_id_required` | Falta `partner_id` | Incluir en payload |
+     | 400 | `partner_id_invalid` | Partner inexistente o inactivo | Revisar valor |
+     | 400 | Validación de campos | Tipos/longitudes/regex | Ver `error` en respuesta |
+     | 401 | `Unauthorized` | `x-api-key` faltante o inválido | Revisar credencial |
+     | 403 | `partner_mismatch` | API key de otro partner | Usar key correcta |
+     | 403 | `MAX_SEATS_REACHED` | Asientos del tenant agotados | Aumentar `max_users` |
+     | 404 | `TENANT_NOT_FOUND` | `tenant_external_id` no existe | Crear tenant primero |
+     | 405 | `Method not allowed` | Método ≠ POST | Usar POST |
+     | 409 | `EMAIL_IN_OTHER_TENANT` | Email ya pertenece a otro tenant | Usar otro email |
+     | 500 | `Database error` / `Internal server error` | Error interno | Reintentar / notificar |
+   - Recomendaciones: idempotencia (todas las acciones son upsert seguros), reintentos con backoff exponencial en 5xx, NO reintentar en 4xx.
 
-## 3. Segregación Super Admins
+8. **7. Apéndice — Checklist de integración**
+   - Lista numerada (sin colores): credenciales obtenidas, dominio app.mlslatam.com configurado, primer `upsert_tenant` exitoso, owner provisionado, primer `sync_user` correcto, recarga inicial de créditos vía `update_billing`, sincronización de propiedades, prueba de SSO, manejo de errores 4xx/5xx implementado.
 
-### 3.1 Extender `AuthContext`
-- Agregar `partnerScope: string | null` al estado (leído de `user_roles.partner_scope`).
-- Agregar `currentPartner` (resuelto del hostname vía `usePartnerBranding`).
+## Pasos de ejecución (modo default)
 
-### 3.2 `AdminTenants.tsx`
-- En `fetchTenants()`: si `partnerScope` no es null, agregar `.eq('partner_id', partnerScope)` al query.
-- En el formulario "Nuevo Tenant": si tiene scope, forzar `partner_id = partnerScope` (campo oculto). Si es global, agregar selector de partner.
-- Mostrar badge de partner por fila en la tabla.
+1. Crear script Python `/tmp/gen_manual.py` usando `docx-js` no — usaremos **`python-docx`** (más simple para B/N puro y disponible en sandbox).
+2. Definir estilos: Arial 11pt cuerpo, Arial Bold para títulos. Niveles de heading 1/2/3. Tablas con borde negro 1pt y cabecera con sombreado `F2F2F2`.
+3. Generar todas las secciones según la estructura de arriba; usar bloques de código monoespaciados (Courier New 9pt) con borde sutil, sin coloreado de sintaxis.
+4. Guardar en `/mnt/documents/MLS_Latam_Manual_Integracion_Tecnica.docx` (versión nueva, sin sobrescribir el PDF anterior).
+5. **QA**: convertir el `.docx` a PDF con LibreOffice (`run_libreoffice.py`) y luego a imágenes (`pdftoppm`) para inspeccionar visualmente cada página: verificar tablas no se desborden, código no se corte, todo realmente sea blanco/negro/gris claro, jerarquía clara.
+6. Emitir tag `<lov-artifact path="MLS_Latam_Manual_Integracion_Tecnica.docx" mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"></lov-artifact>`.
 
-### 3.3 `AdminUsers.tsx`
-- Mismo filtro: super admins con scope solo ven usuarios cuyos tenants pertenecen a su partner.
-- Al invitar nuevo super admin, permitir asignar `partner_scope` (solo super admins globales pueden hacerlo).
+## Archivos modificados
 
-### 3.4 Validación en edge functions
-- `admin-invite-owner`, `admin-invite-super-admin`, `admin-impersonate-sso`: validar que el caller con `partner_scope != null` solo opere sobre tenants de su partner. Devolver 403 si no.
+- **Generado**: `/mnt/documents/MLS_Latam_Manual_Integracion_Tecnica.docx` (~10–12 páginas).
+- **No se tocan archivos del proyecto** (es una tarea de generación de artefacto, no cambio de código).
 
----
+## Resultado esperado
 
-## 4. Restricción cross-domain (auto-redirect)
-
-### 4.1 En `auth-sso/index.ts`
-Después de resolver el tenant pero antes de generar el magic link:
-1. Leer `tenant.partner_id` y joinear `partners.primary_domain`.
-2. Comparar contra el `origin` del request (host del referer/Origin header).
-3. Si NO coincide y NO está en `alt_domains`:
-   - Reconstruir URL al `primary_domain` correcto preservando `?token=...&redirect=...&mode=...`.
-   - Devolver 302 a `https://{partner.primary_domain}/auth/sso?token=...`.
-4. Si coincide: continuar flujo normal.
-
-### 4.2 En login manual (`Auth.tsx` super admins)
-- Después del `signIn`, si el super admin tiene `partner_scope` y el hostname actual no coincide con `partner.primary_domain`:
-  - Mostrar toast "Esta cuenta pertenece a {partner.name}. Redirigiendo..."
-  - `window.location.replace('https://' + partner.primary_domain + '/admin')`.
-
-### 4.3 Pre-validación en frontend
-- En `App.tsx`, hook que compara `currentPartner.id` vs `tenant.partner_id` post-login. Si mismatch, signOut + redirect con toast.
-
----
-
-## 5. Emails dinámicos por marca
-
-### 5.1 Helper compartido `supabase/functions/_shared/partnerBranding.ts`
-```ts
-export async function getPartnerForTenant(supabase, tenantId): Promise<Partner>
-export async function getPartnerById(supabase, partnerId): Promise<Partner>
-export function buildEmailFrom(partner): string  // "Responde <no-reply@notifications.responde.mx>"
-export function injectPartnerIntoTemplate(html, partner): string
-  // Reemplaza {{LOGO_URL}}, {{BRAND_NAME}}, {{PRIMARY_COLOR}}, {{FOOTER}} en el HTML
-```
-
-### 5.2 Refactor de funciones de email
-Aplicar el helper en:
-- `invite-tenant-user/index.ts` → resuelve partner via `tenant.partner_id`
-- `admin-invite-owner/index.ts` → idem
-- `admin-invite-super-admin/index.ts` → resuelve via `partner_scope` del invitador (o partner del dominio si es global)
-- `auth-password-reset/index.ts` → resuelve via tenant del usuario que solicita reset
-- `auth-change-password/index.ts` → idem
-- `send-email/index.ts` → aceptar `partner_id` opcional en el body, default 'brokia'
-
-Reemplazar `from: "NotyFive <no-reply@notifications.notyfive.com>"` hardcodeado por `from: buildEmailFrom(partner)`.
-
-### 5.3 Templates HTML parametrizados
-Cambiar templates inline (texto "Brokia", logo hardcoded, color `#7C3AED`) por placeholders sustituidos en runtime con datos del partner. Botones del CTA deben usar `partner.primary_color_hex`.
-
-### 5.4 Verificación de dominios Resend
-**Acción del usuario** (no automatizable): verificar `notifications.mlslatam.com` y `notifications.responde.mx` en el dashboard de Resend. Mientras tanto, fallback a `no-reply@resend.dev` con `email_sender_name` correcto.
-
----
-
-## 6. UI Super Admin: gestión de Partners
-
-### 6.1 Nueva página `src/pages/admin/AdminPartners.tsx` (solo super admins globales)
-- Lista de partners con logo, dominio, color, # de tenants.
-- Formulario CRUD con secciones:
-  - **Identidad**: id, nombre, dominio primario, dominios alternos
-  - **Branding visual**: logo, logo mark, colores (color picker → genera hex+hsl auto)
-  - **Branding email**: nombre emisor, dirección emisor, logo email, footer
-  - **País + estado activo**
-
-### 6.2 En `TenantDetailPanel.tsx`
-- Mostrar badge del partner.
-- Si es super admin global: selector para reasignar partner del tenant.
-
----
-
-## 7. Orden de implementación
-
-1. **Migración DB** — tabla `partners`, columnas `partner_id`/`partner_scope`, seed de 3 partners, helper SQL.
-2. **Frontend branding** — `partnerConfig.ts`, `usePartnerBranding`, `PartnerBrandingProvider`, reemplazar logos hardcoded.
-3. **Edge functions emails** — helper compartido + refactor de las 6 funciones.
-4. **Segregación admin** — AuthContext, filtros en AdminTenants/AdminUsers, validación en edge functions.
-5. **Cross-domain redirect** — lógica en `auth-sso` + frontend post-login.
-6. **CRUD partners** — página AdminPartners.
-
----
-
-## ⚠️ Notas importantes
-
-- **Los previews `*.lovable.app`** caen en partner 'brokia' por defecto (configurable en `alt_domains`).
-- **Dominios DNS**: `app.mlslatam.com` y `app.responde.mx` deben apuntar (CNAME) al hosting de Lovable. El usuario debe configurarlos en Project Settings → Domains.
-- **Resend**: los dominios `notifications.mlslatam.com` y `notifications.responde.mx` requieren verificación manual SPF/DKIM en el dashboard de Resend antes de enviar emails reales.
-- **No rompe nada existente**: tenants actuales heredan `partner_id = 'brokia'` por default, super admins actuales mantienen `partner_scope = NULL` (global).
-- **Lovable Cloud Emails**: Si prefieres en lugar de Resend usar el sistema de emails nativo de Lovable Cloud (queue, retry, suppression), se puede migrar después — el helper de partner branding queda igual.
+Un documento Word editable, completamente en blanco y negro, técnicamente exacto al código del endpoint, con: cabecera correcta (`x-api-key`), envoltorio `data: {}` en todos los ejemplos, todos los campos obligatorios y opcionales con validaciones reales, catálogo completo de errores HTTP/códigos, y los 4 ejemplos cURL alineados con las capturas que el usuario compartió.
