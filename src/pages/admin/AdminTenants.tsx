@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Building2, Users, Search, MoreHorizontal, Loader2, MessageSquare, ExternalLink, Pause, Play, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { TwilioConfigDialog } from '@/components/admin/TwilioConfigDialog';
-import { TenantDetailPanel } from '@/components/admin/TenantDetailPanel';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +68,7 @@ const tenantSchema = z.object({
 });
 
 const AdminTenants = () => {
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,7 +77,6 @@ const AdminTenants = () => {
 
   const [twilioConfigOpen, setTwilioConfigOpen] = useState(false);
   const [selectedTenantForTwilio, setSelectedTenantForTwilio] = useState<Tenant | null>(null);
-  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [tenantToSuspend, setTenantToSuspend] = useState<Tenant | null>(null);
   const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
