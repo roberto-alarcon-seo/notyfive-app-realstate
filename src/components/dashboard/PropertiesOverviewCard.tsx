@@ -1,9 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, ArrowUpRight, MapPin } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Building2, MapPin } from "lucide-react";
 import { PropertyMetric } from "@/hooks/useRealEstateDashboard";
 
 interface PropertiesOverviewCardProps {
@@ -12,8 +10,6 @@ interface PropertiesOverviewCardProps {
 }
 
 export function PropertiesOverviewCard({ properties, isLoading }: PropertiesOverviewCardProps) {
-  const navigate = useNavigate();
-
   if (isLoading) {
     return (
       <Card>
@@ -44,14 +40,9 @@ export function PropertiesOverviewCard({ properties, isLoading }: PropertiesOver
             </div>
             <CardTitle className="text-sm font-semibold">Propiedades</CardTitle>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-7 text-xs"
-            onClick={() => navigate("/properties")}
-          >
-            Ver <ArrowUpRight className="w-3 h-3 ml-1" />
-          </Button>
+          <Badge variant="outline" className="text-[10px] font-normal">
+            Sincronizado desde Core
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

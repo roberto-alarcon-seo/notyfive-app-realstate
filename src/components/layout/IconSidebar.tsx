@@ -11,7 +11,6 @@ import {
   CalendarDays,
   Settings,
   Kanban,
-  Home,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
@@ -33,7 +32,6 @@ const menuItems = [
 ];
 
 const bottomItems = [
-  { icon: Home, label: "Propiedades", path: "/properties" },
   { icon: Settings, label: "Configuración", path: "/settings", requireAdmin: true },
 ];
 
