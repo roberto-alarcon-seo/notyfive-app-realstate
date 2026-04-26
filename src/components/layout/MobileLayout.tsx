@@ -16,7 +16,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
-import logo from "@/assets/brokia-logo.png";
+import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
 import { supabase } from "@/integrations/supabase/client";
 
 const mobileMenuItems = [
@@ -38,6 +38,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   );
   const navigate = useNavigate();
   const totalUnread = useTotalUnreadCount();
+  const { partner } = usePartnerBranding();
 
   const toggleTheme = () => {
     const next = currentTheme === "dark" ? "light" : "dark";
@@ -67,7 +68,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
           >
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <img src={logo} alt="Logo" className="h-8 w-8 object-contain" />
+          <img src={partner.logoUrl} alt={partner.name} className="h-8 w-8 object-contain" />
         </div>
         <div className="flex items-center gap-3">
           <UserMenu />
@@ -87,8 +88,8 @@ export function MobileLayout({ children }: MobileLayoutProps) {
             {/* Header */}
             <div className="h-16 flex items-center justify-between px-5 border-b border-border">
               <div className="flex items-center gap-3">
-                <img src={logo} alt="Logo" className="h-9 w-9 object-contain" />
-                <span className="text-lg font-semibold text-foreground">Brokia24</span>
+                <img src={partner.logoUrl} alt={partner.name} className="h-9 w-9 object-contain" />
+                <span className="text-lg font-semibold text-foreground">{partner.name}</span>
               </div>
               <button
                 onClick={() => setMenuOpen(false)}
