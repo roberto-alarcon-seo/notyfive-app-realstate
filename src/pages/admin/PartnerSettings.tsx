@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Upload, Mail, Palette, Eye, EyeOff } from "lucide-react";
+import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -17,6 +17,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  APP_BG_PRESETS,
+  SIDEBAR_STYLE_OPTIONS,
+  THEME_PRESETS,
+  applyPartnerTheme,
+  buildDefaultTheme,
+  hexToHslString,
+  hslStringToHex,
+  type PartnerTheme,
+} from "@/lib/partnerTheme";
+import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PartnerRow {
   id: string;
@@ -28,43 +45,12 @@ interface PartnerRow {
   resend_from_email: string | null;
   email_sender_name: string;
   email_sender_address: string;
-}
-
-// Convert "#RRGGBB" to "H S% L%" string used in CSS variables
-function hexToHslString(hex: string): string {
-  const cleaned = hex.replace("#", "");
-  const r = parseInt(cleaned.substring(0, 2), 16) / 255;
-  const g = parseInt(cleaned.substring(2, 4), 16) / 255;
-  const b = parseInt(cleaned.substring(4, 6), 16) / 255;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
-
-function applyPrimaryColorPreview(hsl: string) {
-  const root = document.documentElement;
-  root.style.setProperty("--primary", hsl);
-  root.style.setProperty("--ring", hsl);
-  root.style.setProperty("--sidebar-primary", hsl);
-  root.style.setProperty("--sidebar-ring", hsl);
-  root.style.setProperty("--message-outgoing", hsl);
+  branding: PartnerTheme;
 }
 
 export default function PartnerSettings() {
   const { partnerScope, isSuperAdmin } = useAuth();
+  const { setLiveTheme } = usePartnerBranding();
 
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -88,7 +74,7 @@ export default function PartnerSettings() {
         let query = supabase
           .from("partners")
           .select(
-            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address",
+            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding",
           )
           .order("name");
 
@@ -100,7 +86,16 @@ export default function PartnerSettings() {
         if (cancelled) return;
         if (error) throw error;
 
-        const rows = (data ?? []) as PartnerRow[];
+        const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+          const base = buildDefaultTheme(r.primary_color_hsl as string | null);
+          const saved = (r.branding ?? null) as Partial<PartnerTheme> | null;
+          const branding: PartnerTheme = {
+            ...base,
+            ...(saved && typeof saved === "object" ? saved : {}),
+            primary_color: saved?.primary_color || (r.primary_color_hsl as string) || base.primary_color,
+          };
+          return { ...(r as object), branding } as PartnerRow;
+        });
         setPartners(rows);
         const initial = partnerScope
           ? rows.find((r) => r.id === partnerScope) ?? null
@@ -126,15 +121,54 @@ export default function PartnerSettings() {
     if (found) setPartner(found);
   }, [selectedId, partners]);
 
+  // Live preview: whenever the in-flight partner branding changes, apply tokens.
+  useEffect(() => {
+    if (!partner) return;
+    setLiveTheme(partner.branding);
+    return () => {
+      // Revert to saved theme when unmounting / leaving the page
+      setLiveTheme(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partner?.branding]);
+
   const handleFieldChange = <K extends keyof PartnerRow>(key: K, value: PartnerRow[K]) => {
     setPartner((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const updateBranding = (patch: Partial<PartnerTheme>) => {
+    setPartner((prev) =>
+      prev
+        ? {
+            ...prev,
+            branding: { ...prev.branding, ...patch },
+          }
+        : prev,
+    );
   };
 
   const handleColorChange = (hex: string) => {
     if (!partner) return;
     const hsl = hexToHslString(hex);
-    setPartner({ ...partner, primary_color_hex: hex, primary_color_hsl: hsl });
-    applyPrimaryColorPreview(hsl);
+    setPartner({
+      ...partner,
+      primary_color_hex: hex,
+      primary_color_hsl: hsl,
+      branding: { ...partner.branding, primary_color: hsl },
+    });
+  };
+
+  const handleApplyPreset = (presetKey: keyof typeof THEME_PRESETS) => {
+    if (!partner) return;
+    const preset = THEME_PRESETS[presetKey].theme;
+    const hex = hslStringToHex(preset.primary_color);
+    setPartner({
+      ...partner,
+      primary_color_hex: hex,
+      primary_color_hsl: preset.primary_color,
+      branding: { ...preset },
+    });
+    toast.success(`Plantilla aplicada: ${THEME_PRESETS[presetKey].label}`);
   };
 
   const handleSaveBranding = async () => {
@@ -148,10 +182,14 @@ export default function PartnerSettings() {
           primary_color_hex: partner.primary_color_hex,
           primary_color_hsl: partner.primary_color_hsl,
           logo_url: partner.logo_url,
+          branding: partner.branding as unknown as Record<string, string>,
         })
         .eq("id", partner.id);
       if (error) throw error;
       toast.success("Apariencia actualizada");
+      // Lock in the saved theme as the new baseline
+      applyPartnerTheme(partner.branding);
+      setLiveTheme(null);
       // Update local list cache
       setPartners((list) => list.map((p) => (p.id === partner.id ? partner : p)));
     } catch (e) {
@@ -317,33 +355,126 @@ export default function PartnerSettings() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Color primario</Label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={partner.primary_color_hex}
-                      onChange={(e) => handleColorChange(e.target.value)}
-                      className="h-10 w-16 rounded cursor-pointer bg-transparent border border-border"
-                      aria-label="Selector de color primario"
-                    />
-                    <Input
-                      value={partner.primary_color_hex}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (/^#[0-9a-fA-F]{6}$/.test(v)) handleColorChange(v);
-                        else handleFieldChange("primary_color_hex", v);
-                      }}
-                      className="max-w-[140px] font-mono"
-                    />
-                    <div
-                      className="h-10 w-10 rounded border border-border"
-                      style={{ backgroundColor: partner.primary_color_hex }}
-                      aria-hidden
-                    />
+                {/* THEME ENGINE — full design tokens */}
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-5">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Palette className="h-4 w-4" /> Motor de tematización
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Controla la estética completa: fondo, sidebar y acento.
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Wand2 className="h-4 w-4" /> Cargar plantilla
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {Object.entries(THEME_PRESETS).map(([key, p]) => (
+                          <DropdownMenuItem
+                            key={key}
+                            onClick={() => handleApplyPreset(key as keyof typeof THEME_PRESETS)}
+                            className="gap-2"
+                          >
+                            <span
+                              className="h-3 w-3 rounded-full border border-border"
+                              style={{ backgroundColor: `hsl(${p.theme.primary_color})` }}
+                              aria-hidden
+                            />
+                            {p.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {/* App background */}
+                    <div className="space-y-2">
+                      <Label>Tema de fondo</Label>
+                      <Select
+                        value={partner.branding.app_bg}
+                        onValueChange={(v) => updateBranding({ app_bg: v, theme_preset: undefined })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {APP_BG_PRESETS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="h-3 w-3 rounded border border-border"
+                                  style={{ backgroundColor: `hsl(${opt.value})` }}
+                                  aria-hidden
+                                />
+                                {opt.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Sidebar style */}
+                    <div className="space-y-2">
+                      <Label>Estilo de sidebar</Label>
+                      <Select
+                        value={partner.branding.sidebar_style}
+                        onValueChange={(v) =>
+                          updateBranding({
+                            sidebar_style: v as PartnerTheme["sidebar_style"],
+                            theme_preset: undefined,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SIDEBAR_STYLE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Accent color */}
+                  <div className="space-y-2">
+                    <Label>Color de acento</Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={partner.primary_color_hex}
+                        onChange={(e) => handleColorChange(e.target.value)}
+                        className="h-10 w-16 rounded cursor-pointer bg-transparent border border-border"
+                        aria-label="Selector de color de acento"
+                      />
+                      <Input
+                        value={partner.primary_color_hex}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (/^#[0-9a-fA-F]{6}$/.test(v)) handleColorChange(v);
+                          else handleFieldChange("primary_color_hex", v);
+                        }}
+                        className="max-w-[140px] font-mono"
+                      />
+                      <div
+                        className="h-10 w-10 rounded border border-border"
+                        style={{ backgroundColor: partner.primary_color_hex }}
+                        aria-hidden
+                      />
+                    </div>
+                  </div>
+
                   <p className="text-xs text-muted-foreground">
-                    Vista previa aplicada en vivo. Guarda para persistir el cambio.
+                    Vista previa aplicada en vivo en la app. Guarda para persistir.
                   </p>
                 </div>
 

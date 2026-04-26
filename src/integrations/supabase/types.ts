@@ -2037,6 +2037,7 @@ export type Database = {
         Row: {
           accent_color_hex: string | null
           alt_domains: string[]
+          branding: Json
           country_code: string
           created_at: string
           email_branding_logo: string | null
@@ -2058,6 +2059,7 @@ export type Database = {
         Insert: {
           accent_color_hex?: string | null
           alt_domains?: string[]
+          branding?: Json
           country_code?: string
           created_at?: string
           email_branding_logo?: string | null
@@ -2079,6 +2081,7 @@ export type Database = {
         Update: {
           accent_color_hex?: string | null
           alt_domains?: string[]
+          branding?: Json
           country_code?: string
           created_at?: string
           email_branding_logo?: string | null
