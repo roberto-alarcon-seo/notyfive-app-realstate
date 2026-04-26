@@ -270,13 +270,14 @@ async function handleUpsertTenant(
   if (!name || typeof name !== 'string' || name.trim().length < 2) {
     return jsonResponse({ error: 'name is required (min 2 chars)' }, 400);
   }
-  const resolvedPlan = (plan ?? 'trial').toLowerCase();
-  if (!VALID_PLANS.includes(resolvedPlan)) {
-    return jsonResponse(
-      { error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` },
-      400,
-    );
+  // Plans are now free-form text. Externally managed tenants may receive
+  // region-specific names (e.g. "premium_mx"). We still sanity-check the
+  // shape so we never persist obviously invalid values.
+  const planResult = normalizePlan(plan ?? 'trial');
+  if ('error' in planResult) {
+    return jsonResponse({ error: planResult.error }, 400);
   }
+  const resolvedPlan = planResult.value;
   if (owner_email !== undefined && owner_email !== null) {
     if (typeof owner_email !== 'string' || !isValidEmail(owner_email)) {
       return jsonResponse({ error: 'owner_email must be a valid email' }, 400);
@@ -1302,17 +1303,14 @@ async function handleUpdateBilling(
     resolvedBillingState = billing_state;
   }
 
-  // Validate plan (optional).
+  // Validate plan (optional). Free-form text — see normalizePlan.
   let resolvedPlan: string | undefined;
   if (plan !== undefined && plan !== null) {
-    const candidate = String(plan).toLowerCase();
-    if (!VALID_PLANS.includes(candidate)) {
-      return jsonResponse(
-        { error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` },
-        400,
-      );
+    const planResult = normalizePlan(plan);
+    if ('error' in planResult) {
+      return jsonResponse({ error: planResult.error }, 400);
     }
-    resolvedPlan = candidate;
+    resolvedPlan = planResult.value;
   }
 
   // Validate message_credits (optional). Must be a non-negative integer.
