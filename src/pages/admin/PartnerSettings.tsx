@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Upload, Mail, Palette, Eye, EyeOff } from "lucide-react";
+import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -17,6 +17,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  APP_BG_PRESETS,
+  SIDEBAR_STYLE_OPTIONS,
+  THEME_PRESETS,
+  applyPartnerTheme,
+  buildDefaultTheme,
+  hexToHslString,
+  hslStringToHex,
+  type PartnerTheme,
+} from "@/lib/partnerTheme";
+import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PartnerRow {
   id: string;
@@ -28,43 +45,12 @@ interface PartnerRow {
   resend_from_email: string | null;
   email_sender_name: string;
   email_sender_address: string;
-}
-
-// Convert "#RRGGBB" to "H S% L%" string used in CSS variables
-function hexToHslString(hex: string): string {
-  const cleaned = hex.replace("#", "");
-  const r = parseInt(cleaned.substring(0, 2), 16) / 255;
-  const g = parseInt(cleaned.substring(2, 4), 16) / 255;
-  const b = parseInt(cleaned.substring(4, 6), 16) / 255;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
-
-function applyPrimaryColorPreview(hsl: string) {
-  const root = document.documentElement;
-  root.style.setProperty("--primary", hsl);
-  root.style.setProperty("--ring", hsl);
-  root.style.setProperty("--sidebar-primary", hsl);
-  root.style.setProperty("--sidebar-ring", hsl);
-  root.style.setProperty("--message-outgoing", hsl);
+  branding: PartnerTheme;
 }
 
 export default function PartnerSettings() {
   const { partnerScope, isSuperAdmin } = useAuth();
+  const { setLiveTheme } = usePartnerBranding();
 
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -88,7 +74,7 @@ export default function PartnerSettings() {
         let query = supabase
           .from("partners")
           .select(
-            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address",
+            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding",
           )
           .order("name");
 
@@ -100,7 +86,16 @@ export default function PartnerSettings() {
         if (cancelled) return;
         if (error) throw error;
 
-        const rows = (data ?? []) as PartnerRow[];
+        const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+          const base = buildDefaultTheme(r.primary_color_hsl as string | null);
+          const saved = (r.branding ?? null) as Partial<PartnerTheme> | null;
+          const branding: PartnerTheme = {
+            ...base,
+            ...(saved && typeof saved === "object" ? saved : {}),
+            primary_color: saved?.primary_color || (r.primary_color_hsl as string) || base.primary_color,
+          };
+          return { ...(r as object), branding } as PartnerRow;
+        });
         setPartners(rows);
         const initial = partnerScope
           ? rows.find((r) => r.id === partnerScope) ?? null
@@ -126,15 +121,54 @@ export default function PartnerSettings() {
     if (found) setPartner(found);
   }, [selectedId, partners]);
 
+  // Live preview: whenever the in-flight partner branding changes, apply tokens.
+  useEffect(() => {
+    if (!partner) return;
+    setLiveTheme(partner.branding);
+    return () => {
+      // Revert to saved theme when unmounting / leaving the page
+      setLiveTheme(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partner?.branding]);
+
   const handleFieldChange = <K extends keyof PartnerRow>(key: K, value: PartnerRow[K]) => {
     setPartner((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const updateBranding = (patch: Partial<PartnerTheme>) => {
+    setPartner((prev) =>
+      prev
+        ? {
+            ...prev,
+            branding: { ...prev.branding, ...patch },
+          }
+        : prev,
+    );
   };
 
   const handleColorChange = (hex: string) => {
     if (!partner) return;
     const hsl = hexToHslString(hex);
-    setPartner({ ...partner, primary_color_hex: hex, primary_color_hsl: hsl });
-    applyPrimaryColorPreview(hsl);
+    setPartner({
+      ...partner,
+      primary_color_hex: hex,
+      primary_color_hsl: hsl,
+      branding: { ...partner.branding, primary_color: hsl },
+    });
+  };
+
+  const handleApplyPreset = (presetKey: keyof typeof THEME_PRESETS) => {
+    if (!partner) return;
+    const preset = THEME_PRESETS[presetKey].theme;
+    const hex = hslStringToHex(preset.primary_color);
+    setPartner({
+      ...partner,
+      primary_color_hex: hex,
+      primary_color_hsl: preset.primary_color,
+      branding: { ...preset },
+    });
+    toast.success(`Plantilla aplicada: ${THEME_PRESETS[presetKey].label}`);
   };
 
   const handleSaveBranding = async () => {
@@ -148,10 +182,14 @@ export default function PartnerSettings() {
           primary_color_hex: partner.primary_color_hex,
           primary_color_hsl: partner.primary_color_hsl,
           logo_url: partner.logo_url,
+          branding: partner.branding,
         })
         .eq("id", partner.id);
       if (error) throw error;
       toast.success("Apariencia actualizada");
+      // Lock in the saved theme as the new baseline
+      applyPartnerTheme(partner.branding);
+      setLiveTheme(null);
       // Update local list cache
       setPartners((list) => list.map((p) => (p.id === partner.id ? partner : p)));
     } catch (e) {
