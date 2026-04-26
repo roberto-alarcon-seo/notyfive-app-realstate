@@ -2228,8 +2228,11 @@ export type Database = {
         Row: {
           accepted_credits: string[] | null
           address: string | null
+          ai_description_template: string | null
           ai_prompt: string | null
           assigned_user_id: string | null
+          bathrooms: number | null
+          bedrooms: number | null
           created_at: string
           currency: string
           id: string
@@ -2237,9 +2240,11 @@ export type Database = {
           is_active: boolean
           maintenance_fee: number | null
           operation_type: string
+          parking_spots: number | null
           price: number
           property_code: string
           property_type: string | null
+          sq_meters: number | null
           status: string
           template_id: string | null
           tenant_id: string
@@ -2252,8 +2257,11 @@ export type Database = {
         Insert: {
           accepted_credits?: string[] | null
           address?: string | null
+          ai_description_template?: string | null
           ai_prompt?: string | null
           assigned_user_id?: string | null
+          bathrooms?: number | null
+          bedrooms?: number | null
           created_at?: string
           currency?: string
           id?: string
@@ -2261,9 +2269,11 @@ export type Database = {
           is_active?: boolean
           maintenance_fee?: number | null
           operation_type?: string
+          parking_spots?: number | null
           price?: number
           property_code: string
           property_type?: string | null
+          sq_meters?: number | null
           status?: string
           template_id?: string | null
           tenant_id: string
@@ -2276,8 +2286,11 @@ export type Database = {
         Update: {
           accepted_credits?: string[] | null
           address?: string | null
+          ai_description_template?: string | null
           ai_prompt?: string | null
           assigned_user_id?: string | null
+          bathrooms?: number | null
+          bedrooms?: number | null
           created_at?: string
           currency?: string
           id?: string
@@ -2285,9 +2298,11 @@ export type Database = {
           is_active?: boolean
           maintenance_fee?: number | null
           operation_type?: string
+          parking_spots?: number | null
           price?: number
           property_code?: string
           property_type?: string | null
+          sq_meters?: number | null
           status?: string
           template_id?: string | null
           tenant_id?: string
@@ -3386,6 +3401,7 @@ export type Database = {
           cancellation_comment: string | null
           cancellation_reason: string | null
           cancellation_requested_at: string | null
+          country_code: string
           created_at: string
           current_period_end: string | null
           external_id: string | null
@@ -3421,6 +3437,7 @@ export type Database = {
           cancellation_comment?: string | null
           cancellation_reason?: string | null
           cancellation_requested_at?: string | null
+          country_code?: string
           created_at?: string
           current_period_end?: string | null
           external_id?: string | null
@@ -3456,6 +3473,7 @@ export type Database = {
           cancellation_comment?: string | null
           cancellation_reason?: string | null
           cancellation_requested_at?: string | null
+          country_code?: string
           created_at?: string
           current_period_end?: string | null
           external_id?: string | null
