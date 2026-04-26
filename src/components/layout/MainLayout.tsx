@@ -3,6 +3,7 @@ import { IconSidebar } from "./IconSidebar";
 import { UserMenu } from "./UserMenu";
 import { SupportModeBanner } from "./SupportModeBanner";
 import { MobileLayout } from "./MobileLayout";
+import { CreditsBadge } from "./CreditsBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MainLayoutProps {
@@ -22,6 +23,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="flex-1 flex flex-col overflow-hidden">
         <SupportModeBanner />
         <header className="h-14 border-b border-border bg-card flex items-center justify-end px-6 shrink-0 gap-4">
+          <CreditsBadge />
           <UserMenu />
         </header>
         <main className="flex-1 overflow-auto">

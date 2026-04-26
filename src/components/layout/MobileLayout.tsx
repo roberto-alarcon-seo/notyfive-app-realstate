@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { CreditsBadge } from "@/components/layout/CreditsBadge";
 import { SupportModeBanner } from "./SupportModeBanner";
 import {
   LayoutDashboard,
@@ -71,6 +72,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
           <img src={partner.logoUrl} alt={partner.name} className="h-8 w-8 object-contain" />
         </div>
         <div className="flex items-center gap-3">
+          <CreditsBadge />
           <UserMenu />
         </div>
       </header>
