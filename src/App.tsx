@@ -46,6 +46,7 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import CompleteSignup from "./pages/auth/CompleteSignup";
 import SsoCallback from "./pages/auth/SsoCallback";
+import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
 import AdminTenants from "./pages/admin/AdminTenants";
 import TenantAdminDetail from "./pages/admin/TenantAdminDetail";
@@ -91,7 +92,12 @@ const App = () => (
           <SupportModeProvider>
             <MobileRouteGuard>
             <Routes>
-              <Route path="/auth" element={<Auth />} />
+              {/* Public landing for unauthenticated tenant users */}
+              <Route path="/welcome" element={<Landing />} />
+              {/* Admin login (super_admin only) */}
+              <Route path="/rs_admin" element={<Auth />} />
+              {/* Legacy /auth redirects to admin login */}
+              <Route path="/auth" element={<Navigate to="/rs_admin" replace />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/reset-password" element={<ResetPassword />} />
               <Route path="/auth/complete-signup" element={<CompleteSignup />} />
