@@ -11,6 +11,8 @@ type UpsertTenantBody = {
   external_id: string;
   name: string;
   plan?: string;
+  owner_email?: string;
+  owner_name?: string;
 };
 
 type RequestBody = UpsertTenantBody;
@@ -31,6 +33,10 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 Deno.serve(async (req) => {
