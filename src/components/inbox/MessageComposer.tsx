@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, AlertTriangle, Clock, Wallet, Loader2, RotateCcw, FileText, Sparkles, CreditCard } from "lucide-react";
+import { Send, AlertTriangle, Clock, Wallet, Loader2, RotateCcw, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,7 +12,6 @@ import { useTemplates } from "@/hooks/useTemplates";
 import { useRewriteText } from "@/hooks/useRewriteText";
 import { useOperationStatus } from "@/hooks/useOperationStatus";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 import { EmojiPicker } from "./EmojiPicker";
 import { TemplateSelectorSheet } from "./TemplateSelectorSheet";
 import { MediaUploadButton, type MediaFile } from "./MediaUploadButton";
