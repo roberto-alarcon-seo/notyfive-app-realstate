@@ -336,6 +336,32 @@ const AdminUsers = () => {
               />
               {inviteErrors.email && <p className="text-xs text-destructive">{inviteErrors.email}</p>}
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Partner / Empresa a administrar</label>
+              <Select
+                value={inviteForm.partnerScope}
+                onValueChange={(v) => setInviteForm({ ...inviteForm, partnerScope: v })}
+                disabled={isInviting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un partner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="global">🌐 Global (todos los partners)</SelectItem>
+                  {partners.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {inviteErrors.partnerScope && (
+                <p className="text-xs text-destructive">{inviteErrors.partnerScope}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                El admin solo verá tenants y usuarios del partner asignado. Selecciona "Global" para acceso total.
+              </p>
+            </div>
             <p className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded-md">
               💡 El usuario recibirá un correo con un enlace seguro para establecer su contraseña.
             </p>
