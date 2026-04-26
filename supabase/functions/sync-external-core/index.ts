@@ -16,9 +16,21 @@ type UpsertTenantBody = {
   max_users?: number;
 };
 
-type RequestBody = UpsertTenantBody;
+type SyncUserBody = {
+  action: 'sync_user';
+  tenant_external_id: string;
+  email: string;
+  name?: string;
+  tenant_role?: string;
+  status?: string; // 'active' | 'inactive' | 'suspended'
+};
+
+type RequestBody = UpsertTenantBody | SyncUserBody;
 
 const VALID_PLANS = ['trial', 'starter', 'growth', 'pro', 'scale', 'enterprise'];
+const VALID_TENANT_ROLES = ['owner', 'administrador', 'manager', 'marketer', 'asesor'];
+const ADMIN_TENANT_ROLES = ['owner', 'administrador'];
+const VALID_USER_STATUSES = ['active', 'inactive', 'suspended'];
 
 async function hashApiKey(key: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -111,6 +123,9 @@ Deno.serve(async (req) => {
     // 4. Route by action
     if (body.action === 'upsert_tenant') {
       return await handleUpsertTenant(supabase, body, serviceName);
+    }
+    if (body.action === 'sync_user') {
+      return await handleSyncUser(supabase, body, serviceName);
     }
 
     return jsonResponse({ error: `Unknown action: ${(body as any).action}` }, 400);
@@ -446,4 +461,295 @@ async function inviteOwner(
   } catch (err) {
     return { success: false, error: String(err) };
   }
+}
+
+// ---------------------------------------------------------------------------
+// User sync (Core -> CRM)
+// ---------------------------------------------------------------------------
+async function handleSyncUser(
+  supabase: SupabaseClient,
+  body: SyncUserBody,
+  serviceName: string,
+): Promise<Response> {
+  const { tenant_external_id, email, name, tenant_role, status } = body;
+
+  // Validate input
+  if (!tenant_external_id || typeof tenant_external_id !== 'string' || !tenant_external_id.trim()) {
+    return jsonResponse({ error: 'tenant_external_id is required (non-empty string)' }, 400);
+  }
+  if (!email || typeof email !== 'string' || !isValidEmail(email)) {
+    return jsonResponse({ error: 'email must be a valid email' }, 400);
+  }
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const resolvedRole = (tenant_role ?? 'asesor').toLowerCase();
+  if (!VALID_TENANT_ROLES.includes(resolvedRole)) {
+    return jsonResponse(
+      { error: `Invalid tenant_role. Must be one of: ${VALID_TENANT_ROLES.join(', ')}` },
+      400,
+    );
+  }
+
+  const resolvedStatus = (status ?? 'active').toLowerCase();
+  if (!VALID_USER_STATUSES.includes(resolvedStatus)) {
+    return jsonResponse(
+      { error: `Invalid status. Must be one of: ${VALID_USER_STATUSES.join(', ')}` },
+      400,
+    );
+  }
+  // Map suspended -> inactive at the profile level (suspended is a role-driven concept).
+  const profileStatus = resolvedStatus === 'suspended' ? 'inactive' : resolvedStatus;
+
+  const resolvedName =
+    (name && name.trim()) || normalizedEmail.split('@')[0];
+
+  // 1. Look up tenant by external_id (multi-tenancy boundary).
+  const { data: tenant, error: tenantErr } = await supabase
+    .from('tenants')
+    .select('id, external_id, managed_externally, max_users')
+    .eq('external_id', tenant_external_id.trim())
+    .maybeSingle();
+
+  if (tenantErr) {
+    console.error('sync_user: tenant lookup error', tenantErr);
+    return jsonResponse({ error: 'Database error', details: tenantErr.message }, 500);
+  }
+  if (!tenant) {
+    return jsonResponse(
+      { error: 'Tenant not found for tenant_external_id', code: 'TENANT_NOT_FOUND' },
+      404,
+    );
+  }
+  const tenantId = tenant.id as string;
+
+  // 2. Find existing auth user by email (idempotency).
+  const { data: usersList, error: listErr } = await supabase.auth.admin.listUsers();
+  if (listErr) {
+    return jsonResponse({ error: `listUsers failed: ${listErr.message}` }, 500);
+  }
+  const authUser = usersList?.users?.find((u) => (u.email ?? '').toLowerCase() === normalizedEmail);
+
+  // Determine if user already belongs to this tenant.
+  let existingProfile: { id: string; tenant_id: string | null } | null = null;
+  if (authUser) {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('id, tenant_id')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    existingProfile = prof ?? null;
+  }
+
+  const userBelongsToTenant = existingProfile?.tenant_id === tenantId;
+
+  if (userBelongsToTenant && authUser) {
+    // ===== UPDATE EXISTING USER =====
+    const { error: profileUpdateErr } = await supabase
+      .from('profiles')
+      .update({
+        name: resolvedName,
+        status: profileStatus,
+      })
+      .eq('id', authUser.id);
+
+    if (profileUpdateErr) {
+      return jsonResponse(
+        { error: 'Failed to update profile', details: profileUpdateErr.message },
+        500,
+      );
+    }
+
+    const { error: roleUpdateErr } = await supabase
+      .from('user_roles')
+      .upsert(
+        { user_id: authUser.id, global_role: 'user', tenant_role: resolvedRole },
+        { onConflict: 'user_id' },
+      );
+
+    if (roleUpdateErr) {
+      return jsonResponse(
+        { error: 'Failed to update user role', details: roleUpdateErr.message },
+        500,
+      );
+    }
+
+    // Audit log (non-blocking).
+    try {
+      await supabase.from('security_events').insert({
+        tenant_id: tenantId,
+        user_id: authUser.id,
+        event_type: 'external_user_sync',
+        metadata: {
+          operation: 'updated',
+          service: serviceName,
+          email: normalizedEmail,
+          tenant_external_id: tenant.external_id,
+          tenant_role: resolvedRole,
+          status: resolvedStatus,
+        },
+      });
+    } catch (logErr) {
+      console.warn('sync_user: security_events insert failed (update)', logErr);
+    }
+
+    return jsonResponse(
+      {
+        success: true,
+        operation: 'updated',
+        user_id: authUser.id,
+        tenant_id: tenantId,
+        email: normalizedEmail,
+        tenant_role: resolvedRole,
+        status: profileStatus,
+      },
+      200,
+    );
+  }
+
+  // ===== CREATE NEW USER (or attach existing auth user to this tenant) =====
+  // Reject if the auth user exists but belongs to ANOTHER tenant (tenant isolation).
+  if (existingProfile && existingProfile.tenant_id && existingProfile.tenant_id !== tenantId) {
+    return jsonResponse(
+      {
+        error: 'User already exists in another tenant',
+        code: 'EMAIL_IN_OTHER_TENANT',
+      },
+      409,
+    );
+  }
+
+  // Seat validation: count active non-admin users in the tenant.
+  const { data: adminRoles } = await supabase
+    .from('user_roles')
+    .select('user_id')
+    .in('tenant_role', ADMIN_TENANT_ROLES);
+  const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
+
+  let seatQuery = supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active');
+  if (adminIds.length > 0) {
+    seatQuery = seatQuery.not('id', 'in', `(${adminIds.map((id) => `"${id}"`).join(',')})`);
+  }
+  const { count: currentUsers, error: countErr } = await seatQuery;
+  if (countErr) {
+    console.error('sync_user: seat count error', countErr);
+    return jsonResponse({ error: 'Failed to count seats', details: countErr.message }, 500);
+  }
+
+  const willCountAgainstSeats = !ADMIN_TENANT_ROLES.includes(resolvedRole);
+  if (willCountAgainstSeats && (currentUsers ?? 0) >= (tenant.max_users ?? 0)) {
+    return jsonResponse(
+      {
+        error: 'Tenant has reached the maximum number of seats.',
+        code: 'MAX_SEATS_REACHED',
+        max_users: tenant.max_users,
+        current_users: currentUsers ?? 0,
+      },
+      403,
+    );
+  }
+
+  // Create or reuse auth user.
+  let userId: string;
+  let createdNewAuthUser = false;
+  if (authUser) {
+    userId = authUser.id;
+  } else {
+    const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
+      email: normalizedEmail,
+      email_confirm: true,
+      user_metadata: {
+        name: resolvedName,
+        tenant_id: tenantId,
+        global_role: 'user',
+        tenant_role: resolvedRole,
+      },
+    });
+    if (createErr || !newUser?.user) {
+      return jsonResponse(
+        { error: createErr?.message || 'createUser failed' },
+        500,
+      );
+    }
+    userId = newUser.user.id;
+    createdNewAuthUser = true;
+  }
+
+  // Insert/upsert profile bound to this tenant.
+  const { error: profileErr } = await supabase
+    .from('profiles')
+    .upsert(
+      {
+        id: userId,
+        tenant_id: tenantId,
+        name: resolvedName,
+        email: normalizedEmail,
+        status: profileStatus,
+        first_login_required: createdNewAuthUser,
+        invited_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' },
+    );
+  if (profileErr) {
+    if (createdNewAuthUser) {
+      await supabase.auth.admin.deleteUser(userId);
+    }
+    return jsonResponse(
+      { error: 'profile upsert failed', details: profileErr.message },
+      500,
+    );
+  }
+
+  // Upsert role.
+  const { error: roleErr } = await supabase
+    .from('user_roles')
+    .upsert(
+      { user_id: userId, global_role: 'user', tenant_role: resolvedRole },
+      { onConflict: 'user_id' },
+    );
+  if (roleErr) {
+    if (createdNewAuthUser) {
+      await supabase.from('profiles').delete().eq('id', userId);
+      await supabase.auth.admin.deleteUser(userId);
+    }
+    return jsonResponse(
+      { error: 'role upsert failed', details: roleErr.message },
+      500,
+    );
+  }
+
+  // Audit log (non-blocking).
+  try {
+    await supabase.from('security_events').insert({
+      tenant_id: tenantId,
+      user_id: userId,
+      event_type: 'external_user_sync',
+      metadata: {
+        operation: 'created',
+        service: serviceName,
+        email: normalizedEmail,
+        tenant_external_id: tenant.external_id,
+        tenant_role: resolvedRole,
+        status: resolvedStatus,
+      },
+    });
+  } catch (logErr) {
+    console.warn('sync_user: security_events insert failed (create)', logErr);
+  }
+
+  return jsonResponse(
+    {
+      success: true,
+      operation: 'created',
+      user_id: userId,
+      tenant_id: tenantId,
+      email: normalizedEmail,
+      tenant_role: resolvedRole,
+      status: profileStatus,
+    },
+    201,
+  );
 }

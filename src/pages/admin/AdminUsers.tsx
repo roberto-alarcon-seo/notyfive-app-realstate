@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Loader2, Search, MoreHorizontal, Shield, User as UserIcon, Trash2, Mail } from 'lucide-react';
+import { Plus, Loader2, Search, MoreHorizontal, Shield, User as UserIcon, Trash2, Mail, Lock } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -49,6 +55,7 @@ interface TenantUserRow {
   status: string;
   tenant_id: string | null;
   tenant_name: string | null;
+  tenant_managed_externally: boolean;
   global_role: string;
   tenant_role: string | null;
   created_at: string;
@@ -112,7 +119,7 @@ const AdminUsers = () => {
     try {
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, email, name, status, tenant_id, created_at, last_login_at, tenants(name)')
+        .select('id, email, name, status, tenant_id, created_at, last_login_at, tenants(name, managed_externally)')
         .order('created_at', { ascending: false })
         .limit(500);
       if (error) throw error;
@@ -137,6 +144,7 @@ const AdminUsers = () => {
         status: p.status,
         tenant_id: p.tenant_id,
         tenant_name: p.tenants?.name ?? null,
+        tenant_managed_externally: Boolean(p.tenants?.managed_externally),
         global_role: rolesMap[p.id]?.global_role ?? 'user',
         tenant_role: rolesMap[p.id]?.tenant_role ?? null,
         created_at: p.created_at,
@@ -414,6 +422,7 @@ const AdminUsers = () => {
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Tenant</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Rol</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Estado</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Acceso</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Último acceso</th>
                   </tr>
                 </thead>
@@ -427,9 +436,19 @@ const AdminUsers = () => {
                         </div>
                       </td>
                       <td className="p-4 text-sm text-foreground">
-                        {u.tenant_name || (
-                          <span className="text-muted-foreground italic">Sin tenant</span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {u.tenant_name || (
+                            <span className="text-muted-foreground italic">Sin tenant</span>
+                          )}
+                          {u.tenant_managed_externally && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] border-accent/40 text-accent bg-accent/10"
+                            >
+                              Core
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         <Badge variant={u.global_role === 'super_admin' ? 'default' : 'secondary'} className="capitalize">
@@ -437,6 +456,26 @@ const AdminUsers = () => {
                         </Badge>
                       </td>
                       <td className="p-4">{getStatusBadge(u.status)}</td>
+                      <td className="p-4">
+                        {u.tenant_managed_externally ? (
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 border border-border rounded-md px-2 py-1">
+                                  <Lock className="h-3 w-3" />
+                                  Solo lectura
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                Este usuario pertenece a un tenant gestionado por el Sistema Core.
+                                La gestión de acceso (alta, baja, roles) se realiza desde el Core.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Editable</span>
+                        )}
+                      </td>
                       <td className="p-4 text-sm text-muted-foreground">
                         {u.last_login_at
                           ? new Date(u.last_login_at).toLocaleString('es-MX')
