@@ -417,8 +417,10 @@ const AdminTenants = () => {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Empresa</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Origen</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Plan</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Estado</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Asientos</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Saldo</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Creado</th>
                 <th className="text-right p-4 text-sm font-medium text-muted-foreground"></th>
@@ -436,15 +438,25 @@ const AdminTenants = () => {
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                           <Building2 className="h-5 w-5 text-primary" />
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium text-foreground">{tenant.name}</span>
-                          {tenant.managed_externally && (
-                            <Badge variant="outline" className="w-fit text-[10px] uppercase tracking-wider border-accent text-accent">
-                              Externo
-                            </Badge>
-                          )}
-                        </div>
+                        <span className="font-medium text-foreground">{tenant.name}</span>
                       </div>
+                    </td>
+                    <td className="p-4">
+                      {tenant.managed_externally ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] uppercase tracking-wider border-accent text-accent bg-accent/10"
+                        >
+                          Sistema Core
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                        >
+                          Local
+                        </Badge>
+                      )}
                     </td>
                     <td className="p-4">
                       <Badge variant="secondary" className="capitalize">
@@ -455,6 +467,12 @@ const AdminTenants = () => {
                       <Badge variant={getStatusBadgeVariant(tenant.status, tenant.subscription_status)} className="capitalize">
                         {getStatusLabel(tenant.status, tenant.subscription_status)}
                       </Badge>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm text-foreground">
+                        <span className="font-medium">{tenant.users_count ?? 0}</span>
+                        <span className="text-muted-foreground"> / {tenant.max_users ?? '—'}</span>
+                      </span>
                     </td>
                     <td className="p-4">
                       <div className="min-w-[120px]">
