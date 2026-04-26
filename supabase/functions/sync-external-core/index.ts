@@ -829,3 +829,223 @@ async function handleSyncUser(
     201,
   );
 }
+
+// ---------------------------------------------------------------------------
+// Property sync (Core -> CRM)
+// ---------------------------------------------------------------------------
+async function handleSyncProperty(
+  supabase: SupabaseClient,
+  body: SyncPropertyBody,
+  serviceName: string,
+): Promise<Response> {
+  const {
+    tenant_external_id,
+    property_code,
+    title,
+    zone,
+    address,
+    operation_type,
+    property_type,
+    price,
+    currency,
+    status,
+    is_active,
+    ai_description_template,
+    metadata,
+  } = body;
+
+  // ---- Input validation ----
+  if (!tenant_external_id || typeof tenant_external_id !== 'string' || !tenant_external_id.trim()) {
+    return jsonResponse({ error: 'tenant_external_id is required (non-empty string)' }, 400);
+  }
+  if (!property_code || typeof property_code !== 'string' || !property_code.trim()) {
+    return jsonResponse({ error: 'property_code is required (non-empty string)' }, 400);
+  }
+
+  if (operation_type !== undefined && !VALID_OPERATION_TYPES.includes(operation_type)) {
+    return jsonResponse(
+      { error: `Invalid operation_type. Must be one of: ${VALID_OPERATION_TYPES.join(', ')}` },
+      400,
+    );
+  }
+  if (status !== undefined && !VALID_PROPERTY_STATUSES.includes(status)) {
+    return jsonResponse(
+      { error: `Invalid status. Must be one of: ${VALID_PROPERTY_STATUSES.join(', ')}` },
+      400,
+    );
+  }
+
+  // ---- Locate tenant (multi-tenancy boundary) ----
+  const { data: tenant, error: tenantErr } = await supabase
+    .from('tenants')
+    .select('id, external_id, managed_externally')
+    .eq('external_id', tenant_external_id.trim())
+    .maybeSingle();
+
+  if (tenantErr) {
+    console.error('sync_property: tenant lookup error', tenantErr);
+    return jsonResponse({ error: 'Database error', details: tenantErr.message }, 500);
+  }
+  if (!tenant) {
+    return jsonResponse(
+      { error: 'Tenant not found for tenant_external_id', code: 'TENANT_NOT_FOUND' },
+      404,
+    );
+  }
+  const tenantId = tenant.id as string;
+
+  // ---- Normalize technical metadata ----
+  const md = metadata && typeof metadata === 'object' ? metadata : {};
+
+  // accepted_credits is a dynamic list of strings (any region).
+  let acceptedCredits: string[] | undefined;
+  if (md.accepted_credits !== undefined && md.accepted_credits !== null) {
+    if (!Array.isArray(md.accepted_credits)) {
+      return jsonResponse(
+        { error: 'metadata.accepted_credits must be an array of strings' },
+        400,
+      );
+    }
+    acceptedCredits = md.accepted_credits
+      .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+      .map((c) => c.trim());
+  }
+
+  const numericOrNull = (v: unknown): number | null | undefined => {
+    if (v === undefined) return undefined;
+    if (v === null || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
+  const intOrNull = (v: unknown): number | null | undefined => {
+    const n = numericOrNull(v);
+    if (n === undefined) return undefined;
+    if (n === null) return null;
+    return Math.trunc(n);
+  };
+
+  const bedrooms = intOrNull(md.bedrooms);
+  const bathrooms = numericOrNull(md.bathrooms);
+  const parkingSpots = intOrNull(md.parking_spots);
+  const sqMeters = numericOrNull(md.sq_meters);
+  const maintenanceFee = numericOrNull(md.maintenance_fee);
+
+  // ---- Build payload (only include defined keys for partial updates) ----
+  const updatePayload: Record<string, unknown> = {};
+  if (title !== undefined) updatePayload.title = title;
+  if (zone !== undefined) updatePayload.zone = zone;
+  if (address !== undefined) updatePayload.address = address;
+  if (operation_type !== undefined) updatePayload.operation_type = operation_type;
+  if (property_type !== undefined) updatePayload.property_type = property_type;
+  if (price !== undefined) updatePayload.price = price;
+  if (currency !== undefined) updatePayload.currency = currency;
+  if (status !== undefined) updatePayload.status = status;
+  if (is_active !== undefined) updatePayload.is_active = is_active;
+  if (ai_description_template !== undefined) {
+    updatePayload.ai_description_template = ai_description_template;
+  }
+  if (acceptedCredits !== undefined) updatePayload.accepted_credits = acceptedCredits;
+  if (bedrooms !== undefined) updatePayload.bedrooms = bedrooms;
+  if (bathrooms !== undefined) updatePayload.bathrooms = bathrooms;
+  if (parkingSpots !== undefined) updatePayload.parking_spots = parkingSpots;
+  if (sqMeters !== undefined) updatePayload.sq_meters = sqMeters;
+  if (maintenanceFee !== undefined) updatePayload.maintenance_fee = maintenanceFee;
+  if (md.visit_availability !== undefined) {
+    updatePayload.visit_availability = md.visit_availability;
+  }
+  if (md.youtube_url !== undefined) updatePayload.youtube_url = md.youtube_url;
+
+  // ---- Check existence: (tenant_id, property_code) is unique ----
+  const { data: existingProp, error: lookupErr } = await supabase
+    .from('properties')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('property_code', property_code.trim())
+    .maybeSingle();
+
+  if (lookupErr) {
+    console.error('sync_property: lookup error', lookupErr);
+    return jsonResponse({ error: 'Database error', details: lookupErr.message }, 500);
+  }
+
+  let propertyId: string;
+  let operation: 'created' | 'updated';
+
+  if (existingProp) {
+    operation = 'updated';
+    propertyId = existingProp.id;
+
+    if (Object.keys(updatePayload).length > 0) {
+      const { error: updErr } = await supabase
+        .from('properties')
+        .update(updatePayload)
+        .eq('id', propertyId);
+      if (updErr) {
+        console.error('sync_property: update error', updErr);
+        return jsonResponse(
+          { error: 'Failed to update property', details: updErr.message },
+          500,
+        );
+      }
+    }
+  } else {
+    operation = 'created';
+    // Required fields for INSERT (NOT NULL): title, zone, operation_type
+    const insertPayload = {
+      tenant_id: tenantId,
+      property_code: property_code.trim(),
+      title: title ?? property_code.trim(),
+      zone: zone ?? '',
+      operation_type: operation_type ?? 'sale',
+      price: price ?? 0,
+      currency: currency ?? 'MXN',
+      status: status ?? 'available',
+      is_active: is_active ?? true,
+      ...updatePayload,
+    };
+    const { data: created, error: insErr } = await supabase
+      .from('properties')
+      .insert(insertPayload)
+      .select('id')
+      .single();
+    if (insErr || !created) {
+      console.error('sync_property: insert error', insErr);
+      return jsonResponse(
+        { error: 'Failed to create property', details: insErr?.message },
+        500,
+      );
+    }
+    propertyId = created.id;
+  }
+
+  // ---- Audit log (non-blocking) ----
+  try {
+    await supabase.from('security_events').insert({
+      tenant_id: tenantId,
+      event_type: 'external_sync_update',
+      metadata: {
+        operation,
+        entity: 'property',
+        service: serviceName,
+        property_id: propertyId,
+        property_code: property_code.trim(),
+        tenant_external_id: tenant.external_id,
+        fields_synced: Object.keys(updatePayload),
+      },
+    });
+  } catch (logErr) {
+    console.warn('sync_property: security_events insert failed', logErr);
+  }
+
+  return jsonResponse(
+    {
+      success: true,
+      operation,
+      property_id: propertyId,
+      tenant_id: tenantId,
+      property_code: property_code.trim(),
+    },
+    operation === 'created' ? 201 : 200,
+  );
+}
