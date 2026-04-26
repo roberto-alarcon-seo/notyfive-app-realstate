@@ -216,7 +216,14 @@ export function TenantPropertyDetailSheet({
                           : '—'
                       }
                     />
-                    <SpecCell label="Tipo" value={property.property_type ?? '—'} />
+                    <SpecCell
+                      label="Tipo"
+                      value={
+                        property.property_type && property.property_type.trim().length > 0
+                          ? property.property_type
+                          : 'No especificado'
+                      }
+                    />
                   </div>
 
                   {/* Galería */}
