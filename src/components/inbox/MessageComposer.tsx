@@ -297,20 +297,10 @@ export function MessageComposer({
             <div className="flex-1 min-w-0">
               <h4 className="font-medium text-destructive">Envío deshabilitado</h4>
               <p className="text-sm text-muted-foreground">
-                {!canOperate 
-                  ? 'Necesitas activar un plan o recargar créditos para enviar mensajes.'
-                  : 'Recarga mensajes para continuar enviando.'
-                }
+                Sin saldo disponible. Contacta a tu administrador en Brokia24 Core para gestionar
+                tu plan o recargar mensajes.
               </p>
             </div>
-            <Button 
-              size="sm"
-              onClick={() => navigate('/settings/billing')}
-              className="shrink-0 gap-2"
-            >
-              <CreditCard className="h-4 w-4" />
-              {!canOperate ? 'Activar plan' : 'Recargar'}
-            </Button>
           </div>
         </div>
       </div>

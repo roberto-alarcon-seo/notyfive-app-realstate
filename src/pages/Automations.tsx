@@ -271,18 +271,15 @@ export default function Automations() {
       <AlertDialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Necesitas créditos</AlertDialogTitle>
+            <AlertDialogTitle>Sin saldo disponible</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta automatización envía mensajes. Para activarla necesitas tener créditos disponibles o un plan activo.
+              Esta automatización envía mensajes. Tu saldo es gestionado desde Brokia24 Core; contacta
+              a tu administrador para obtener más créditos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              setShowCreditsDialog(false);
-              navigate('/settings/billing');
-            }}>
-              Ir a Planes y créditos
+            <AlertDialogAction onClick={() => setShowCreditsDialog(false)}>
+              Entendido
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

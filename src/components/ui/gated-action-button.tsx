@@ -1,5 +1,4 @@
 import { forwardRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useOperationStatus } from '@/hooks/useOperationStatus';
@@ -18,7 +17,6 @@ interface GatedActionButtonProps extends ButtonProps {
  */
 export const GatedActionButton = forwardRef<HTMLButtonElement, GatedActionButtonProps>(
   ({ gated = true, gatedTooltip, children, disabled, onClick, ...props }, ref) => {
-    const navigate = useNavigate();
     const { canOperate } = useOperationStatus();
 
     const isGated = gated && !canOperate;
@@ -27,7 +25,6 @@ export const GatedActionButton = forwardRef<HTMLButtonElement, GatedActionButton
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
       if (isGated) {
         e.preventDefault();
-        navigate('/settings/billing');
         return;
       }
       onClick?.(e);
@@ -50,7 +47,7 @@ export const GatedActionButton = forwardRef<HTMLButtonElement, GatedActionButton
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{gatedTooltip || 'Acción bloqueada: no tienes créditos. Activa un plan o recarga.'}</p>
+              <p>{gatedTooltip || 'Acción bloqueada: sin saldo disponible. Gestionado desde Brokia24 Core.'}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
