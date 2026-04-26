@@ -60,9 +60,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
-  // Super admin should always be redirected to /admin (unless already there or in support mode)
-  if (isSuperAdmin && !requireSuperAdmin && !isSupportMode && location.pathname !== '/admin') {
-    return <Navigate to="/admin" replace />;
+  // Super admin should always be redirected to /admin/tenants (unless already in /admin/* or in support mode)
+  if (
+    isSuperAdmin &&
+    !requireSuperAdmin &&
+    !isSupportMode &&
+    !location.pathname.startsWith('/admin')
+  ) {
+    return <Navigate to="/admin/tenants" replace />;
   }
 
   // For super admin on /admin route, allow access

@@ -46,6 +46,9 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import CompleteSignup from "./pages/auth/CompleteSignup";
 import Admin from "./pages/Admin";
+import AdminTenants from "./pages/admin/AdminTenants";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminLogs from "./pages/admin/AdminLogs";
 import ApiDocs from "./pages/developers/ApiDocs";
 import Followups from "./pages/Followups";
 import Support from "./pages/Support";
@@ -90,7 +93,10 @@ const App = () => (
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/reset-password" element={<ResetPassword />} />
               <Route path="/auth/complete-signup" element={<CompleteSignup />} />
-              <Route path="/admin" element={<ProtectedRoute requireSuperAdmin><Admin /></ProtectedRoute>} />
+              <Route path="/admin" element={<Navigate to="/admin/tenants" replace />} />
+              <Route path="/admin/tenants" element={<ProtectedRoute requireSuperAdmin><AdminTenants /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute requireSuperAdmin><AdminUsers /></ProtectedRoute>} />
+              <Route path="/admin/logs" element={<ProtectedRoute requireSuperAdmin><AdminLogs /></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
               <Route path="/inbox" element={<ProtectedRoute><MainLayout><Inbox /></MainLayout></ProtectedRoute>} />
               <Route path="/contacts" element={<ProtectedRoute><MainLayout><Contacts /></MainLayout></ProtectedRoute>} />
