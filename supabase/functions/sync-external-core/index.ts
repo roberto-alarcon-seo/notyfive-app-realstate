@@ -178,43 +178,45 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Validate API key against EXTERNAL_CORE_API_KEY secret BEFORE touching DB.
+    // 1. Extract x-api-key header. Empty/missing keys are rejected before any DB work.
     const apiKey = req.headers.get('x-api-key');
-    // Per-partner keys allow each Core (MLS Latam, Responde, ...) to have its
-    // own credential. We resolve the partner_id from whichever key matches.
-    // Fallback: legacy global EXTERNAL_CORE_API_KEY (no partner association).
-    const PARTNER_KEYS: Array<{ env: string; partner_id: string }> = [
-      { env: 'EXTERNAL_CORE_API_KEY_MLS_LATAM', partner_id: 'mls_latam' },
-      { env: 'EXTERNAL_CORE_API_KEY_RESPONDE', partner_id: 'responde' },
-      { env: 'EXTERNAL_CORE_API_KEY_BROKIA', partner_id: 'brokia' },
-    ];
-    let resolvedPartnerId: string | null = null;
-    let authed = false;
-    if (apiKey) {
-      for (const k of PARTNER_KEYS) {
-        const v = Deno.env.get(k.env);
-        if (v && v === apiKey) {
-          authed = true;
-          resolvedPartnerId = k.partner_id;
-          break;
-        }
-      }
-      if (!authed) {
-        const legacy = Deno.env.get('EXTERNAL_CORE_API_KEY');
-        if (legacy && legacy === apiKey) authed = true;
-      }
-    }
-    if (!authed) {
-      console.warn('sync-external-core: unauthorized request', { hasHeader: Boolean(apiKey) });
+    if (!apiKey || apiKey.trim().length === 0) {
+      console.warn('sync-external-core: missing x-api-key header');
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
-    // 2. Initialize Supabase client (service role) only after auth passes.
+    // 2. Initialize Supabase client (service role) to look up the partner key.
+    //    The service role is used ONLY internally — the caller is authenticated
+    //    via the per-partner api_key stored in the `partners` table.
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
+
+    // 2b. Resolve the partner that owns this API key. Exact match against
+    //     partners.api_key. No fallback, no env-based keys.
+    const { data: keyOwner, error: keyOwnerErr } = await supabase
+      .from('partners')
+      .select('id, is_active, api_key')
+      .eq('api_key', apiKey.trim())
+      .maybeSingle();
+
+    if (keyOwnerErr) {
+      console.error('sync-external-core: partner key lookup error', keyOwnerErr);
+      return jsonResponse({ error: 'Unauthorized' }, 401);
+    }
+    if (!keyOwner?.id) {
+      console.warn('sync-external-core: api key did not match any partner');
+      return jsonResponse({ error: 'Unauthorized' }, 401);
+    }
+    if (keyOwner.is_active !== true) {
+      console.warn('sync-external-core: api key belongs to inactive partner', {
+        partner_id: keyOwner.id,
+      });
+      return jsonResponse({ error: 'Unauthorized' }, 401);
+    }
+    const resolvedPartnerId: string = keyOwner.id;
 
     // Best-effort audit: keep internal_system_auth.last_used_at fresh for the "core" service.
     // Non-blocking; ignore errors.
@@ -270,9 +272,9 @@ Deno.serve(async (req) => {
     merged.action = action;
 
     // 4. Centralized partner_id enforcement (composite key isolation).
-    //    - The field is REQUIRED in the payload.
-    //    - When the API key is partner-scoped, the payload partner_id MUST match.
-    //    - The partner must exist & be active in the partners catalog.
+    //    - The field is REQUIRED in the payload (body.data.partner_id or top-level).
+    //    - The payload partner_id MUST match the partner that owns the api_key.
+    //    Applies to ALL actions: upsert_tenant, sync_user, sync_property, update_billing.
     const rawPartnerId = (merged as { partner_id?: unknown }).partner_id;
     if (typeof rawPartnerId !== 'string' || rawPartnerId.trim().length === 0) {
       return jsonResponse(
@@ -286,9 +288,9 @@ Deno.serve(async (req) => {
     }
     const payloadPartnerId = rawPartnerId.trim();
 
-    // Cross-partner protection: a partner-scoped API key cannot operate on a
-    // different partner's data, even if the payload claims so.
-    if (resolvedPartnerId && payloadPartnerId !== resolvedPartnerId) {
+    // Cross-partner protection: the API key's partner MUST match the payload's
+    // partner_id. No exceptions — every key is partner-scoped.
+    if (payloadPartnerId !== resolvedPartnerId) {
       console.warn('sync-external-core: cross-partner attempt blocked', {
         api_key_partner: resolvedPartnerId,
         payload_partner: payloadPartnerId,
@@ -304,34 +306,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate partner exists & is active.
-    const { data: partnerRow, error: partnerErr } = await supabase
-      .from('partners')
-      .select('id, is_active')
-      .eq('id', payloadPartnerId)
-      .maybeSingle();
-    if (partnerErr) {
-      console.error('sync-external-core: partner lookup error', partnerErr);
-      return jsonResponse(
-        {
-          success: false,
-          error: 'partner_id_invalid',
-          message: 'El Partner ID proporcionado no es válido o no está activo.',
-        },
-        400,
-      );
-    }
-    if (!partnerRow?.id || partnerRow.is_active !== true) {
-      return jsonResponse(
-        {
-          success: false,
-          error: 'partner_id_invalid',
-          message: 'El Partner ID proporcionado no es válido o no está activo.',
-        },
-        400,
-      );
-    }
-    const partnerId = partnerRow.id as string;
+    // The partner is already validated as active during key lookup.
+    const partnerId = resolvedPartnerId;
 
     // 5. Route by action — every handler receives the validated partnerId
     //    and MUST scope all tenant lookups to (partner_id, external_id).
