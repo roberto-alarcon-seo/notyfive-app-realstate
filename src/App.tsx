@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SupportModeProvider } from "@/contexts/SupportModeContext";
+import { PartnerBrandingProvider } from "@/contexts/PartnerBrandingContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MobileRouteGuard } from "@/components/layout/MobileRouteGuard";
@@ -88,13 +89,14 @@ const PropertiesRedirect = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <RecoveryHashRedirector />
-        <AuthProvider>
-          <SupportModeProvider>
+    <PartnerBrandingProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <RecoveryHashRedirector />
+          <AuthProvider>
+            <SupportModeProvider>
             <MobileRouteGuard>
             <Routes>
               {/* Public landing for unauthenticated tenant users */}
@@ -165,10 +167,11 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             </MobileRouteGuard>
-          </SupportModeProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+            </SupportModeProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </PartnerBrandingProvider>
   </QueryClientProvider>
 );
 
