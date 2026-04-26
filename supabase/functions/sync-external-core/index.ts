@@ -377,6 +377,24 @@ async function inviteOwner(
     if (existingUser) {
       userId = existingUser.id;
     } else {
+      // Seat validation: count ALL profiles in tenant (owner is the first seat).
+      const { data: tenantRow } = await supabase
+        .from('tenants')
+        .select('max_users')
+        .eq('id', tenantId)
+        .maybeSingle();
+      const { count: currentUsers } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId);
+      const maxUsers = tenantRow?.max_users ?? 0;
+      if ((currentUsers ?? 0) >= maxUsers) {
+        return {
+          success: false,
+          error: `MAX_SEATS_REACHED: tenant has ${currentUsers}/${maxUsers} seats in use`,
+        };
+      }
+
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email: ownerEmail,
         email_confirm: true,
