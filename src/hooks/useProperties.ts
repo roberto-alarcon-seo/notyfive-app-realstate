@@ -44,6 +44,7 @@ export interface PropertyFaq {
   answer: string;
   sort_order: number;
   created_at: string;
+  source?: string;
 }
 
 export interface PropertyImage {
@@ -55,6 +56,7 @@ export interface PropertyImage {
   is_cover: boolean;
   sort_order: number;
   created_at: string;
+  source?: string;
 }
 
 export interface PropertyDocument {
@@ -66,6 +68,7 @@ export interface PropertyDocument {
   file_name: string;
   file_type: string | null;
   created_at: string;
+  source?: string;
 }
 
 export interface PropertyFilters {

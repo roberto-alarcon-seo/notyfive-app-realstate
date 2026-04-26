@@ -52,6 +52,13 @@ type SyncPropertyBody = {
     youtube_url?: string | null;
     [key: string]: unknown;
   };
+  // Multimedia & FAQ payloads (Core-managed). When provided, they fully
+  // replace the existing 'core' entries for this property; manual entries
+  // created locally remain untouched.
+  youtube_url?: string | null;
+  images?: string[];
+  documents?: Array<{ url: string; name?: string; type?: string }>;
+  faqs?: Array<{ question: string; answer: string }>;
 };
 
 type RequestBody = UpsertTenantBody | SyncUserBody | SyncPropertyBody;
@@ -852,6 +859,10 @@ async function handleSyncProperty(
     is_active,
     ai_description_template,
     metadata,
+    youtube_url: topYoutubeUrl,
+    images,
+    documents,
+    faqs,
   } = body;
 
   // ---- Input validation ----
@@ -954,7 +965,12 @@ async function handleSyncProperty(
   if (md.visit_availability !== undefined) {
     updatePayload.visit_availability = md.visit_availability;
   }
-  if (md.youtube_url !== undefined) updatePayload.youtube_url = md.youtube_url;
+  // youtube_url can come either at top-level or inside metadata; top-level wins.
+  const effectiveYoutubeUrl =
+    topYoutubeUrl !== undefined ? topYoutubeUrl : md.youtube_url;
+  if (effectiveYoutubeUrl !== undefined) {
+    updatePayload.youtube_url = effectiveYoutubeUrl;
+  }
 
   // ---- Check existence: (tenant_id, property_code) is unique ----
   const { data: existingProp, error: lookupErr } = await supabase
@@ -1019,6 +1035,141 @@ async function handleSyncProperty(
     propertyId = created.id;
   }
 
+  // ---- Sync Core-managed multimedia & FAQs ----
+  // For each provided collection, we delete existing rows tagged as
+  // source = 'core' and insert the new ones. Manual entries are preserved.
+  const mediaSyncSummary: Record<string, number> = {};
+
+  if (Array.isArray(images)) {
+    const cleanImages = images
+      .filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+      .map((u) => u.trim());
+
+    const { error: delImgErr } = await supabase
+      .from('property_images')
+      .delete()
+      .eq('property_id', propertyId)
+      .eq('source', 'core');
+    if (delImgErr) {
+      console.error('sync_property: delete core images error', delImgErr);
+      return jsonResponse(
+        { error: 'Failed to clear Core images', details: delImgErr.message },
+        500,
+      );
+    }
+
+    if (cleanImages.length > 0) {
+      const rows = cleanImages.map((url, idx) => ({
+        tenant_id: tenantId,
+        property_id: propertyId,
+        file_url: url,
+        is_cover: idx === 0,
+        sort_order: idx,
+        source: 'core',
+      }));
+      const { error: insImgErr } = await supabase.from('property_images').insert(rows);
+      if (insImgErr) {
+        console.error('sync_property: insert core images error', insImgErr);
+        return jsonResponse(
+          { error: 'Failed to insert Core images', details: insImgErr.message },
+          500,
+        );
+      }
+    }
+    mediaSyncSummary.images = cleanImages.length;
+  }
+
+  if (Array.isArray(documents)) {
+    const cleanDocs = documents
+      .filter(
+        (d): d is { url: string; name?: string; type?: string } =>
+          !!d && typeof d === 'object' && typeof (d as any).url === 'string' &&
+          (d as any).url.trim().length > 0,
+      )
+      .map((d) => ({
+        url: d.url.trim(),
+        name: typeof d.name === 'string' && d.name.trim() ? d.name.trim() : d.url.split('/').pop() || 'document',
+        type: typeof d.type === 'string' && d.type.trim() ? d.type.trim() : (d.url.split('.').pop() || 'unknown'),
+      }));
+
+    const { error: delDocErr } = await supabase
+      .from('property_documents')
+      .delete()
+      .eq('property_id', propertyId)
+      .eq('source', 'core');
+    if (delDocErr) {
+      console.error('sync_property: delete core docs error', delDocErr);
+      return jsonResponse(
+        { error: 'Failed to clear Core documents', details: delDocErr.message },
+        500,
+      );
+    }
+
+    if (cleanDocs.length > 0) {
+      const rows = cleanDocs.map((d) => ({
+        tenant_id: tenantId,
+        property_id: propertyId,
+        file_url: d.url,
+        file_name: d.name,
+        file_type: d.type,
+        source: 'core',
+      }));
+      const { error: insDocErr } = await supabase.from('property_documents').insert(rows);
+      if (insDocErr) {
+        console.error('sync_property: insert core docs error', insDocErr);
+        return jsonResponse(
+          { error: 'Failed to insert Core documents', details: insDocErr.message },
+          500,
+        );
+      }
+    }
+    mediaSyncSummary.documents = cleanDocs.length;
+  }
+
+  if (Array.isArray(faqs)) {
+    const cleanFaqs = faqs
+      .filter(
+        (f): f is { question: string; answer: string } =>
+          !!f && typeof f === 'object' &&
+          typeof (f as any).question === 'string' && (f as any).question.trim().length > 0 &&
+          typeof (f as any).answer === 'string' && (f as any).answer.trim().length > 0,
+      )
+      .map((f) => ({ question: f.question.trim(), answer: f.answer.trim() }));
+
+    const { error: delFaqErr } = await supabase
+      .from('property_faq')
+      .delete()
+      .eq('property_id', propertyId)
+      .eq('source', 'core');
+    if (delFaqErr) {
+      console.error('sync_property: delete core faqs error', delFaqErr);
+      return jsonResponse(
+        { error: 'Failed to clear Core FAQs', details: delFaqErr.message },
+        500,
+      );
+    }
+
+    if (cleanFaqs.length > 0) {
+      const rows = cleanFaqs.map((f, idx) => ({
+        tenant_id: tenantId,
+        property_id: propertyId,
+        question: f.question,
+        answer: f.answer,
+        sort_order: idx,
+        source: 'core',
+      }));
+      const { error: insFaqErr } = await supabase.from('property_faq').insert(rows);
+      if (insFaqErr) {
+        console.error('sync_property: insert core faqs error', insFaqErr);
+        return jsonResponse(
+          { error: 'Failed to insert Core FAQs', details: insFaqErr.message },
+          500,
+        );
+      }
+    }
+    mediaSyncSummary.faqs = cleanFaqs.length;
+  }
+
   // ---- Audit log (non-blocking) ----
   try {
     await supabase.from('security_events').insert({
@@ -1032,6 +1183,7 @@ async function handleSyncProperty(
         property_code: property_code.trim(),
         tenant_external_id: tenant.external_id,
         fields_synced: Object.keys(updatePayload),
+        media_synced: mediaSyncSummary,
       },
     });
   } catch (logErr) {
@@ -1045,6 +1197,7 @@ async function handleSyncProperty(
       property_id: propertyId,
       tenant_id: tenantId,
       property_code: property_code.trim(),
+      media_synced: mediaSyncSummary,
     },
     operation === 'created' ? 201 : 200,
   );
