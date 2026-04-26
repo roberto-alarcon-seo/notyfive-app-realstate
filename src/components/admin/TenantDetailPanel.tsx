@@ -23,6 +23,7 @@ interface Tenant {
   initial_credits_granted?: boolean;
   external_id?: string | null;
   managed_externally?: boolean;
+  max_users?: number;
 }
 
 interface TenantDetailPanelProps {
