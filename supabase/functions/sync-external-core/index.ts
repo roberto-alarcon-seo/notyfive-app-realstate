@@ -50,6 +50,9 @@ type SyncPropertyBody = {
     accepted_credits?: string[] | null;
     visit_availability?: string | null;
     youtube_url?: string | null;
+    images?: string[] | null;
+    documents?: Array<{ url: string; name?: string; type?: string }> | null;
+    faqs?: Array<{ question: string; answer: string }> | null;
     [key: string]: unknown;
   };
   // Multimedia & FAQ payloads (Core-managed). When provided, they fully
@@ -922,9 +925,9 @@ async function handleSyncProperty(
     ai_description_template,
     metadata,
     youtube_url: topYoutubeUrl,
-    images,
-    documents,
-    faqs,
+    images: topImages,
+    documents: topDocuments,
+    faqs: topFaqs,
   } = body;
 
   // ---- Input validation ----
@@ -969,6 +972,25 @@ async function handleSyncProperty(
 
   // ---- Normalize technical metadata ----
   const md = metadata && typeof metadata === 'object' ? metadata : {};
+
+  // Multimedia & FAQ payloads can arrive either at the root of the request
+  // or nested inside `metadata`. Root-level wins, but we fall back to
+  // metadata so different Core implementations remain compatible.
+  const images = Array.isArray(topImages)
+    ? topImages
+    : Array.isArray((md as any).images)
+      ? ((md as any).images as string[])
+      : undefined;
+  const documents = Array.isArray(topDocuments)
+    ? topDocuments
+    : Array.isArray((md as any).documents)
+      ? ((md as any).documents as Array<{ url: string; name?: string; type?: string }>)
+      : undefined;
+  const faqs = Array.isArray(topFaqs)
+    ? topFaqs
+    : Array.isArray((md as any).faqs)
+      ? ((md as any).faqs as Array<{ question: string; answer: string }>)
+      : undefined;
 
   // accepted_credits is a dynamic list of strings (any region).
   let acceptedCredits: string[] | undefined;
