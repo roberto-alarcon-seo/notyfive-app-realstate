@@ -112,7 +112,7 @@ const AdminUsers = () => {
         .select('user_id, partner_scope' as any)
         .eq('global_role', 'super_admin');
       if (rolesError) throw rolesError;
-      const rolesArr = (roles || []) as Array<{ user_id: string; partner_scope: string | null }>;
+      const rolesArr = (roles || []) as unknown as Array<{ user_id: string; partner_scope: string | null }>;
       const ids = rolesArr.map((r) => r.user_id);
       const scopeMap = rolesArr.reduce((acc, r) => {
         acc[r.user_id] = r.partner_scope;
