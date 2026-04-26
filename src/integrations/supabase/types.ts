@@ -2313,6 +2313,7 @@ export type Database = {
           maintenance_fee: number | null
           operation_type: string
           parking_spots: number | null
+          partner_id: string | null
           price: number
           property_code: string
           property_type: string | null
@@ -2342,6 +2343,7 @@ export type Database = {
           maintenance_fee?: number | null
           operation_type?: string
           parking_spots?: number | null
+          partner_id?: string | null
           price?: number
           property_code: string
           property_type?: string | null
@@ -2371,6 +2373,7 @@ export type Database = {
           maintenance_fee?: number | null
           operation_type?: string
           parking_spots?: number | null
+          partner_id?: string | null
           price?: number
           property_code?: string
           property_type?: string | null
