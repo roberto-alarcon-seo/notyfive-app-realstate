@@ -53,7 +53,6 @@ export function MessageComposer({
   const [rewriteOriginalText, setRewriteOriginalText] = useState("");
   const [rewriteSuggestedText, setRewriteSuggestedText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const navigate = useNavigate();
   const { profile } = useAuth();
   const isMobile = useIsMobile();
 
