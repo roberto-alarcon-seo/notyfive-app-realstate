@@ -17,6 +17,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, isLoading, isSuperAdmin, tenantRole, profile } = useAuth();
   const { isSupportMode } = useSupportMode();
   const location = useLocation();
+  const isAdminImpersonation = typeof window !== 'undefined' && sessionStorage.getItem('noty5_admin_impersonation') === '1';
 
   if (isLoading) {
     return (
@@ -56,6 +57,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Super admins bypass this check
   if (
     !isSuperAdmin &&
+    !isAdminImpersonation &&
     (profile.status === 'inactive' || profile.first_login_required || !profile.password_set_at)
   ) {
     return <Navigate to="/auth/complete-signup" replace />;
