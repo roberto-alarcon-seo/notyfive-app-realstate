@@ -21,6 +21,8 @@ interface Tenant {
   billing_state?: string;
   message_credits?: number;
   initial_credits_granted?: boolean;
+  external_id?: string | null;
+  managed_externally?: boolean;
 }
 
 interface TenantDetailPanelProps {
