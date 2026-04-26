@@ -71,6 +71,13 @@ type UpdateBillingBody = {
   plan?: string;
   message_credits?: number;
   reason?: string;
+  // Optional identifier of the movement in the Core system. Stored in the
+  // wallet_ledger metadata so financial movements can be reconciled
+  // end-to-end with the Core billing system.
+  external_id?: string | null;
+  // Optional description override. When omitted we generate a sensible
+  // default like "Recarga automática vía API Core - Plan Premium MX".
+  description?: string | null;
 };
 
 type RequestBody =
