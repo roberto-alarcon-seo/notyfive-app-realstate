@@ -76,7 +76,44 @@ type RequestBody =
   | SyncPropertyBody
   | UpdateBillingBody;
 
-const VALID_PLANS = ['trial', 'starter', 'growth', 'pro', 'scale', 'enterprise'];
+// Plans known to the local app (used only for legacy reference / UI hints).
+// The `tenants.plan` column is now free-form TEXT, so the external Core can
+// send region- or customer-specific plan names. We only enforce minimal
+// shape/safety constraints on incoming plan strings — see `normalizePlan`.
+const KNOWN_PLANS = ['trial', 'starter', 'growth', 'pro', 'scale', 'enterprise'];
+
+/**
+ * Normalize and validate a plan string sent by the external Core.
+ * Returns the normalized value, or an error string describing why it is
+ * invalid. We accept any non-empty string up to 64 chars that contains
+ * only letters, digits, underscores, dashes, dots and spaces. This covers
+ * regional plan names like "premium_mx", "core-co-basic" or "Plan Pro 2".
+ */
+function normalizePlan(input: unknown): { value: string } | { error: string } {
+  if (typeof input !== 'string') {
+    return { error: 'plan must be a string' };
+  }
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    return { error: 'plan must be a non-empty string' };
+  }
+  if (trimmed.length > 64) {
+    return { error: 'plan must be 64 characters or fewer' };
+  }
+  if (!/^[A-Za-z0-9 _.\-]+$/.test(trimmed)) {
+    return {
+      error:
+        'plan may only contain letters, digits, spaces, underscores, dashes and dots',
+    };
+  }
+  // Lowercase known plans for consistency with prior behavior; preserve
+  // casing/format for custom regional plans so the UI shows them as-sent.
+  const lower = trimmed.toLowerCase();
+  if (KNOWN_PLANS.includes(lower)) {
+    return { value: lower };
+  }
+  return { value: trimmed };
+}
 const VALID_TENANT_ROLES = ['owner', 'administrador', 'manager', 'marketer', 'asesor'];
 const ADMIN_TENANT_ROLES = ['owner', 'administrador'];
 const VALID_USER_STATUSES = ['active', 'inactive', 'suspended'];
@@ -233,13 +270,14 @@ async function handleUpsertTenant(
   if (!name || typeof name !== 'string' || name.trim().length < 2) {
     return jsonResponse({ error: 'name is required (min 2 chars)' }, 400);
   }
-  const resolvedPlan = (plan ?? 'trial').toLowerCase();
-  if (!VALID_PLANS.includes(resolvedPlan)) {
-    return jsonResponse(
-      { error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` },
-      400,
-    );
+  // Plans are now free-form text. Externally managed tenants may receive
+  // region-specific names (e.g. "premium_mx"). We still sanity-check the
+  // shape so we never persist obviously invalid values.
+  const planResult = normalizePlan(plan ?? 'trial');
+  if ('error' in planResult) {
+    return jsonResponse({ error: planResult.error }, 400);
   }
+  const resolvedPlan = planResult.value;
   if (owner_email !== undefined && owner_email !== null) {
     if (typeof owner_email !== 'string' || !isValidEmail(owner_email)) {
       return jsonResponse({ error: 'owner_email must be a valid email' }, 400);
@@ -1265,17 +1303,14 @@ async function handleUpdateBilling(
     resolvedBillingState = billing_state;
   }
 
-  // Validate plan (optional).
+  // Validate plan (optional). Free-form text — see normalizePlan.
   let resolvedPlan: string | undefined;
   if (plan !== undefined && plan !== null) {
-    const candidate = String(plan).toLowerCase();
-    if (!VALID_PLANS.includes(candidate)) {
-      return jsonResponse(
-        { error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` },
-        400,
-      );
+    const planResult = normalizePlan(plan);
+    if ('error' in planResult) {
+      return jsonResponse({ error: planResult.error }, 400);
     }
-    resolvedPlan = candidate;
+    resolvedPlan = planResult.value;
   }
 
   // Validate message_credits (optional). Must be a non-negative integer.
