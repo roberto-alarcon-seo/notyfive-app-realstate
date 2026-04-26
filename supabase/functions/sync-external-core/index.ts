@@ -965,7 +965,12 @@ async function handleSyncProperty(
   if (md.visit_availability !== undefined) {
     updatePayload.visit_availability = md.visit_availability;
   }
-  if (md.youtube_url !== undefined) updatePayload.youtube_url = md.youtube_url;
+  // youtube_url can come either at top-level or inside metadata; top-level wins.
+  const effectiveYoutubeUrl =
+    topYoutubeUrl !== undefined ? topYoutubeUrl : md.youtube_url;
+  if (effectiveYoutubeUrl !== undefined) {
+    updatePayload.youtube_url = effectiveYoutubeUrl;
+  }
 
   // ---- Check existence: (tenant_id, property_code) is unique ----
   const { data: existingProp, error: lookupErr } = await supabase
