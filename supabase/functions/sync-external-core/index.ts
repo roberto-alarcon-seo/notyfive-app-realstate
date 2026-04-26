@@ -14,6 +14,7 @@ type UpsertTenantBody = {
   owner_email?: string;
   owner_name?: string;
   max_users?: number;
+  country_code?: string;
 };
 
 type SyncUserBody = {
@@ -25,12 +26,43 @@ type SyncUserBody = {
   status?: string; // 'active' | 'inactive' | 'suspended'
 };
 
-type RequestBody = UpsertTenantBody | SyncUserBody;
+type SyncPropertyBody = {
+  action: 'sync_property';
+  tenant_external_id: string;
+  property_code: string;
+  title?: string;
+  zone?: string;
+  address?: string | null;
+  operation_type?: string;
+  property_type?: string | null;
+  price?: number;
+  currency?: string;
+  status?: string;
+  is_active?: boolean;
+  ai_description_template?: string | null;
+  // metadata bag with technical fields & accepted credits
+  metadata?: {
+    bedrooms?: number | null;
+    bathrooms?: number | null;
+    parking_spots?: number | null;
+    sq_meters?: number | null;
+    maintenance_fee?: number | null;
+    accepted_credits?: string[] | null;
+    visit_availability?: string | null;
+    youtube_url?: string | null;
+    [key: string]: unknown;
+  };
+};
+
+type RequestBody = UpsertTenantBody | SyncUserBody | SyncPropertyBody;
 
 const VALID_PLANS = ['trial', 'starter', 'growth', 'pro', 'scale', 'enterprise'];
 const VALID_TENANT_ROLES = ['owner', 'administrador', 'manager', 'marketer', 'asesor'];
 const ADMIN_TENANT_ROLES = ['owner', 'administrador'];
 const VALID_USER_STATUSES = ['active', 'inactive', 'suspended'];
+const VALID_OPERATION_TYPES = ['sale', 'rent'];
+const VALID_PROPERTY_STATUSES = ['available', 'reserved', 'sold', 'rented', 'inactive'];
+const COUNTRY_CODE_REGEX = /^[A-Z]{2}$/;
 
 async function hashApiKey(key: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -144,6 +176,9 @@ Deno.serve(async (req) => {
     }
     if (action === 'sync_user') {
       return await handleSyncUser(supabase, merged as SyncUserBody, serviceName);
+    }
+    if (action === 'sync_property') {
+      return await handleSyncProperty(supabase, merged as SyncPropertyBody, serviceName);
     }
 
     return jsonResponse({ error: `Unknown action: ${action}` }, 400);
