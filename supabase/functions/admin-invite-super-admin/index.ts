@@ -96,10 +96,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Invite flow
-    const { email, name, partnerScope } = body;
+    // Create flow (direct creation with password, no email invite)
+    const { email, name, partnerScope, password } = body;
     if (!email || !name) {
       return new Response(JSON.stringify({ success: false, error: "Missing email or name" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!password || typeof password !== "string" || password.length < 8) {
+      return new Response(JSON.stringify({ success: false, error: "La contraseña debe tener al menos 8 caracteres" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -120,27 +125,30 @@ Deno.serve(async (req) => {
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const existing = existingUsers?.users?.find((u) => u.email === email);
 
-    let userId: string;
-    let createdNew = false;
     if (existing) {
-      userId = existing.id;
-    } else {
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email, email_confirm: true,
-        user_metadata: { name, global_role: "super_admin" },
+      return new Response(JSON.stringify({ success: false, error: "Este correo ya está registrado" }), {
+        status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      if (createError || !newUser?.user) {
-        return new Response(JSON.stringify({ success: false, error: createError?.message || "Create failed" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      userId = newUser.user.id;
-      createdNew = true;
     }
+
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name, global_role: "super_admin" },
+    });
+    if (createError || !newUser?.user) {
+      const msg = createError?.message || "Create failed";
+      const isDup = /already|exists|registered/i.test(msg);
+      return new Response(JSON.stringify({ success: false, error: isDup ? "Este correo ya está registrado" : msg }), {
+        status: isDup ? 409 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = newUser.user.id;
 
     await supabaseAdmin.from("profiles").upsert({
       id: userId, tenant_id: null, name, email,
-      status: "inactive", first_login_required: true,
+      status: "active", first_login_required: false,
       invited_at: new Date().toISOString(), invited_by: user.id,
     }, { onConflict: "id" });
 
@@ -149,26 +157,12 @@ Deno.serve(async (req) => {
       partner_scope: validatedPartnerScope,
     }, { onConflict: "user_id" });
 
-    const requestOrigin = req.headers.get("origin");
-    const appBaseUrl = requestOrigin || Deno.env.get("APP_BASE_URL") || supabaseUrl;
-    const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
-      type: "recovery", email,
-      options: { redirectTo: `${appBaseUrl}/auth/complete-signup` },
-    });
-
-    let emailSent = false;
-    if (linkData?.properties?.action_link) {
-      const productionUrl = (Deno.env.get("APP_BASE_URL") || appBaseUrl).replace(/\/+$/, "");
-      const result = await sendInviteEmail(email, name, linkData.properties.action_link, `${productionUrl}/email-logo.png`);
-      emailSent = result.success;
-    }
-
     await supabaseAdmin.from("security_events").insert({
-      event_type: "super_admin_invited", user_id: user.id,
-      metadata: { invited_email: email, invited_user_id: userId, email_sent: emailSent, created_new: createdNew },
+      event_type: "super_admin_created", user_id: user.id,
+      metadata: { created_email: email, created_user_id: userId, partner_scope: validatedPartnerScope },
     });
 
-    return new Response(JSON.stringify({ success: true, userId, emailSent }), {
+    return new Response(JSON.stringify({ success: true, userId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {

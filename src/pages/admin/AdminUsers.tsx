@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Loader2, Search, MoreHorizontal, Shield, User as UserIcon, Trash2, Mail, Lock } from 'lucide-react';
+import { Plus, Loader2, Search, MoreHorizontal, Shield, User as UserIcon, Trash2, Mail, Lock, Eye, EyeOff, Sparkles } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -75,6 +75,7 @@ const inviteSchema = z.object({
   name: z.string().trim().min(2, 'Nombre muy corto').max(100),
   email: z.string().trim().email('Email inválido'),
   partnerScope: z.string().min(1, 'Selecciona un partner'),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres').max(72, 'Máximo 72 caracteres'),
 });
 
 const AdminUsers = () => {
@@ -86,8 +87,9 @@ const AdminUsers = () => {
   const [loadingSA, setLoadingSA] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ name: '', email: '', partnerScope: 'global' });
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', partnerScope: 'global', password: '' });
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [saToDelete, setSaToDelete] = useState<SuperAdminRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -231,21 +233,37 @@ const AdminUsers = () => {
           email: inviteForm.email,
           name: inviteForm.name,
           partnerScope: inviteForm.partnerScope === 'global' ? null : inviteForm.partnerScope,
+          password: inviteForm.password,
         },
       });
       if (error || !data?.success) {
-        throw new Error(data?.error || error?.message || 'Error al invitar');
+        throw new Error(data?.error || error?.message || 'Error al crear super admin');
       }
-      toast.success('Super admin invitado. Le enviamos un enlace de activación.');
+      toast.success('Super Admin creado. Ya puede acceder a /rs_admin');
       setInviteOpen(false);
-      setInviteForm({ name: '', email: '', partnerScope: 'global' });
+      setInviteForm({ name: '', email: '', partnerScope: 'global', password: '' });
+      setShowPassword(false);
       fetchSuperAdmins();
       fetchAllUsers();
     } catch (err: any) {
-      toast.error(err.message || 'Error al invitar super admin');
+      toast.error(err.message || 'Error al crear super admin');
     } finally {
       setIsInviting(false);
     }
+  };
+
+  const generateRandomPassword = () => {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghijkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const symbols = '!@#$%^&*';
+    const all = upper + lower + digits + symbols;
+    const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
+    let pw = pick(upper) + pick(lower) + pick(digits) + pick(symbols);
+    for (let i = 0; i < 12; i++) pw += pick(all);
+    pw = pw.split('').sort(() => Math.random() - 0.5).join('');
+    setInviteForm((f) => ({ ...f, password: pw }));
+    setShowPassword(true);
   };
 
   const handleDeleteSuperAdmin = async () => {
@@ -312,7 +330,7 @@ const AdminUsers = () => {
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Invitar Super Admin</DialogTitle>
+            <DialogTitle>Crear Super Admin</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleInviteSuperAdmin} className="space-y-4 mt-4">
             <div className="space-y-2">
@@ -362,9 +380,45 @@ const AdminUsers = () => {
                 El admin solo verá tenants y usuarios del partner asignado. Selecciona "Global" para acceso total.
               </p>
             </div>
-            <p className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded-md">
-              💡 El usuario recibirá un correo con un enlace seguro para establecer su contraseña.
-            </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Contraseña</label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={generateRandomPassword}
+                  disabled={isInviting}
+                >
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Generar aleatoria
+                </Button>
+              </div>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={inviteForm.password}
+                  onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })}
+                  placeholder="Mínimo 8 caracteres"
+                  disabled={isInviting}
+                  className="pr-10"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {inviteErrors.password && (
+                <p className="text-xs text-destructive">{inviteErrors.password}</p>
+              )}
+            </div>
             <div className="flex justify-end gap-3 pt-2">
               <Button type="button" variant="outline" onClick={() => setInviteOpen(false)} disabled={isInviting}>
                 Cancelar
@@ -373,12 +427,12 @@ const AdminUsers = () => {
                 {isInviting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Invitando...
+                    Creando...
                   </>
                 ) : (
                   <>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Enviar invitación
+                    <Lock className="h-4 w-4 mr-2" />
+                    Crear Super Admin
                   </>
                 )}
               </Button>
