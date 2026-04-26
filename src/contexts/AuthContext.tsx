@@ -28,6 +28,7 @@ interface UserRole {
   user_id: string;
   global_role: GlobalRole;
   tenant_role: TenantRole | null;
+  partner_scope: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -52,6 +53,7 @@ interface AuthState {
   isLoading: boolean;
   isSuperAdmin: boolean;
   tenantRole: TenantRole | null;
+  partnerScope: string | null;
 }
 
 interface AuthContextType extends AuthState {
@@ -80,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: true,
     isSuperAdmin: false,
     tenantRole: null,
+    partnerScope: null,
   });
 
   const fetchUserData = useCallback(async (userId: string) => {
@@ -129,6 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         tenant,
         isSuperAdmin: userRole?.global_role === 'super_admin',
         tenantRole: userRole?.tenant_role as TenantRole | null,
+        partnerScope: (userRole as any)?.partner_scope ?? null,
         isLoading: false,
       }));
 
@@ -160,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             tenant: null,
             isSuperAdmin: false,
             tenantRole: null,
+            partnerScope: null,
             isLoading: true,
           }));
 
@@ -177,6 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             tenant: null,
             isSuperAdmin: false,
             tenantRole: null,
+            partnerScope: null,
             isLoading: false,
           }));
         }
@@ -196,6 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           tenant: null,
           isSuperAdmin: false,
           tenantRole: null,
+          partnerScope: null,
           isLoading: true,
         }));
 
@@ -238,6 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isLoading: false,
       isSuperAdmin: false,
       tenantRole: null,
+      partnerScope: null,
     });
   };
 
