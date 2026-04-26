@@ -33,7 +33,7 @@ serve(async (req) => {
       // Update password if user exists
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
         existingAdmin.id,
-        { password: "C0c02024" }
+        { password: "P4dr1n0s" }
       );
       
       if (updateError) {
@@ -56,7 +56,7 @@ serve(async (req) => {
     // Create super admin user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: "roberto@responde.mx",
-      password: "C0c02024",
+      password: "P4dr1n0s",
       email_confirm: true,
       user_metadata: {
         name: "Roberto (Super Admin)",
