@@ -61,7 +61,20 @@ type SyncPropertyBody = {
   faqs?: Array<{ question: string; answer: string }>;
 };
 
-type RequestBody = UpsertTenantBody | SyncUserBody | SyncPropertyBody;
+type UpdateBillingBody = {
+  action: 'update_billing';
+  tenant_external_id: string;
+  billing_state?: string;
+  plan?: string;
+  message_credits?: number;
+  reason?: string;
+};
+
+type RequestBody =
+  | UpsertTenantBody
+  | SyncUserBody
+  | SyncPropertyBody
+  | UpdateBillingBody;
 
 const VALID_PLANS = ['trial', 'starter', 'growth', 'pro', 'scale', 'enterprise'];
 const VALID_TENANT_ROLES = ['owner', 'administrador', 'manager', 'marketer', 'asesor'];
@@ -70,6 +83,14 @@ const VALID_USER_STATUSES = ['active', 'inactive', 'suspended'];
 const VALID_OPERATION_TYPES = ['sale', 'rent'];
 const VALID_PROPERTY_STATUSES = ['available', 'reserved', 'sold', 'rented', 'inactive'];
 const COUNTRY_CODE_REGEX = /^[A-Z]{2}$/;
+const VALID_BILLING_STATES = [
+  'ONBOARDING_PAID',
+  'ACTIVE_WITH_CREDITS',
+  'CREDITS_EXHAUSTED',
+  'SUBSCRIPTION_REQUIRED',
+  'SUBSCRIBED_ACTIVE',
+  'SUSPENDED',
+];
 
 async function hashApiKey(key: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -186,6 +207,9 @@ Deno.serve(async (req) => {
     }
     if (action === 'sync_property') {
       return await handleSyncProperty(supabase, merged as SyncPropertyBody, serviceName);
+    }
+    if (action === 'update_billing') {
+      return await handleUpdateBilling(supabase, merged as UpdateBillingBody, serviceName);
     }
 
     return jsonResponse({ error: `Unknown action: ${action}` }, 400);
