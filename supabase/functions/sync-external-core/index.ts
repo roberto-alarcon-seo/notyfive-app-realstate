@@ -43,59 +43,53 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Validate API key
+    // 1. Validate API key against EXTERNAL_CORE_API_KEY secret BEFORE touching DB.
     const apiKey = req.headers.get('x-api-key');
-    if (!apiKey) {
-      return jsonResponse({ error: 'Missing x-api-key header' }, 401);
+    const expectedKey = Deno.env.get('EXTERNAL_CORE_API_KEY');
+
+    if (!expectedKey) {
+      console.error('sync-external-core: EXTERNAL_CORE_API_KEY secret is not configured');
+      return jsonResponse({ error: 'Server misconfiguration' }, 500);
     }
 
+    if (!apiKey || apiKey !== expectedKey) {
+      console.warn('sync-external-core: unauthorized request', {
+        hasHeader: Boolean(apiKey),
+      });
+      return jsonResponse({ error: 'Unauthorized' }, 401);
+    }
+
+    // 2. Initialize Supabase client (service role) only after auth passes.
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
 
-    const apiKeyHash = await hashApiKey(apiKey);
-
-    // Bootstrap: if EXTERNAL_CORE_API_KEY env var matches the incoming key
-    // and no record exists for "core" service yet, auto-register it.
-    const envCoreKey = Deno.env.get('EXTERNAL_CORE_API_KEY');
-    if (envCoreKey && envCoreKey === apiKey) {
-      const { data: coreRecord } = await supabase
+    // Best-effort audit: keep internal_system_auth.last_used_at fresh for the "core" service.
+    // Non-blocking; ignore errors.
+    try {
+      const apiKeyHash = await hashApiKey(apiKey);
+      supabase
         .from('internal_system_auth')
-        .select('id')
-        .eq('service_name', 'core')
-        .maybeSingle();
-      if (!coreRecord) {
-        await supabase.from('internal_system_auth').insert({
-          service_name: 'core',
-          api_key_hash: apiKeyHash,
-          description: 'External Core system (auto-registered from EXTERNAL_CORE_API_KEY env)',
-          is_active: true,
-        });
-      }
+        .upsert(
+          {
+            service_name: 'core',
+            api_key_hash: apiKeyHash,
+            description: 'External Core system (validated via EXTERNAL_CORE_API_KEY secret)',
+            is_active: true,
+            last_used_at: new Date().toISOString(),
+          },
+          { onConflict: 'service_name' },
+        )
+        .then(() => {});
+    } catch (auditErr) {
+      console.warn('sync-external-core: audit upsert failed', auditErr);
     }
 
-    const { data: authRecord, error: authError } = await supabase
-      .from('internal_system_auth')
-      .select('id, service_name, is_active')
-      .eq('api_key_hash', apiKeyHash)
-      .eq('is_active', true)
-      .maybeSingle();
+    const serviceName = 'core';
 
-    if (authError || !authRecord) {
-      console.warn('sync-external-core: invalid api key', { authError });
-      return jsonResponse({ error: 'Invalid API key' }, 401);
-    }
-
-    // Update last_used_at (fire and forget)
-    supabase
-      .from('internal_system_auth')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', authRecord.id)
-      .then(() => {});
-
-    // 2. Parse body
+    // 3. Parse body
     let body: RequestBody;
     try {
       body = await req.json();
@@ -107,9 +101,9 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Missing action' }, 400);
     }
 
-    // 3. Route by action
+    // 4. Route by action
     if (body.action === 'upsert_tenant') {
-      return await handleUpsertTenant(supabase, body, authRecord.service_name);
+      return await handleUpsertTenant(supabase, body, serviceName);
     }
 
     return jsonResponse({ error: `Unknown action: ${(body as any).action}` }, 400);
