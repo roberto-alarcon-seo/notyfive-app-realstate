@@ -38,14 +38,17 @@ export function useOperationStatus(): OperationStatusResult {
   const totalCredits = getTotalCredits(credits);
   const billingState = credits.billing_state;
 
-  // Check if can operate
-  const canOperate = 
-    totalCredits > 0 || 
-    billingState === 'SUBSCRIBED_ACTIVE';
+  // SUSPENDED (typically dictated by the external Core) hard-blocks all
+  // credit-consuming operations regardless of remaining balance.
+  const isSuspended = billingState === 'SUSPENDED';
 
-  // Determine status
+  const canOperate =
+    !isSuspended && (totalCredits > 0 || billingState === 'SUBSCRIBED_ACTIVE');
+
   let status: OperationStatus = 'ACTIVE';
-  if (!canOperate) {
+  if (isSuspended) {
+    status = 'SUSPENDED';
+  } else if (!canOperate) {
     status = 'READY_TO_CONFIGURE';
   }
 
