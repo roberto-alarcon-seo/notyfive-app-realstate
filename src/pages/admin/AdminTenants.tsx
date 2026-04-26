@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Tenant {
   id: string;
@@ -50,6 +51,7 @@ interface Tenant {
   external_id?: string | null;
   managed_externally?: boolean;
   max_users?: number;
+  partner_id?: string | null;
 }
 
 const PLAN_CONFIG = {
@@ -69,6 +71,7 @@ const tenantSchema = z.object({
 
 const AdminTenants = () => {
   const navigate = useNavigate();
+  const { partnerScope } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,10 +90,14 @@ const AdminTenants = () => {
   const fetchTenants = async () => {
     setIsLoading(true);
     try {
-      const { data: tenantsData, error } = await supabase
+      let query = supabase
         .from('tenants')
         .select('*')
         .order('created_at', { ascending: false });
+      if (partnerScope) {
+        query = query.eq('partner_id', partnerScope);
+      }
+      const { data: tenantsData, error } = await query;
       if (error) throw error;
 
       const tenantsWithCounts = await Promise.all(
@@ -115,7 +122,8 @@ const AdminTenants = () => {
 
   useEffect(() => {
     fetchTenants();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partnerScope]);
 
   const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
