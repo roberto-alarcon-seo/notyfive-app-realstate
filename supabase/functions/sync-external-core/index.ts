@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
     // Best-effort audit: keep internal_system_auth.last_used_at fresh for the "core" service.
     // Non-blocking; ignore errors.
     try {
-      const apiKeyHash = await hashApiKey(apiKey);
+      const apiKeyHash = await hashApiKey(apiKey as string);
       supabase
         .from('internal_system_auth')
         .upsert(
