@@ -47,6 +47,8 @@ interface Tenant {
   message_credits?: number;
   monthly_credits_remaining?: number;
   accumulated_credits?: number;
+  external_id?: string | null;
+  managed_externally?: boolean;
 }
 
 const PLAN_CONFIG = {
@@ -433,7 +435,14 @@ const AdminTenants = () => {
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                           <Building2 className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="font-medium text-foreground">{tenant.name}</span>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium text-foreground">{tenant.name}</span>
+                          {tenant.managed_externally && (
+                            <Badge variant="outline" className="w-fit text-[10px] uppercase tracking-wider border-accent text-accent">
+                              Externo
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="p-4">
