@@ -153,16 +153,18 @@ export const THEME_PRESETS: Record<string, { label: string; theme: PartnerTheme 
     },
   },
   mls_latam_light: {
-    label: "MLS Latam (Claro / Naranja)",
+    label: "MLS Latam (Claro / Rojo)",
     theme: {
-      // Crisp white surfaces, dark text and the signature MLS orange (#F34C3D)
-      // as accent. Sidebar stays white with dark text for readability.
-      app_bg: "0 0% 100%",
-      card_bg: "0 0% 100%",
-      sidebar_bg: "0 0% 100%",
-      sidebar_text: "0 0% 10%",
-      sidebar_style: "contrast",
-      primary_color: "4 89% 60%",
+      // MLS Latam — official spec.
+      // Light surfaces (#FDFAFB / #FFFFFF), dark text (#1B2030), brand red
+      // accent (#E14132). Main sidebar stays DARK permanently as part of the
+      // brand identity, with the brand red as active state.
+      app_bg: "340 33% 99%", // #FDFAFB
+      card_bg: "0 0% 100%", // #FFFFFF
+      sidebar_bg: "220 26% 14%", // #1B2030 (always dark)
+      sidebar_text: "220 9% 70%", // #A8ADBA
+      sidebar_style: "solid",
+      primary_color: "4 74% 54%", // #E14132
       mode: "light",
       theme_preset: "mls_latam_light",
     },
@@ -217,18 +219,26 @@ export function applyPartnerTheme(theme: PartnerTheme): void {
 
   // Text + ancillary tokens that flip with the surface mode
   if (isLight) {
-    root.style.setProperty("--foreground", "0 0% 10%");
-    root.style.setProperty("--card-foreground", "0 0% 10%");
-    root.style.setProperty("--popover-foreground", "0 0% 10%");
-    root.style.setProperty("--secondary", "0 0% 96%");
-    root.style.setProperty("--secondary-foreground", "0 0% 10%");
-    root.style.setProperty("--muted", "0 0% 96%");
-    root.style.setProperty("--muted-foreground", "0 0% 35%");
-    root.style.setProperty("--accent", "0 0% 96%");
-    root.style.setProperty("--accent-foreground", "0 0% 10%");
-    root.style.setProperty("--border", "0 0% 90%");
-    root.style.setProperty("--input", "0 0% 90%");
-    root.style.setProperty("--message-incoming", "0 0% 94%");
+    // Light mode — derive warm neutrals from the app background's hue so
+    // borders/secondary surfaces feel cohesive with the brand (per MLS spec
+    // they're slightly tinted vs pure gray).
+    const bgMatch = theme.app_bg.trim().match(
+      /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/,
+    );
+    const bgHue = bgMatch ? Math.round(parseFloat(bgMatch[1])) : 340;
+    root.style.setProperty("--foreground", "220 26% 14%");
+    root.style.setProperty("--card-foreground", "220 26% 14%");
+    root.style.setProperty("--popover-foreground", "220 26% 14%");
+    root.style.setProperty("--secondary", `${bgHue} 20% 95%`);
+    root.style.setProperty("--secondary-foreground", "220 26% 14%");
+    root.style.setProperty("--muted", `${bgHue} 15% 93%`);
+    root.style.setProperty("--muted-foreground", "220 9% 46%");
+    // In light mode the accent matches the brand primary (per spec).
+    root.style.setProperty("--accent", theme.primary_color);
+    root.style.setProperty("--accent-foreground", "0 0% 100%");
+    root.style.setProperty("--border", `${bgHue} 15% 90%`);
+    root.style.setProperty("--input", "0 0% 100%");
+    root.style.setProperty("--message-incoming", `${bgHue} 15% 93%`);
   } else {
     root.style.setProperty("--foreground", "0 0% 100%");
     root.style.setProperty("--card-foreground", "0 0% 100%");
@@ -248,6 +258,22 @@ export function applyPartnerTheme(theme: PartnerTheme): void {
   root.style.setProperty("--primary", theme.primary_color);
   root.style.setProperty("--ring", theme.primary_color);
   root.style.setProperty("--message-outgoing", theme.primary_color);
+
+  // Gradient + shadow tokens derived from the primary so brand elements
+  // (buttons, hover cards, glow effects) follow the partner accent.
+  const primaryGlow = shiftLightness(theme.primary_color, 10);
+  root.style.setProperty(
+    "--gradient-primary",
+    `linear-gradient(135deg, hsl(${theme.primary_color}), hsl(${primaryGlow}))`,
+  );
+  root.style.setProperty(
+    "--shadow-elegant",
+    `0 10px 30px -10px hsl(${theme.primary_color} / 0.3)`,
+  );
+  root.style.setProperty(
+    "--shadow-glow",
+    `0 0 40px hsl(${theme.primary_color} / 0.2)`,
+  );
 
   // Sidebar
   let sidebarBg = theme.sidebar_bg;
