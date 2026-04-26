@@ -14,7 +14,10 @@ import { usePartnerBranding } from '@/contexts/PartnerBrandingContext';
 const Landing = () => {
   const [params, setParams] = useSearchParams();
   const { partner } = usePartnerBranding();
-  const coreUrl = `https://${partner.primaryDomain}`;
+  // Dynamic redirect URL based on the partner resolved from the hostname.
+  // Falls back to the primary domain so the button always works.
+  const coreUrl =
+    partner.dashboardUrl ?? `https://${partner.primaryDomain}`;
   const ssoError = params.get('error') === 'sso_denied'
     ? params.get('reason') ?? 'unknown'
     : null;
@@ -85,20 +88,12 @@ const Landing = () => {
             <ExternalLink className="ml-2 h-4 w-4" />
           </a>
         </Button>
-
-        <p className="text-xs text-muted-foreground pt-4">
-          ¿Eres administrador global? {' '}
-          <a
-            href="/rs_admin"
-            className="text-primary hover:underline font-medium"
-          >
-            Acceso restringido
-          </a>
-        </p>
       </div>
 
-      <p className="absolute bottom-6 text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Brokia24. Todos los derechos reservados.
+      <p className="absolute bottom-6 text-xs text-muted-foreground text-center px-6">
+        {partner.emailFooterText
+          ? partner.emailFooterText
+          : `© ${new Date().getFullYear()} ${partner.name}. Todos los derechos reservados.`}
       </p>
     </div>
   );

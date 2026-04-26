@@ -2041,6 +2041,7 @@ export type Database = {
           branding: Json
           country_code: string
           created_at: string
+          dashboard_url: string | null
           email_branding_logo: string | null
           email_footer_text: string | null
           email_sender_address: string
@@ -2064,6 +2065,7 @@ export type Database = {
           branding?: Json
           country_code?: string
           created_at?: string
+          dashboard_url?: string | null
           email_branding_logo?: string | null
           email_footer_text?: string | null
           email_sender_address: string
@@ -2087,6 +2089,7 @@ export type Database = {
           branding?: Json
           country_code?: string
           created_at?: string
+          dashboard_url?: string | null
           email_branding_logo?: string | null
           email_footer_text?: string | null
           email_sender_address?: string

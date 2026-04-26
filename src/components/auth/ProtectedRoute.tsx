@@ -15,7 +15,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireSuperAdmin = false,
   requireRoles,
 }) => {
-  const { user, isLoading, isSuperAdmin, tenantRole, profile } = useAuth();
+  const { user, isLoading, isSuperAdmin, tenantRole, profile, partnerScope } = useAuth();
   const { isSupportMode } = useSupportMode();
   const location = useLocation();
   const isAdminImpersonation = typeof window !== 'undefined' && sessionStorage.getItem('noty5_admin_impersonation') === '1';
@@ -80,6 +80,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
+  // Global admin routes (/admin/*) are reserved for global super admins
+  // WITHOUT a partner_scope. Partner-scoped admins must use their own
+  // partner dashboard (PartnerSettings) and cannot access cross-tenant
+  // global tools.
+  if (requireSuperAdmin && isSuperAdmin && partnerScope) {
+    // Redirect partner-scoped admins to their partner-specific settings page
+    return <Navigate to="/admin/partner-settings" replace />;
+  }
+
   // Super admin should always be redirected to /admin/tenants (unless already in /admin/* or in support mode)
   if (
     isSuperAdmin &&
@@ -87,7 +96,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     !isSupportMode &&
     !location.pathname.startsWith('/admin')
   ) {
-    return <Navigate to="/admin/tenants" replace />;
+    // Partner-scoped admins go to their partner settings instead of the
+    // cross-tenant tenants list.
+    const adminLanding = partnerScope ? '/admin/partner-settings' : '/admin/tenants';
+    return <Navigate to={adminLanding} replace />;
   }
 
   // For super admin on /admin route, allow access

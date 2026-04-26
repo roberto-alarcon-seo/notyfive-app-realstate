@@ -33,6 +33,11 @@ export interface PartnerBranding {
   emailSenderName: string;
   emailSenderAddress: string;
   emailFooterText: string | null;
+  /**
+   * URL of the partner's master Core dashboard. Tenant users are redirected
+   * here from the CRM landing page, since access to the CRM is SSO-only.
+   */
+  dashboardUrl: string | null;
   /** Full design tokens for this partner (loaded from `partners.branding`). */
   theme: PartnerTheme;
 }
@@ -74,6 +79,9 @@ function staticToBranding(p: PartnerStaticConfig): PartnerBranding {
     emailSenderName: p.emailSenderName,
     emailSenderAddress: p.emailSenderAddress,
     emailFooterText: p.emailFooterText ?? null,
+    // Static fallback: assume the dashboard lives at the partner's primary
+    // domain. The DB value (when available) takes precedence.
+    dashboardUrl: p.primaryDomain ? `https://${p.primaryDomain}` : null,
     theme: buildDefaultTheme(p.primaryColorHsl),
   };
 }
@@ -186,6 +194,9 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
             emailSenderName: match.email_sender_name,
             emailSenderAddress: match.email_sender_address,
             emailFooterText: match.email_footer_text,
+            dashboardUrl:
+              (match as { dashboard_url?: string | null }).dashboard_url ??
+              (match.primary_domain ? `https://${match.primary_domain}` : null),
             theme: mergedTheme,
           });
         }
