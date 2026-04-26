@@ -182,7 +182,7 @@ export default function PartnerSettings() {
           primary_color_hex: partner.primary_color_hex,
           primary_color_hsl: partner.primary_color_hsl,
           logo_url: partner.logo_url,
-          branding: partner.branding,
+          branding: partner.branding as unknown as Record<string, string>,
         })
         .eq("id", partner.id);
       if (error) throw error;
