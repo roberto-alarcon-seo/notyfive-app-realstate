@@ -859,6 +859,10 @@ async function handleSyncProperty(
     is_active,
     ai_description_template,
     metadata,
+    youtube_url: topYoutubeUrl,
+    images,
+    documents,
+    faqs,
   } = body;
 
   // ---- Input validation ----
