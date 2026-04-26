@@ -293,20 +293,47 @@ async function handleUpsertTenant(
   const { external_id, name, plan, owner_email, owner_name, max_users, country_code, partner_id } = body;
 
   // Final partner_id: explicit payload value wins, then API-key inference.
-  // We validate it against the partners catalog before persisting.
+  // We STRICTLY validate it against the partners catalog before persisting.
+  // If a partner_id is supplied (explicitly or inferred) and it doesn't exist
+  // or is inactive, we reject the request with a 400 to prevent the creation
+  // of tenants linked to phantom/invalid partners.
   let finalPartnerId: string | null = null;
   const candidatePartnerId =
     typeof partner_id === 'string' && partner_id.trim().length > 0
       ? partner_id.trim()
       : resolvedPartnerId;
   if (candidatePartnerId) {
-    const { data: partnerRow } = await supabase
-      .from('partners').select('id').eq('id', candidatePartnerId).maybeSingle();
-    if (partnerRow?.id) {
-      finalPartnerId = partnerRow.id;
-    } else {
-      console.warn('sync-external-core: unknown partner_id received, ignoring', candidatePartnerId);
+    const { data: partnerRow, error: partnerErr } = await supabase
+      .from('partners')
+      .select('id, is_active')
+      .eq('id', candidatePartnerId)
+      .maybeSingle();
+    if (partnerErr) {
+      console.error('sync-external-core: partner lookup error', partnerErr);
+      return jsonResponse(
+        {
+          success: false,
+          error: 'partner_id_invalid',
+          message: 'El Partner ID proporcionado no es válido o no está activo.',
+        },
+        400,
+      );
     }
+    if (!partnerRow?.id || partnerRow.is_active !== true) {
+      console.warn(
+        'sync-external-core: rejected unknown/inactive partner_id',
+        candidatePartnerId,
+      );
+      return jsonResponse(
+        {
+          success: false,
+          error: 'partner_id_invalid',
+          message: 'El Partner ID proporcionado no es válido o no está activo.',
+        },
+        400,
+      );
+    }
+    finalPartnerId = partnerRow.id;
   }
 
   // Validate input
