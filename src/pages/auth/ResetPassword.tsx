@@ -285,8 +285,8 @@ const ResetPassword = () => {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <img 
-            src={authLogo} 
-            alt="NotyFive Logo" 
+            src={partner.logoUrl} 
+            alt={`${partner.name} Logo`}
             className="h-24 w-24 object-contain" 
           />
         </div>
