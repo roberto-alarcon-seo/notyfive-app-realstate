@@ -1032,7 +1032,13 @@ async function handleSyncProperty(
   if (zone !== undefined) updatePayload.zone = zone;
   if (address !== undefined) updatePayload.address = address;
   if (operation_type !== undefined) updatePayload.operation_type = operation_type;
-  if (property_type !== undefined) updatePayload.property_type = property_type;
+  // property_type is a free-form string (multi-country: "Departamento" MX, "Apartamento" CO, etc.)
+  // If Core sends the field but the value is empty/null, persist a friendly fallback so the UI
+  // never shows an empty badge.
+  if (property_type !== undefined) {
+    const pt = typeof property_type === 'string' ? property_type.trim() : '';
+    updatePayload.property_type = pt.length > 0 ? pt : 'No especificado';
+  }
   if (price !== undefined) updatePayload.price = price;
   if (currency !== undefined) updatePayload.currency = currency;
   if (status !== undefined) updatePayload.status = status;
