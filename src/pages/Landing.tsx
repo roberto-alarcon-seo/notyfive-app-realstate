@@ -1,6 +1,9 @@
-import { ExternalLink } from 'lucide-react';
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { ExternalLink, AlertTriangle } from 'lucide-react';
 import authLogo from '@/assets/brokia-logo.png';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 /**
  * Public landing page shown when an unauthenticated user lands on `/`.
@@ -11,6 +14,31 @@ import { Button } from '@/components/ui/button';
 const CORE_URL = 'https://app.brokia24.com';
 
 const Landing = () => {
+  const [params, setParams] = useSearchParams();
+  const ssoError = params.get('error') === 'sso_denied'
+    ? params.get('reason') ?? 'unknown'
+    : null;
+
+  useEffect(() => {
+    if (!ssoError) return;
+    const reasonMap: Record<string, string> = {
+      invalid_token: 'El enlace de acceso es inválido.',
+      missing_token: 'Falta el token de acceso.',
+      invalid_claims: 'El token no contiene la información necesaria.',
+      tenant_not_found: 'La cuenta no existe en este sistema.',
+      user_not_found: 'No se encontró tu usuario en este tenant.',
+      user_inactive: 'Tu usuario está inactivo. Contacta al administrador.',
+      link_generation_failed: 'No se pudo generar la sesión. Intenta de nuevo.',
+      server_misconfigured: 'El servidor SSO no está configurado correctamente.',
+    };
+    const detail = reasonMap[ssoError] ?? 'Acceso denegado o sesión expirada.';
+    toast.error('Acceso denegado o sesión expirada', { description: detail });
+    const next = new URLSearchParams(params);
+    next.delete('error');
+    next.delete('reason');
+    setParams(next, { replace: true });
+  }, [ssoError, params, setParams]);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-12">
       <div className="w-full max-w-md text-center space-y-8 animate-fade-in">
@@ -35,6 +63,16 @@ const Landing = () => {
             clic, sin necesidad de credenciales adicionales.
           </p>
         </div>
+
+        {ssoError && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-left">
+            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <p className="text-xs text-destructive">
+              No se pudo iniciar tu sesión. Vuelve a intentarlo desde tu panel
+              principal.
+            </p>
+          </div>
+        )}
 
         <Button
           asChild
