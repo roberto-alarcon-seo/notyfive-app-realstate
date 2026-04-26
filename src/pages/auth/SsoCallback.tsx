@@ -24,7 +24,7 @@ const SsoCallback = () => {
     if (startedRef.current) return;
 
     if (!token) {
-      navigate("/auth?error=sso_denied&reason=missing_token", { replace: true });
+      navigate("/welcome?error=sso_denied&reason=missing_token", { replace: true });
       return;
     }
 

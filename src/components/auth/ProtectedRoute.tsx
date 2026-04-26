@@ -31,7 +31,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Not authenticated
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    // Super admin pages send unauthenticated users to the admin login.
+    // All other (tenant) routes show the public landing instructing the user
+    // to enter via SSO from the master Core platform.
+    if (requireSuperAdmin) {
+      return <Navigate to="/rs_admin" replace />;
+    }
+    return <Navigate to="/welcome" replace />;
   }
 
   // User is authenticated but doesn't have a profile yet (shouldn't happen but just in case)

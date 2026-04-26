@@ -13,7 +13,6 @@ import { TenantWhatsAppTab } from '@/components/admin/TenantWhatsAppTab';
 import { TenantInventoryTab } from '@/components/admin/TenantInventoryTab';
 import { TenantUsersTab } from '@/components/admin/TenantUsersTab';
 import { TenantLogsTab } from '@/components/admin/TenantLogsTab';
-import { useSupportMode } from '@/contexts/SupportModeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -35,7 +34,7 @@ export default function TenantAdminDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
-  const { startSupportMode, isLoading: isSupportLoading } = useSupportMode();
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   const [tenant, setTenant] = useState<TenantRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,8 +70,28 @@ export default function TenantAdminDetail() {
 
   const handleStartSupportMode = async () => {
     if (!tenant) return;
-    const success = await startSupportMode(tenant.id, tenant.name);
-    if (success) navigate('/');
+    setIsImpersonating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'admin-impersonate-sso',
+        { body: { tenant_id: tenant.id } },
+      );
+      if (error || !data?.sso_path) {
+        const detail = (error as { message?: string } | null)?.message
+          ?? (data as { error?: string } | null)?.error
+          ?? 'No se pudo generar el acceso SSO.';
+        toast.error('Error al iniciar impersonación', { description: detail });
+        return;
+      }
+      toast.success(`Accediendo como ${data.target_email}`);
+      // Full-page navigation so the new session replaces the current one.
+      window.location.assign(data.sso_path as string);
+    } catch (err) {
+      console.error(err);
+      toast.error('Error inesperado al generar SSO');
+    } finally {
+      setIsImpersonating(false);
+    }
   };
 
   if (loading || !tenant) {
@@ -96,15 +115,16 @@ export default function TenantAdminDetail() {
               variant="outline"
               size="sm"
               onClick={handleStartSupportMode}
-              disabled={isSupportLoading}
+              disabled={isImpersonating}
               className="gap-2"
             >
               <Shield className="h-4 w-4" />
-              Acceder como Tenant
+              {isImpersonating ? 'Generando acceso…' : 'Acceder como Tenant'}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-xs">
-            Accede temporalmente a esta instancia para soporte. Todas las acciones quedan registradas.
+            Genera un acceso SSO al CRM como administrador del tenant. La acción
+            queda registrada en auditoría.
           </TooltipContent>
         </Tooltip>
       )}

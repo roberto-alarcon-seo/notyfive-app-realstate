@@ -103,7 +103,10 @@ function redirectTo(url: string): Response {
 }
 
 function denyRedirect(origin: string, reason: string): Response {
-  const url = new URL("/auth", origin);
+  // Send unauthenticated SSO failures to the public landing page.
+  // Tenant users do not have a manual login surface — `/welcome`
+  // explains how to access the CRM and surfaces the error.
+  const url = new URL("/welcome", origin);
   url.searchParams.set("error", "sso_denied");
   url.searchParams.set("reason", reason);
   return redirectTo(url.toString());
