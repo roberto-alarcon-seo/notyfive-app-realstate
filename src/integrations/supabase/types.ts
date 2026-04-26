@@ -3431,7 +3431,7 @@ export type Database = {
           pending_plan: string | null
           pending_plan_effective_at: string | null
           pending_stripe_price_id: string | null
-          plan: Database["public"]["Enums"]["tenant_plan"]
+          plan: string
           status: Database["public"]["Enums"]["tenant_status"]
           stripe_customer_id: string | null
           stripe_price_id: string | null
@@ -3467,7 +3467,7 @@ export type Database = {
           pending_plan?: string | null
           pending_plan_effective_at?: string | null
           pending_stripe_price_id?: string | null
-          plan?: Database["public"]["Enums"]["tenant_plan"]
+          plan?: string
           status?: Database["public"]["Enums"]["tenant_status"]
           stripe_customer_id?: string | null
           stripe_price_id?: string | null
@@ -3503,7 +3503,7 @@ export type Database = {
           pending_plan?: string | null
           pending_plan_effective_at?: string | null
           pending_stripe_price_id?: string | null
-          plan?: Database["public"]["Enums"]["tenant_plan"]
+          plan?: string
           status?: Database["public"]["Enums"]["tenant_status"]
           stripe_customer_id?: string | null
           stripe_price_id?: string | null
@@ -3971,14 +3971,6 @@ export type Database = {
         | "SUBSCRIPTION_REQUIRED"
         | "SUBSCRIBED_ACTIVE"
         | "SUSPENDED"
-      tenant_plan:
-        | "trial"
-        | "basic"
-        | "pro"
-        | "enterprise"
-        | "starter"
-        | "growth"
-        | "scale"
       tenant_role:
         | "owner"
         | "marketer"
@@ -4236,15 +4228,6 @@ export const Constants = {
         "SUBSCRIPTION_REQUIRED",
         "SUBSCRIBED_ACTIVE",
         "SUSPENDED",
-      ],
-      tenant_plan: [
-        "trial",
-        "basic",
-        "pro",
-        "enterprise",
-        "starter",
-        "growth",
-        "scale",
       ],
       tenant_role: [
         "owner",
