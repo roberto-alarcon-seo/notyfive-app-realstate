@@ -2387,6 +2387,7 @@ export type Database = {
           file_url: string
           id: string
           property_id: string
+          source: string
           tenant_id: string
         }
         Insert: {
@@ -2397,6 +2398,7 @@ export type Database = {
           file_url: string
           id?: string
           property_id: string
+          source?: string
           tenant_id: string
         }
         Update: {
@@ -2407,6 +2409,7 @@ export type Database = {
           file_url?: string
           id?: string
           property_id?: string
+          source?: string
           tenant_id?: string
         }
         Relationships: [
@@ -2434,6 +2437,7 @@ export type Database = {
           property_id: string
           question: string
           sort_order: number
+          source: string
           tenant_id: string
         }
         Insert: {
@@ -2443,6 +2447,7 @@ export type Database = {
           property_id: string
           question: string
           sort_order?: number
+          source?: string
           tenant_id: string
         }
         Update: {
@@ -2452,6 +2457,7 @@ export type Database = {
           property_id?: string
           question?: string
           sort_order?: number
+          source?: string
           tenant_id?: string
         }
         Relationships: [
@@ -2480,6 +2486,7 @@ export type Database = {
           is_cover: boolean
           property_id: string
           sort_order: number
+          source: string
           tenant_id: string
         }
         Insert: {
@@ -2490,6 +2497,7 @@ export type Database = {
           is_cover?: boolean
           property_id: string
           sort_order?: number
+          source?: string
           tenant_id: string
         }
         Update: {
@@ -2500,6 +2508,7 @@ export type Database = {
           is_cover?: boolean
           property_id?: string
           sort_order?: number
+          source?: string
           tenant_id?: string
         }
         Relationships: [
