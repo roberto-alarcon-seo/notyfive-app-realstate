@@ -58,12 +58,13 @@ Deno.serve(async (req) => {
       });
     }
     const { data: roleRow } = await supabaseAdmin
-      .from("user_roles").select("global_role").eq("user_id", user.id).single();
+      .from("user_roles").select("global_role, partner_scope").eq("user_id", user.id).single();
     if (roleRow?.global_role !== "super_admin") {
       return new Response(JSON.stringify({ success: false, error: "Forbidden" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const callerPartnerScope: string | null = (roleRow as any)?.partner_scope ?? null;
 
     const body = await req.json();
     const action = body?.action || "invite";
@@ -82,10 +83,18 @@ Deno.serve(async (req) => {
       }
       // Verify target is super_admin
       const { data: targetRole } = await supabaseAdmin
-        .from("user_roles").select("global_role").eq("user_id", userId).single();
+        .from("user_roles").select("global_role, partner_scope").eq("user_id", userId).single();
       if (targetRole?.global_role !== "super_admin") {
         return new Response(JSON.stringify({ success: false, error: "Target is not a super admin" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Scope enforcement: partner admins can only delete super admins in
+      // their own partner_scope. Global admins (null scope) can delete anyone.
+      const targetScope: string | null = (targetRole as any)?.partner_scope ?? null;
+      if (callerPartnerScope && targetScope !== callerPartnerScope) {
+        return new Response(JSON.stringify({ success: false, error: "No autorizado para eliminar super admins fuera de tu ámbito" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
@@ -109,7 +118,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate partnerScope if provided
+    // Validate partnerScope if provided. Partner admins can only create
+    // super admins inside their own scope.
     let validatedPartnerScope: string | null = null;
     if (partnerScope && partnerScope !== "global") {
       const { data: partnerRow } = await supabaseAdmin
@@ -120,6 +130,11 @@ Deno.serve(async (req) => {
         });
       }
       validatedPartnerScope = partnerScope;
+    }
+    if (callerPartnerScope && validatedPartnerScope !== callerPartnerScope) {
+      return new Response(JSON.stringify({ success: false, error: "Solo puedes crear super admins dentro de tu propio partner" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
