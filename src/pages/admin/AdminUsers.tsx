@@ -422,6 +422,7 @@ const AdminUsers = () => {
                   <tr className="border-b border-border">
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Nombre</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Email</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Ámbito</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Estado</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Último acceso</th>
                     <th className="text-right p-4 text-sm font-medium text-muted-foreground"></th>
@@ -442,6 +443,17 @@ const AdminUsers = () => {
                         </div>
                       </td>
                       <td className="p-4 text-sm text-foreground">{sa.email}</td>
+                      <td className="p-4">
+                        {sa.partner_scope ? (
+                          <Badge variant="outline" className="text-xs">
+                            {sa.partner_name || sa.partner_scope}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            🌐 Global
+                          </Badge>
+                        )}
+                      </td>
                       <td className="p-4">{getStatusBadge(sa.status)}</td>
                       <td className="p-4 text-sm text-muted-foreground">
                         {sa.last_login_at
