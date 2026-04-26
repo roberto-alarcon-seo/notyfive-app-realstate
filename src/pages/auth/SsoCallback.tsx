@@ -19,6 +19,7 @@ const SsoCallback = () => {
 
   const token = params.get("token");
   const redirect = params.get("redirect") || "/";
+  const mode = params.get("mode") || "";
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -49,6 +50,9 @@ const SsoCallback = () => {
         );
         ssoUrl.searchParams.set("token", token);
         ssoUrl.searchParams.set("redirect", redirect);
+        if (mode) {
+          ssoUrl.searchParams.set("mode", mode);
+        }
 
         // Full-page navigation: the Edge Function responds with a 302 to the
         // Supabase magic link, which redirects back to `redirect` with a
@@ -59,7 +63,7 @@ const SsoCallback = () => {
         navigate("/welcome?error=sso_denied&reason=client_error", { replace: true });
       }
     })();
-  }, [token, redirect, navigate]);
+  }, [token, redirect, mode, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
