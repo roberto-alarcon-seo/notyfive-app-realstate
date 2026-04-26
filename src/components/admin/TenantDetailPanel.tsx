@@ -1,5 +1,5 @@
 import { X, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -9,8 +9,9 @@ import { TenantWhatsAppTab } from './TenantWhatsAppTab';
 import { TenantUsageTab } from './TenantUsageTab';
 import { TenantAutomationTab } from './TenantAutomationTab';
 import { TenantSupportTab } from './TenantSupportTab';
-import { useSupportMode } from '@/contexts/SupportModeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface Tenant {
   id: string;
@@ -33,16 +34,30 @@ interface TenantDetailPanelProps {
 }
 
 export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDetailPanelProps) {
-  const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
-  const { startSupportMode, isLoading: isSupportLoading } = useSupportMode();
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   const handleStartSupportMode = async () => {
-    const success = await startSupportMode(tenant.id, tenant.name);
-    if (success) {
-      onClose();
-      // Navigate to dashboard to view tenant data
-      navigate('/');
+    setIsImpersonating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'admin-impersonate-sso',
+        { body: { tenant_id: tenant.id } },
+      );
+      if (error || !data?.sso_path) {
+        const detail = (error as { message?: string } | null)?.message
+          ?? (data as { error?: string } | null)?.error
+          ?? 'No se pudo generar el acceso SSO.';
+        toast.error('Error al iniciar impersonación', { description: detail });
+        return;
+      }
+      toast.success(`Accediendo como ${data.target_email}`);
+      window.location.assign(data.sso_path as string);
+    } catch (err) {
+      console.error(err);
+      toast.error('Error inesperado al generar SSO');
+    } finally {
+      setIsImpersonating(false);
     }
   };
 
@@ -64,15 +79,16 @@ export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDet
                     variant="outline" 
                     size="sm"
                     onClick={handleStartSupportMode}
-                    disabled={isSupportLoading}
+                    disabled={isImpersonating}
                     className="gap-2"
                   >
                     <Shield className="h-4 w-4" />
-                    Acceder como Tenant
+                    {isImpersonating ? 'Generando…' : 'Acceder como Tenant'}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
-                  Accede temporalmente a esta instancia para soporte. Todas las acciones quedan registradas.
+                  Genera un acceso SSO al CRM como administrador del tenant.
+                  La acción queda registrada en auditoría.
                 </TooltipContent>
               </Tooltip>
             )}
