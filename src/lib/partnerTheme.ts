@@ -153,16 +153,18 @@ export const THEME_PRESETS: Record<string, { label: string; theme: PartnerTheme 
     },
   },
   mls_latam_light: {
-    label: "MLS Latam (Claro / Naranja)",
+    label: "MLS Latam (Claro / Rojo)",
     theme: {
-      // Crisp white surfaces, dark text and the signature MLS orange (#F34C3D)
-      // as accent. Sidebar stays white with dark text for readability.
-      app_bg: "0 0% 100%",
-      card_bg: "0 0% 100%",
-      sidebar_bg: "0 0% 100%",
-      sidebar_text: "0 0% 10%",
-      sidebar_style: "contrast",
-      primary_color: "4 89% 60%",
+      // MLS Latam — official spec.
+      // Light surfaces (#FDFAFB / #FFFFFF), dark text (#1B2030), brand red
+      // accent (#E14132). Main sidebar stays DARK permanently as part of the
+      // brand identity, with the brand red as active state.
+      app_bg: "340 33% 99%", // #FDFAFB
+      card_bg: "0 0% 100%", // #FFFFFF
+      sidebar_bg: "220 26% 14%", // #1B2030 (always dark)
+      sidebar_text: "220 9% 70%", // #A8ADBA
+      sidebar_style: "solid",
+      primary_color: "4 74% 54%", // #E14132
       mode: "light",
       theme_preset: "mls_latam_light",
     },
