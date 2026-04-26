@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export function CreditsGatingBanner() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
-  const { canOperate, isLoading } = useOperationStatus();
+  const { canOperate, isLoading, status } = useOperationStatus();
 
   // Don't show for super admins or if still loading
   if (isSuperAdmin || isLoading) {
@@ -23,6 +23,8 @@ export function CreditsGatingBanner() {
     return null;
   }
 
+  const isSuspended = status === 'SUSPENDED';
+
   return (
     <div className="bg-warning/10 border-b border-warning/20 px-6 py-3">
       <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
@@ -32,13 +34,18 @@ export function CreditsGatingBanner() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
-              Tu cuenta está lista para configurarse
+              {isSuspended
+                ? 'Cuenta suspendida'
+                : 'Tu cuenta está lista para configurarse'}
             </p>
             <p className="text-xs text-muted-foreground">
-              Para enviar mensajes necesitas activar un plan o recargar créditos.
+              {isSuspended
+                ? 'El envío de mensajes y la IA están bloqueados. Contacta a tu administrador para reactivar el servicio.'
+                : 'Para enviar mensajes necesitas activar un plan o recargar créditos.'}
             </p>
           </div>
         </div>
+        {!isSuspended && (
         <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
@@ -50,6 +57,7 @@ export function CreditsGatingBanner() {
             <ArrowRight className="h-3 w-3" />
           </Button>
         </div>
+        )}
       </div>
     </div>
   );

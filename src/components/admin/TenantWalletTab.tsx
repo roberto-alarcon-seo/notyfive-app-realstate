@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquare, Plus, AlertTriangle, CheckCircle2, XCircle, TrendingUp, TrendingDown, History, Loader2, Info, Calendar } from 'lucide-react';
+import { MessageSquare, Plus, AlertTriangle, CheckCircle2, XCircle, TrendingUp, TrendingDown, History, Loader2, Info, Calendar, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTenantWallet, useTenantWalletTransactions, useAddMessages } from '@/hooks/useWallet';
 import { useAdminTenantCredits, getPlanMonthlyCredits } from '@/hooks/useTenantCredits';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -27,6 +29,23 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
   const { data: wallet, isLoading: walletLoading } = useTenantWallet(tenantId);
   const { data: transactions, isLoading: txLoading } = useTenantWalletTransactions(tenantId);
   const addMessages = useAddMessages();
+
+  // Tenant context: detect whether this tenant's billing is managed by the
+  // external Core. When true we lock manual adjustments and surface a banner.
+  const { data: tenantInfo } = useQuery({
+    queryKey: ['tenant-managed-externally', tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('managed_externally, billing_state')
+        .eq('id', tenantId)
+        .single();
+      if (error) throw error;
+      return data as { managed_externally: boolean | null; billing_state: string };
+    },
+    enabled: !!tenantId,
+  });
+  const isManagedExternally = tenantInfo?.managed_externally === true;
   
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [messagesToAdd, setMessagesToAdd] = useState('');
@@ -173,10 +192,23 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
         </div>
 
         {/* Action */}
-        <Button onClick={() => setShowAddDialog(true)} className="gradient-primary">
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar Créditos
-        </Button>
+        {isManagedExternally ? (
+          <div className="flex items-start gap-2 rounded-lg border border-border bg-background/50 p-3 text-xs">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <div>
+              <p className="font-medium text-foreground">Gestionado por el Core</p>
+              <p className="text-muted-foreground">
+                El saldo y estado de suscripción son dictados por el Core. Los ajustes
+                manuales están deshabilitados.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <Button onClick={() => setShowAddDialog(true)} className="gradient-primary">
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Créditos
+          </Button>
+        )}
       </div>
 
       {/* Stats Cards */}

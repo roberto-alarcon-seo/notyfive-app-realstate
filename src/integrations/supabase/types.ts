@@ -3970,6 +3970,7 @@ export type Database = {
         | "CREDITS_EXHAUSTED"
         | "SUBSCRIPTION_REQUIRED"
         | "SUBSCRIBED_ACTIVE"
+        | "SUSPENDED"
       tenant_plan:
         | "trial"
         | "basic"
@@ -4234,6 +4235,7 @@ export const Constants = {
         "CREDITS_EXHAUSTED",
         "SUBSCRIPTION_REQUIRED",
         "SUBSCRIBED_ACTIVE",
+        "SUSPENDED",
       ],
       tenant_plan: [
         "trial",
