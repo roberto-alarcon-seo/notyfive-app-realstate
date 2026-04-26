@@ -108,27 +108,45 @@ Deno.serve(async (req) => {
 
     const serviceName = 'core';
 
-    // 3. Parse body
-    let body: RequestBody;
+    // 3. Parse body. The Core system wraps the payload in a `data` envelope:
+    //    { "action": "upsert_tenant", "data": { "external_id": "...", ... } }
+    // We also accept a flat payload for backward compatibility.
+    let rawBody: any;
     try {
-      body = await req.json();
+      rawBody = await req.json();
     } catch {
       return jsonResponse({ error: 'Invalid JSON body' }, 400);
     }
 
-    if (!body || typeof body !== 'object' || !('action' in body)) {
+    if (!rawBody || typeof rawBody !== 'object' || !('action' in rawBody)) {
       return jsonResponse({ error: 'Missing action' }, 400);
     }
 
-    // 4. Route by action
-    if (body.action === 'upsert_tenant') {
-      return await handleUpsertTenant(supabase, body, serviceName);
+    const action = rawBody.action;
+    const dataEnvelope =
+      rawBody.data && typeof rawBody.data === 'object' && !Array.isArray(rawBody.data)
+        ? rawBody.data
+        : null;
+
+    // Merge: prefer values inside `data`, fall back to top-level for compatibility.
+    const merged = { ...(dataEnvelope ?? {}), ...rawBody };
+    // Re-overlay data so envelope wins on overlapping keys (other than `action`).
+    if (dataEnvelope) {
+      for (const key of Object.keys(dataEnvelope)) {
+        merged[key] = dataEnvelope[key];
+      }
     }
-    if (body.action === 'sync_user') {
-      return await handleSyncUser(supabase, body, serviceName);
+    merged.action = action;
+
+    // 4. Route by action
+    if (action === 'upsert_tenant') {
+      return await handleUpsertTenant(supabase, merged as UpsertTenantBody, serviceName);
+    }
+    if (action === 'sync_user') {
+      return await handleSyncUser(supabase, merged as SyncUserBody, serviceName);
     }
 
-    return jsonResponse({ error: `Unknown action: ${(body as any).action}` }, 400);
+    return jsonResponse({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
     console.error('sync-external-core: unexpected error', err);
     return jsonResponse({ error: 'Internal server error', details: String(err) }, 500);
