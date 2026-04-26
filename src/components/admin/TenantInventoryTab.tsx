@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Building2, Loader2, Lock, Search } from 'lucide-react';
+import { Building2, Eye, Loader2, Lock, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -12,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { TenantPropertyDetailSheet } from './TenantPropertyDetailSheet';
 
 interface TenantInventoryTabProps {
   tenantId: string;
@@ -53,6 +55,13 @@ export function TenantInventoryTab({ tenantId, managedExternally }: TenantInvent
   const [properties, setProperties] = useState<PropertyRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const openDetail = (id: string) => {
+    setSelectedId(id);
+    setSheetOpen(true);
+  };
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -155,11 +164,16 @@ export function TenantInventoryTab({ tenantId, managedExternally }: TenantInvent
                 <TableHead className="text-center">Baños</TableHead>
                 <TableHead className="text-center">m²</TableHead>
                 <TableHead>Origen</TableHead>
+                <TableHead className="w-12 text-right">Detalle</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow
+                  key={p.id}
+                  className="cursor-pointer hover:bg-muted/40"
+                  onClick={() => openDetail(p.id)}
+                >
                   <TableCell>
                     <div className="flex flex-col min-w-0">
                       <span className="font-medium text-foreground truncate max-w-[260px]">
@@ -214,12 +228,33 @@ export function TenantInventoryTab({ tenantId, managedExternally }: TenantInvent
                       </Badge>
                     )}
                   </TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openDetail(p.id)}
+                      aria-label="Ver detalle"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
       </div>
+
+      <TenantPropertyDetailSheet
+        propertyId={selectedId}
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          setSheetOpen(open);
+          if (!open) setSelectedId(null);
+        }}
+        managedExternally={managedExternally}
+      />
     </div>
   );
 }
