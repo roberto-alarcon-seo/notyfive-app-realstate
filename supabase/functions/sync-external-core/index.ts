@@ -1316,7 +1316,15 @@ async function handleUpdateBilling(
   body: UpdateBillingBody,
   serviceName: string,
 ): Promise<Response> {
-  const { tenant_external_id, billing_state, plan, message_credits, reason } = body;
+  const {
+    tenant_external_id,
+    billing_state,
+    plan,
+    message_credits,
+    reason,
+    external_id: movementExternalId,
+    description: descriptionOverride,
+  } = body;
 
   if (
     !tenant_external_id ||
@@ -1437,7 +1445,11 @@ async function handleUpdateBilling(
       .eq('tenant_id', tenant.id)
       .maybeSingle();
 
-    const previousBalance = walletRow?.balance_messages ?? previousState.message_credits;
+    // Use the previous tenant credits as authoritative source for the ledger
+    // (the legacy wallet row may be stale or missing). Fall back to the
+    // wallet balance only if tenant credits are unknown.
+    const previousBalance =
+      previousState.message_credits ?? walletRow?.balance_messages ?? 0;
     const status =
       resolvedBillingState === 'SUSPENDED'
         ? 'blocked'
@@ -1479,12 +1491,49 @@ async function handleUpdateBilling(
     const delta = resolvedCredits - previousBalance;
     if (delta !== 0) {
       const movement_type = delta > 0 ? 'credit' : 'debit';
-      const idempotency_key = `external_adjustment:${tenant.id}:${Date.now()}`;
+      // Distinguish between top-ups originating from the Core (positive
+      // delta) and balance corrections / debits coming from the same
+      // channel. This drives the icon/copy in the Super Admin history UI.
+      const ledgerReason = delta > 0 ? 'external_recharge' : 'core_adjustment';
+      const planLabel = updatedTenant.plan ?? resolvedPlan ?? previousState.plan ?? '—';
+      const defaultDescription =
+        delta > 0
+          ? `Recarga automática vía API Core - Plan ${planLabel}`
+          : `Ajuste de saldo vía API Core - Plan ${planLabel}`;
+      const description =
+        typeof descriptionOverride === 'string' && descriptionOverride.trim().length > 0
+          ? descriptionOverride.trim().slice(0, 500)
+          : defaultDescription;
+
+      // Prefer Core-provided external_id for idempotency so re-deliveries of
+      // the same movement are de-duped. Fall back to a timestamped key.
+      const safeMovementExternalId =
+        typeof movementExternalId === 'string' && movementExternalId.trim().length > 0
+          ? movementExternalId.trim().slice(0, 128)
+          : null;
+      const idempotency_key = safeMovementExternalId
+        ? `core:${safeMovementExternalId}`
+        : `external_adjustment:${tenant.id}:${Date.now()}`;
+
+      const ledgerMetadata: Record<string, unknown> = {
+        service: serviceName,
+        tenant_external_id: tenant.external_id,
+        plan: planLabel,
+        billing_state: updatedTenant.billing_state,
+        previous_balance: previousBalance,
+        new_balance: resolvedCredits,
+        delta,
+      };
+      if (safeMovementExternalId) ledgerMetadata.external_id = safeMovementExternalId;
+      if (reason) ledgerMetadata.reason = reason;
+
       const { error: ledgerErr } = await supabase.from('wallet_ledger').insert({
         tenant_id: tenant.id,
         movement_type,
         amount: Math.abs(delta),
-        reason: 'external_adjustment',
+        reason: ledgerReason,
+        description,
+        metadata: ledgerMetadata,
         source_table: 'sync-external-core',
         idempotency_key,
         balance_before: previousBalance,
@@ -1496,9 +1545,12 @@ async function handleUpdateBilling(
       } else {
         walletLedgerEntry = {
           movement_type,
+          reason: ledgerReason,
           amount: Math.abs(delta),
+          description,
           balance_before: previousBalance,
           balance_after: resolvedCredits,
+          external_id: safeMovementExternalId,
         };
       }
     }
