@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, AlertTriangle, Clock, Wallet, Loader2, RotateCcw, FileText, Sparkles, CreditCard } from "lucide-react";
+import { Send, AlertTriangle, Clock, Wallet, Loader2, RotateCcw, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,7 +12,6 @@ import { useTemplates } from "@/hooks/useTemplates";
 import { useRewriteText } from "@/hooks/useRewriteText";
 import { useOperationStatus } from "@/hooks/useOperationStatus";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 import { EmojiPicker } from "./EmojiPicker";
 import { TemplateSelectorSheet } from "./TemplateSelectorSheet";
 import { MediaUploadButton, type MediaFile } from "./MediaUploadButton";
@@ -54,7 +53,6 @@ export function MessageComposer({
   const [rewriteOriginalText, setRewriteOriginalText] = useState("");
   const [rewriteSuggestedText, setRewriteSuggestedText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const navigate = useNavigate();
   const { profile } = useAuth();
   const isMobile = useIsMobile();
 
@@ -297,20 +295,10 @@ export function MessageComposer({
             <div className="flex-1 min-w-0">
               <h4 className="font-medium text-destructive">Envío deshabilitado</h4>
               <p className="text-sm text-muted-foreground">
-                {!canOperate 
-                  ? 'Necesitas activar un plan o recargar créditos para enviar mensajes.'
-                  : 'Recarga mensajes para continuar enviando.'
-                }
+                Sin saldo disponible. Contacta a tu administrador en Brokia24 Core para gestionar
+                tu plan o recargar mensajes.
               </p>
             </div>
-            <Button 
-              size="sm"
-              onClick={() => navigate('/settings/billing')}
-              className="shrink-0 gap-2"
-            >
-              <CreditCard className="h-4 w-4" />
-              {!canOperate ? 'Activar plan' : 'Recargar'}
-            </Button>
           </div>
         </div>
       </div>

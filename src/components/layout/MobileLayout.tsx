@@ -2,12 +2,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { UserMenu } from "@/components/layout/UserMenu";
-import { WalletIndicator } from "@/components/inbox/WalletIndicator";
-import { CreditsGatingBanner } from "./CreditsGatingBanner";
 import { SupportModeBanner } from "./SupportModeBanner";
-import { useTenantCredits } from "@/hooks/useTenantCredits";
-import { useAuth } from "@/contexts/AuthContext";
-import { useSupportMode } from "@/contexts/SupportModeContext";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -42,9 +37,6 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     localStorage.getItem("brokia-theme") || "dark"
   );
   const navigate = useNavigate();
-  const { data: credits } = useTenantCredits();
-  const { isSuperAdmin } = useAuth();
-  const { isSupportMode } = useSupportMode();
   const totalUnread = useTotalUnreadCount();
 
   const toggleTheme = () => {
@@ -62,16 +54,9 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     navigate("/auth");
   };
 
-  const walletBalance = credits?.message_credits || 0;
-  const walletRollover = credits?.accumulated_credits || 0;
-  const walletMonthly = credits?.monthly_credits_remaining || 0;
-  const walletExtra = credits?.extra_credits || 0;
-  const showWallet = isSupportMode || !isSuperAdmin;
-
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-background">
       <SupportModeBanner />
-      {!isSupportMode && <CreditsGatingBanner />}
 
       {/* Mobile Header */}
       <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0">
@@ -85,14 +70,6 @@ export function MobileLayout({ children }: MobileLayoutProps) {
           <img src={logo} alt="Logo" className="h-8 w-8 object-contain" />
         </div>
         <div className="flex items-center gap-3">
-          {showWallet && (
-            <WalletIndicator
-              balance={walletBalance}
-              rollover={walletRollover}
-              monthly={walletMonthly}
-              extra={walletExtra}
-            />
-          )}
           <UserMenu />
         </div>
       </header>
