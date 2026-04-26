@@ -21,6 +21,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { getCreditStatus } from '@/hooks/useTenantCredits';
 import { toast } from 'sonner';
@@ -426,9 +432,25 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Plan</p>
-              <Badge variant="default" className="capitalize mt-1">
-                {getPlanLabel(tenant.plan)}
-              </Badge>
+              {isExternallyManaged ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="default" className="capitalize mt-1 gap-1 cursor-help">
+                        {getPlanLabel(tenant.plan)}
+                        <Lock className="h-3 w-3" />
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Este valor es controlado por el Sistema Core
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Badge variant="default" className="capitalize mt-1">
+                  {getPlanLabel(tenant.plan)}
+                </Badge>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
                 {getPlanDescription(tenant.plan)}
               </p>
@@ -520,21 +542,42 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              min={1}
-              max={1000}
-              value={maxUsersValue}
-              onChange={(e) => setMaxUsersValue(e.target.value)}
-              disabled={isExternallyManaged || savingMaxUsers}
-              className="w-24"
-            />
             {isExternallyManaged ? (
-              <Badge variant="outline" className="gap-1 text-xs">
-                <Lock className="h-3 w-3" />
-                Solo lectura
-              </Badge>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        value={maxUsersValue}
+                        readOnly
+                        disabled
+                        className="w-24 cursor-not-allowed"
+                      />
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <Lock className="h-3 w-3" />
+                        Solo lectura
+                      </Badge>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Este valor es controlado por el Sistema Core
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : (
+              <>
+                <Input
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={maxUsersValue}
+                  onChange={(e) => setMaxUsersValue(e.target.value)}
+                  disabled={savingMaxUsers}
+                  className="w-24"
+                />
               <Button
                 size="sm"
                 onClick={handleSaveMaxUsers}
@@ -547,6 +590,7 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
                 )}
                 <span className="ml-1">Guardar</span>
               </Button>
+              </>
             )}
           </div>
         </div>
