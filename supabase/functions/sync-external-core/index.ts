@@ -269,18 +269,83 @@ Deno.serve(async (req) => {
     }
     merged.action = action;
 
-    // 4. Route by action
+    // 4. Centralized partner_id enforcement (composite key isolation).
+    //    - The field is REQUIRED in the payload.
+    //    - When the API key is partner-scoped, the payload partner_id MUST match.
+    //    - The partner must exist & be active in the partners catalog.
+    const rawPartnerId = (merged as { partner_id?: unknown }).partner_id;
+    if (typeof rawPartnerId !== 'string' || rawPartnerId.trim().length === 0) {
+      return jsonResponse(
+        {
+          success: false,
+          error: 'partner_id_required',
+          message: 'partner_id is required for multi-tenant isolation',
+        },
+        400,
+      );
+    }
+    const payloadPartnerId = rawPartnerId.trim();
+
+    // Cross-partner protection: a partner-scoped API key cannot operate on a
+    // different partner's data, even if the payload claims so.
+    if (resolvedPartnerId && payloadPartnerId !== resolvedPartnerId) {
+      console.warn('sync-external-core: cross-partner attempt blocked', {
+        api_key_partner: resolvedPartnerId,
+        payload_partner: payloadPartnerId,
+      });
+      return jsonResponse(
+        {
+          success: false,
+          error: 'partner_mismatch',
+          message:
+            'The provided API key is not authorized to operate on this partner_id.',
+        },
+        403,
+      );
+    }
+
+    // Validate partner exists & is active.
+    const { data: partnerRow, error: partnerErr } = await supabase
+      .from('partners')
+      .select('id, is_active')
+      .eq('id', payloadPartnerId)
+      .maybeSingle();
+    if (partnerErr) {
+      console.error('sync-external-core: partner lookup error', partnerErr);
+      return jsonResponse(
+        {
+          success: false,
+          error: 'partner_id_invalid',
+          message: 'El Partner ID proporcionado no es válido o no está activo.',
+        },
+        400,
+      );
+    }
+    if (!partnerRow?.id || partnerRow.is_active !== true) {
+      return jsonResponse(
+        {
+          success: false,
+          error: 'partner_id_invalid',
+          message: 'El Partner ID proporcionado no es válido o no está activo.',
+        },
+        400,
+      );
+    }
+    const partnerId = partnerRow.id as string;
+
+    // 5. Route by action — every handler receives the validated partnerId
+    //    and MUST scope all tenant lookups to (partner_id, external_id).
     if (action === 'upsert_tenant') {
-      return await handleUpsertTenant(supabase, merged as UpsertTenantBody, serviceName, resolvedPartnerId);
+      return await handleUpsertTenant(supabase, merged as UpsertTenantBody, serviceName, partnerId);
     }
     if (action === 'sync_user') {
-      return await handleSyncUser(supabase, merged as SyncUserBody, serviceName);
+      return await handleSyncUser(supabase, merged as SyncUserBody, serviceName, partnerId);
     }
     if (action === 'sync_property') {
-      return await handleSyncProperty(supabase, merged as SyncPropertyBody, serviceName);
+      return await handleSyncProperty(supabase, merged as SyncPropertyBody, serviceName, partnerId);
     }
     if (action === 'update_billing') {
-      return await handleUpdateBilling(supabase, merged as UpdateBillingBody, serviceName);
+      return await handleUpdateBilling(supabase, merged as UpdateBillingBody, serviceName, partnerId);
     }
 
     return jsonResponse({ error: `Unknown action: ${action}` }, 400);
