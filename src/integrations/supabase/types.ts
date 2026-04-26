@@ -1815,6 +1815,39 @@ export type Database = {
           },
         ]
       }
+      internal_system_auth: {
+        Row: {
+          api_key_hash: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          service_name: string
+          updated_at: string
+        }
+        Insert: {
+          api_key_hash: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          service_name: string
+          updated_at?: string
+        }
+        Update: {
+          api_key_hash?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          service_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           ai_generated: boolean
@@ -3355,6 +3388,7 @@ export type Database = {
           cancellation_requested_at: string | null
           created_at: string
           current_period_end: string | null
+          external_id: string | null
           extra_credits: number
           id: string
           initial_credits_granted: boolean
@@ -3362,6 +3396,7 @@ export type Database = {
           last_payment_at: string | null
           last_refill_at: string | null
           last_upgrade_grant_key: string | null
+          managed_externally: boolean
           max_contacts: number
           max_users: number
           message_credits: number
@@ -3388,6 +3423,7 @@ export type Database = {
           cancellation_requested_at?: string | null
           created_at?: string
           current_period_end?: string | null
+          external_id?: string | null
           extra_credits?: number
           id?: string
           initial_credits_granted?: boolean
@@ -3395,6 +3431,7 @@ export type Database = {
           last_payment_at?: string | null
           last_refill_at?: string | null
           last_upgrade_grant_key?: string | null
+          managed_externally?: boolean
           max_contacts?: number
           max_users?: number
           message_credits?: number
@@ -3421,6 +3458,7 @@ export type Database = {
           cancellation_requested_at?: string | null
           created_at?: string
           current_period_end?: string | null
+          external_id?: string | null
           extra_credits?: number
           id?: string
           initial_credits_granted?: boolean
@@ -3428,6 +3466,7 @@ export type Database = {
           last_payment_at?: string | null
           last_refill_at?: string | null
           last_upgrade_grant_key?: string | null
+          managed_externally?: boolean
           max_contacts?: number
           max_users?: number
           message_credits?: number
