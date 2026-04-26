@@ -17,8 +17,6 @@ interface TopPropertiesCardProps {
 }
 
 export function TopPropertiesCard({ properties, maxInterest, isLoading }: TopPropertiesCardProps) {
-  const navigate = useNavigate();
-
   if (isLoading) {
     return (
       <Card className="col-span-1">

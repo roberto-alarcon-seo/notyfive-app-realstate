@@ -1,6 +1,5 @@
 import { Building } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -17,7 +16,6 @@ interface PropertyInterestCardProps {
 }
 
 export function PropertyInterestCard({ propertyId, onChange }: PropertyInterestCardProps) {
-  const navigate = useNavigate();
   const { data: properties, isLoading } = useProperties();
 
   const selectedProperty = properties?.find(p => p.id === propertyId);
