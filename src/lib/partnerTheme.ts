@@ -259,6 +259,22 @@ export function applyPartnerTheme(theme: PartnerTheme): void {
   root.style.setProperty("--ring", theme.primary_color);
   root.style.setProperty("--message-outgoing", theme.primary_color);
 
+  // Gradient + shadow tokens derived from the primary so brand elements
+  // (buttons, hover cards, glow effects) follow the partner accent.
+  const primaryGlow = shiftLightness(theme.primary_color, 10);
+  root.style.setProperty(
+    "--gradient-primary",
+    `linear-gradient(135deg, hsl(${theme.primary_color}), hsl(${primaryGlow}))`,
+  );
+  root.style.setProperty(
+    "--shadow-elegant",
+    `0 10px 30px -10px hsl(${theme.primary_color} / 0.3)`,
+  );
+  root.style.setProperty(
+    "--shadow-glow",
+    `0 0 40px hsl(${theme.primary_color} / 0.2)`,
+  );
+
   // Sidebar
   let sidebarBg = theme.sidebar_bg;
   if (theme.sidebar_style === "contrast") {
