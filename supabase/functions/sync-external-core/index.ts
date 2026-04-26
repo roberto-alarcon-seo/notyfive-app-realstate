@@ -188,6 +188,26 @@ async function handleUpsertTenant(
       return jsonResponse({ error: 'Failed to update tenant', details: updateError.message }, 500);
     }
 
+    // Audit: log external sync update event (non-blocking).
+    try {
+      await supabase.from('security_events').insert({
+        tenant_id: existing.id,
+        event_type: 'external_sync_update',
+        metadata: {
+          operation: 'updated',
+          external_id: existing.external_id,
+          service: serviceName,
+          changes: {
+            name: name.trim(),
+            plan: resolvedPlan,
+            ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
+          },
+        },
+      });
+    } catch (logErr) {
+      console.warn('sync-external-core: security_events insert failed (update)', logErr);
+    }
+
     return jsonResponse({
       success: true,
       operation: 'updated',
@@ -221,6 +241,24 @@ async function handleUpsertTenant(
   if (createError) {
     console.error('sync-external-core: create error', createError);
     return jsonResponse({ error: 'Failed to create tenant', details: createError.message }, 500);
+  }
+
+  // Audit: log external tenant creation (non-blocking).
+  try {
+    await supabase.from('security_events').insert({
+      tenant_id: created.id,
+      event_type: 'external_sync_update',
+      metadata: {
+        operation: 'created',
+        external_id: created.external_id,
+        service: serviceName,
+        plan: resolvedPlan,
+        ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
+        owner_email: owner_email ?? null,
+      },
+    });
+  } catch (logErr) {
+    console.warn('sync-external-core: security_events insert failed (create)', logErr);
   }
 
   // The `create_wallet_for_tenant` trigger automatically creates a wallet row with 0 balance.
