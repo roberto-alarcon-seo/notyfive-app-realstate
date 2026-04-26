@@ -48,6 +48,11 @@ export default function PropertyEditor() {
     visit_availability: "",
     accepted_credits: [],
     youtube_url: "",
+    bedrooms: null,
+    bathrooms: null,
+    parking_spots: null,
+    sq_meters: null,
+    ai_description_template: "",
   });
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -74,6 +79,11 @@ export default function PropertyEditor() {
         visit_availability: property.visit_availability || "",
         accepted_credits: property.accepted_credits || [],
         youtube_url: property.youtube_url || "",
+        bedrooms: property.bedrooms ?? null,
+        bathrooms: property.bathrooms ?? null,
+        parking_spots: property.parking_spots ?? null,
+        sq_meters: property.sq_meters ?? null,
+        ai_description_template: property.ai_description_template || "",
       });
     }
   }, [property, isNew]);
