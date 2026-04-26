@@ -202,10 +202,47 @@ export function applyPartnerTheme(theme: PartnerTheme): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
 
+  // Detect surface mode. Either explicit (`mode`) or inferred from the app_bg
+  // lightness: anything brighter than 50% lightness is treated as "light".
+  const explicitMode = theme.mode;
+  const lightnessMatch = theme.app_bg.trim().match(/(\d+(?:\.\d+)?)%\s*$/);
+  const inferredLight =
+    !!lightnessMatch && parseFloat(lightnessMatch[1]) >= 50;
+  const isLight = explicitMode ? explicitMode === "light" : inferredLight;
+
   // Core surfaces
   root.style.setProperty("--background", theme.app_bg);
   root.style.setProperty("--card", theme.card_bg);
   root.style.setProperty("--popover", theme.card_bg);
+
+  // Text + ancillary tokens that flip with the surface mode
+  if (isLight) {
+    root.style.setProperty("--foreground", "0 0% 10%");
+    root.style.setProperty("--card-foreground", "0 0% 10%");
+    root.style.setProperty("--popover-foreground", "0 0% 10%");
+    root.style.setProperty("--secondary", "0 0% 96%");
+    root.style.setProperty("--secondary-foreground", "0 0% 10%");
+    root.style.setProperty("--muted", "0 0% 96%");
+    root.style.setProperty("--muted-foreground", "0 0% 35%");
+    root.style.setProperty("--accent", "0 0% 96%");
+    root.style.setProperty("--accent-foreground", "0 0% 10%");
+    root.style.setProperty("--border", "0 0% 90%");
+    root.style.setProperty("--input", "0 0% 90%");
+    root.style.setProperty("--message-incoming", "0 0% 94%");
+  } else {
+    root.style.setProperty("--foreground", "0 0% 100%");
+    root.style.setProperty("--card-foreground", "0 0% 100%");
+    root.style.setProperty("--popover-foreground", "0 0% 100%");
+    root.style.setProperty("--secondary", "0 0% 16%");
+    root.style.setProperty("--secondary-foreground", "0 0% 100%");
+    root.style.setProperty("--muted", "0 0% 16%");
+    root.style.setProperty("--muted-foreground", "220 9% 60%");
+    root.style.setProperty("--accent", "217 91% 60%");
+    root.style.setProperty("--accent-foreground", "0 0% 100%");
+    root.style.setProperty("--border", "0 0% 17%");
+    root.style.setProperty("--input", "0 0% 17%");
+    root.style.setProperty("--message-incoming", "0 0% 16%");
+  }
 
   // Primary / accent
   root.style.setProperty("--primary", theme.primary_color);
