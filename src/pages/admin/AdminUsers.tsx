@@ -38,6 +38,7 @@ import {
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SuperAdminRow {
   id: string;
@@ -46,6 +47,8 @@ interface SuperAdminRow {
   status: string;
   created_at: string;
   last_login_at: string | null;
+  partner_scope: string | null;
+  partner_name: string | null;
 }
 
 interface TenantUserRow {
@@ -56,19 +59,26 @@ interface TenantUserRow {
   tenant_id: string | null;
   tenant_name: string | null;
   tenant_managed_externally: boolean;
+  tenant_partner_id: string | null;
   global_role: string;
   tenant_role: string | null;
   created_at: string;
   last_login_at: string | null;
 }
 
+interface PartnerOption {
+  id: string;
+  name: string;
+}
+
 const inviteSchema = z.object({
   name: z.string().trim().min(2, 'Nombre muy corto').max(100),
   email: z.string().trim().email('Email inválido'),
+  partnerScope: z.string().min(1, 'Selecciona un partner'),
 });
 
 const AdminUsers = () => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, partnerScope: currentPartnerScope } = useAuth();
   const [tab, setTab] = useState<'super_admins' | 'all_users'>('super_admins');
 
   // Super admins state
@@ -76,7 +86,7 @@ const AdminUsers = () => {
   const [loadingSA, setLoadingSA] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ name: '', email: '' });
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', partnerScope: 'global' });
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
   const [saToDelete, setSaToDelete] = useState<SuperAdminRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -86,15 +96,28 @@ const AdminUsers = () => {
   const [loadingAll, setLoadingAll] = useState(true);
   const [searchAll, setSearchAll] = useState('');
 
+  // Partners catalog
+  const [partners, setPartners] = useState<PartnerOption[]>([]);
+
+  const fetchPartners = async () => {
+    const { data } = await (supabase as any).from('partners').select('id, name').order('name');
+    setPartners(data || []);
+  };
+
   const fetchSuperAdmins = async () => {
     setLoadingSA(true);
     try {
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('user_id')
+        .select('user_id, partner_scope' as any)
         .eq('global_role', 'super_admin');
       if (rolesError) throw rolesError;
-      const ids = (roles || []).map((r) => r.user_id);
+      const rolesArr = (roles || []) as Array<{ user_id: string; partner_scope: string | null }>;
+      const ids = rolesArr.map((r) => r.user_id);
+      const scopeMap = rolesArr.reduce((acc, r) => {
+        acc[r.user_id] = r.partner_scope;
+        return acc;
+      }, {} as Record<string, string | null>);
       if (ids.length === 0) {
         setSuperAdmins([]);
         return;
@@ -105,7 +128,24 @@ const AdminUsers = () => {
         .in('id', ids)
         .order('created_at', { ascending: false });
       if (profilesError) throw profilesError;
-      setSuperAdmins(profiles || []);
+      const { data: partnersData } = await (supabase as any).from('partners').select('id, name');
+      const partnerNameMap = (partnersData || []).reduce((acc: Record<string, string>, p: any) => {
+        acc[p.id] = p.name;
+        return acc;
+      }, {});
+      const enriched: SuperAdminRow[] = (profiles || []).map((p: any) => {
+        const scope = scopeMap[p.id] ?? null;
+        return {
+          ...p,
+          partner_scope: scope,
+          partner_name: scope ? partnerNameMap[scope] ?? scope : null,
+        };
+      });
+      // If current super admin has a partner scope, only show admins of same partner + globals
+      const filtered = currentPartnerScope
+        ? enriched.filter((sa) => sa.partner_scope === currentPartnerScope || sa.partner_scope === null)
+        : enriched;
+      setSuperAdmins(filtered);
     } catch (e: any) {
       console.error(e);
       toast.error('Error al cargar super admins');
@@ -119,7 +159,7 @@ const AdminUsers = () => {
     try {
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, email, name, status, tenant_id, created_at, last_login_at, tenants(name, managed_externally)')
+        .select('id, email, name, status, tenant_id, created_at, last_login_at, tenants(name, managed_externally, partner_id)' as any)
         .order('created_at', { ascending: false })
         .limit(500);
       if (error) throw error;
@@ -145,12 +185,17 @@ const AdminUsers = () => {
         tenant_id: p.tenant_id,
         tenant_name: p.tenants?.name ?? null,
         tenant_managed_externally: Boolean(p.tenants?.managed_externally),
+        tenant_partner_id: p.tenants?.partner_id ?? null,
         global_role: rolesMap[p.id]?.global_role ?? 'user',
         tenant_role: rolesMap[p.id]?.tenant_role ?? null,
         created_at: p.created_at,
         last_login_at: p.last_login_at,
       }));
-      setAllUsers(rows);
+      // If current super admin has partner_scope, filter to that partner's tenants only
+      const filtered = currentPartnerScope
+        ? rows.filter((r) => r.tenant_partner_id === currentPartnerScope)
+        : rows;
+      setAllUsers(filtered);
     } catch (e: any) {
       console.error(e);
       toast.error('Error al cargar usuarios');
@@ -160,9 +205,11 @@ const AdminUsers = () => {
   };
 
   useEffect(() => {
+    fetchPartners();
     fetchSuperAdmins();
     fetchAllUsers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPartnerScope]);
 
   const handleInviteSuperAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,14 +227,18 @@ const AdminUsers = () => {
     setIsInviting(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-invite-super-admin', {
-        body: { email: inviteForm.email, name: inviteForm.name },
+        body: {
+          email: inviteForm.email,
+          name: inviteForm.name,
+          partnerScope: inviteForm.partnerScope === 'global' ? null : inviteForm.partnerScope,
+        },
       });
       if (error || !data?.success) {
         throw new Error(data?.error || error?.message || 'Error al invitar');
       }
       toast.success('Super admin invitado. Le enviamos un enlace de activación.');
       setInviteOpen(false);
-      setInviteForm({ name: '', email: '' });
+      setInviteForm({ name: '', email: '', partnerScope: 'global' });
       fetchSuperAdmins();
       fetchAllUsers();
     } catch (err: any) {
