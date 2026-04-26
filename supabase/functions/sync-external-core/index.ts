@@ -1226,3 +1226,244 @@ async function handleSyncProperty(
     operation === 'created' ? 201 : 200,
   );
 }
+
+/**
+ * Handle the `update_billing` action.
+ *
+ * The external Core delegates control of the tenant's billing state, plan and
+ * total credit balance. We:
+ *  - Resolve the tenant by `tenant_external_id`.
+ *  - Update `tenants.billing_state`, `plan`, `message_credits` (when provided).
+ *  - Sync the legacy `wallets.balance_messages` so older code paths agree.
+ *  - Record a `wallet_ledger` movement (`external_adjustment`) for any delta.
+ *  - Audit the change in `security_events` (`external_billing_update`).
+ */
+async function handleUpdateBilling(
+  supabase: SupabaseClient,
+  body: UpdateBillingBody,
+  serviceName: string,
+): Promise<Response> {
+  const { tenant_external_id, billing_state, plan, message_credits, reason } = body;
+
+  if (
+    !tenant_external_id ||
+    typeof tenant_external_id !== 'string' ||
+    tenant_external_id.trim().length === 0
+  ) {
+    return jsonResponse({ error: 'tenant_external_id is required (non-empty string)' }, 400);
+  }
+
+  // Validate billing_state (optional but constrained when sent).
+  let resolvedBillingState: string | undefined;
+  if (billing_state !== undefined && billing_state !== null) {
+    if (typeof billing_state !== 'string' || !VALID_BILLING_STATES.includes(billing_state)) {
+      return jsonResponse(
+        { error: `Invalid billing_state. Must be one of: ${VALID_BILLING_STATES.join(', ')}` },
+        400,
+      );
+    }
+    resolvedBillingState = billing_state;
+  }
+
+  // Validate plan (optional).
+  let resolvedPlan: string | undefined;
+  if (plan !== undefined && plan !== null) {
+    const candidate = String(plan).toLowerCase();
+    if (!VALID_PLANS.includes(candidate)) {
+      return jsonResponse(
+        { error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` },
+        400,
+      );
+    }
+    resolvedPlan = candidate;
+  }
+
+  // Validate message_credits (optional). Must be a non-negative integer.
+  let resolvedCredits: number | undefined;
+  if (message_credits !== undefined && message_credits !== null) {
+    if (
+      typeof message_credits !== 'number' ||
+      !Number.isFinite(message_credits) ||
+      !Number.isInteger(message_credits) ||
+      message_credits < 0
+    ) {
+      return jsonResponse({ error: 'message_credits must be a non-negative integer' }, 400);
+    }
+    resolvedCredits = message_credits;
+  }
+
+  if (
+    resolvedBillingState === undefined &&
+    resolvedPlan === undefined &&
+    resolvedCredits === undefined
+  ) {
+    return jsonResponse(
+      { error: 'At least one of billing_state, plan or message_credits must be provided' },
+      400,
+    );
+  }
+
+  // Resolve tenant.
+  const { data: tenant, error: fetchError } = await supabase
+    .from('tenants')
+    .select(
+      'id, external_id, name, plan, billing_state, message_credits, monthly_credits_remaining, accumulated_credits, extra_credits, managed_externally',
+    )
+    .eq('external_id', tenant_external_id.trim())
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error('update_billing: fetch tenant error', fetchError);
+    return jsonResponse({ error: 'Database error', details: fetchError.message }, 500);
+  }
+  if (!tenant) {
+    return jsonResponse({ error: 'Tenant not found for given tenant_external_id' }, 404);
+  }
+
+  const previousState = {
+    billing_state: tenant.billing_state as string,
+    plan: tenant.plan as string,
+    message_credits: tenant.message_credits ?? 0,
+  };
+
+  // Build tenant update payload. When credits are dictated by Core we map them
+  // entirely into `accumulated_credits` (the rollover bucket) and reset the
+  // monthly/extra buckets so the totals match exactly what Core sent.
+  const tenantUpdate: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (resolvedBillingState !== undefined) tenantUpdate.billing_state = resolvedBillingState;
+  if (resolvedPlan !== undefined) tenantUpdate.plan = resolvedPlan;
+  if (resolvedCredits !== undefined) {
+    tenantUpdate.message_credits = resolvedCredits;
+    tenantUpdate.accumulated_credits = resolvedCredits;
+    tenantUpdate.monthly_credits_remaining = 0;
+    tenantUpdate.extra_credits = 0;
+  }
+
+  const { data: updatedTenant, error: updateError } = await supabase
+    .from('tenants')
+    .update(tenantUpdate)
+    .eq('id', tenant.id)
+    .select(
+      'id, external_id, name, plan, billing_state, message_credits, monthly_credits_remaining, accumulated_credits, extra_credits, managed_externally',
+    )
+    .single();
+
+  if (updateError) {
+    console.error('update_billing: update tenant error', updateError);
+    return jsonResponse(
+      { error: 'Failed to update tenant billing', details: updateError.message },
+      500,
+    );
+  }
+
+  // Sync legacy wallet balance to keep downstream code in sync.
+  let walletLedgerEntry: Record<string, unknown> | null = null;
+  if (resolvedCredits !== undefined) {
+    const { data: walletRow } = await supabase
+      .from('wallets')
+      .select('id, balance_messages')
+      .eq('tenant_id', tenant.id)
+      .maybeSingle();
+
+    const previousBalance = walletRow?.balance_messages ?? previousState.message_credits;
+    const status =
+      resolvedBillingState === 'SUSPENDED'
+        ? 'blocked'
+        : resolvedCredits <= 0
+          ? 'blocked'
+          : resolvedCredits <= 100
+            ? 'low'
+            : 'active';
+
+    if (walletRow) {
+      const { error: walletErr } = await supabase
+        .from('wallets')
+        .update({
+          balance_messages: resolvedCredits,
+          balance_monthly: 0,
+          balance_rollover: resolvedCredits,
+          status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', walletRow.id);
+      if (walletErr) {
+        console.error('update_billing: wallet update error', walletErr);
+      }
+    } else {
+      const { error: walletInsertErr } = await supabase.from('wallets').insert({
+        tenant_id: tenant.id,
+        balance_messages: resolvedCredits,
+        balance_monthly: 0,
+        balance_rollover: resolvedCredits,
+        status,
+      });
+      if (walletInsertErr) {
+        console.error('update_billing: wallet insert error', walletInsertErr);
+      }
+    }
+
+    // Ledger entry: only when there is an actual delta (>0). The ledger
+    // CHECK constraint requires `amount > 0`, so equal balances are skipped.
+    const delta = resolvedCredits - previousBalance;
+    if (delta !== 0) {
+      const movement_type = delta > 0 ? 'credit' : 'debit';
+      const idempotency_key = `external_adjustment:${tenant.id}:${Date.now()}`;
+      const { error: ledgerErr } = await supabase.from('wallet_ledger').insert({
+        tenant_id: tenant.id,
+        movement_type,
+        amount: Math.abs(delta),
+        reason: 'external_adjustment',
+        source_table: 'sync-external-core',
+        idempotency_key,
+        balance_before: previousBalance,
+        balance_after: resolvedCredits,
+        bucket: 'rollover',
+      });
+      if (ledgerErr) {
+        console.warn('update_billing: wallet_ledger insert failed', ledgerErr);
+      } else {
+        walletLedgerEntry = {
+          movement_type,
+          amount: Math.abs(delta),
+          balance_before: previousBalance,
+          balance_after: resolvedCredits,
+        };
+      }
+    }
+  }
+
+  // Audit: log billing update event (non-blocking).
+  try {
+    await supabase.from('security_events').insert({
+      tenant_id: tenant.id,
+      event_type: 'external_billing_update',
+      metadata: {
+        service: serviceName,
+        external_id: tenant.external_id,
+        reason: reason ?? null,
+        previous: previousState,
+        next: {
+          billing_state: updatedTenant.billing_state,
+          plan: updatedTenant.plan,
+          message_credits: updatedTenant.message_credits,
+        },
+        wallet_ledger: walletLedgerEntry,
+      },
+    });
+  } catch (logErr) {
+    console.warn('update_billing: security_events insert failed', logErr);
+  }
+
+  return jsonResponse(
+    {
+      success: true,
+      tenant_id: tenant.id,
+      external_id: tenant.external_id,
+      tenant: updatedTenant,
+      wallet_ledger: walletLedgerEntry,
+    },
+    200,
+  );
+}
