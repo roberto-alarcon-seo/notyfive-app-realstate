@@ -1,7 +1,5 @@
-import { Building, ExternalLink } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Building } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -18,7 +16,6 @@ interface PropertyInterestCardProps {
 }
 
 export function PropertyInterestCard({ propertyId, onChange }: PropertyInterestCardProps) {
-  const navigate = useNavigate();
   const { data: properties, isLoading } = useProperties();
 
   const selectedProperty = properties?.find(p => p.id === propertyId);
@@ -76,13 +73,6 @@ export function PropertyInterestCard({ propertyId, onChange }: PropertyInterestC
                 <p className="font-semibold">{selectedProperty.title}</p>
                 <p className="text-sm text-muted-foreground">{selectedProperty.property_code}</p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate(`/properties/${selectedProperty.id}`)}
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
             </div>
             
             <div className="flex flex-wrap gap-2">
