@@ -3576,8 +3576,10 @@ export type Database = {
           balance_before: number
           bucket: string | null
           created_at: string
+          description: string | null
           id: string
           idempotency_key: string | null
+          metadata: Json
           movement_type: string
           reason: string
           source_id: string | null
@@ -3590,8 +3592,10 @@ export type Database = {
           balance_before: number
           bucket?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           idempotency_key?: string | null
+          metadata?: Json
           movement_type: string
           reason: string
           source_id?: string | null
@@ -3604,8 +3608,10 @@ export type Database = {
           balance_before?: number
           bucket?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           idempotency_key?: string | null
+          metadata?: Json
           movement_type?: string
           reason?: string
           source_id?: string | null
