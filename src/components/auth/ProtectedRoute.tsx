@@ -84,7 +84,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // WITHOUT a partner_scope. Partner-scoped admins must use their own
   // partner dashboard (PartnerSettings) and cannot access cross-tenant
   // global tools.
-  if (requireSuperAdmin && isSuperAdmin && partnerScope) {
+  if (
+    requireSuperAdmin &&
+    isSuperAdmin &&
+    partnerScope &&
+    location.pathname !== '/admin/partner-settings'
+  ) {
     // Redirect partner-scoped admins to their partner-specific settings page
     return <Navigate to="/admin/partner-settings" replace />;
   }
