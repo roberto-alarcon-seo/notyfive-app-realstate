@@ -26,7 +26,6 @@ export default function PropertyFaqEditor({ propertyId }: PropertyFaqEditorProps
   const [editAnswer, setEditAnswer] = useState("");
 
   const coreFaqs = faqs?.filter((f) => f.source === 'core') ?? [];
-  const localFaqs = faqs?.filter((f) => f.source !== 'core') ?? [];
 
   const handleAdd = async () => {
     if (!newQuestion.trim() || !newAnswer.trim()) return;
