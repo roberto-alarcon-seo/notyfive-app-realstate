@@ -52,6 +52,7 @@ import AdminTenants from "./pages/admin/AdminTenants";
 import TenantAdminDetail from "./pages/admin/TenantAdminDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminLogs from "./pages/admin/AdminLogs";
+import PartnerSettings from "./pages/admin/PartnerSettings";
 import ApiDocs from "./pages/developers/ApiDocs";
 import Followups from "./pages/Followups";
 import Support from "./pages/Support";
@@ -129,6 +130,7 @@ const App = () => (
               <Route path="/admin/tenants/:id" element={<ProtectedRoute requireSuperAdmin><TenantAdminDetail /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminUsers /></PartnerScopedAdminGuard></ProtectedRoute>} />
               <Route path="/admin/logs" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminLogs /></PartnerScopedAdminGuard></ProtectedRoute>} />
+              <Route path="/admin/partner-settings" element={<ProtectedRoute requireSuperAdmin><PartnerSettings /></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
               <Route path="/inbox" element={<ProtectedRoute><MainLayout><Inbox /></MainLayout></ProtectedRoute>} />
               <Route path="/contacts" element={<ProtectedRoute><MainLayout><Contacts /></MainLayout></ProtectedRoute>} />

@@ -2051,6 +2051,8 @@ export type Database = {
           primary_color_hex: string
           primary_color_hsl: string
           primary_domain: string
+          resend_api_key: string | null
+          resend_from_email: string | null
           updated_at: string
         }
         Insert: {
@@ -2070,6 +2072,8 @@ export type Database = {
           primary_color_hex: string
           primary_color_hsl: string
           primary_domain: string
+          resend_api_key?: string | null
+          resend_from_email?: string | null
           updated_at?: string
         }
         Update: {
@@ -2089,6 +2093,8 @@ export type Database = {
           primary_color_hex?: string
           primary_color_hsl?: string
           primary_domain?: string
+          resend_api_key?: string | null
+          resend_from_email?: string | null
           updated_at?: string
         }
         Relationships: []
