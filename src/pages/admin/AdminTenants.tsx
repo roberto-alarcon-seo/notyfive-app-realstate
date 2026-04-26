@@ -445,7 +445,7 @@ const AdminTenants = () => {
                       {tenant.managed_externally ? (
                         <Badge
                           variant="outline"
-                          className="text-[10px] uppercase tracking-wider border-info text-info bg-info/10"
+                          className="text-[10px] uppercase tracking-wider border-accent text-accent bg-accent/10"
                         >
                           Sistema Core
                         </Badge>
