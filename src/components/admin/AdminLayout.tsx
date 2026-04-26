@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Building2, Users, FileText, LogOut, User, Shield } from "lucide-react";
+import { Building2, Users, FileText, LogOut, User, Shield, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -27,6 +27,7 @@ const navItems = [
   { title: "Tenants", url: "/admin/tenants", icon: Building2 },
   { title: "Usuarios", url: "/admin/users", icon: Users },
   { title: "Logs", url: "/admin/logs", icon: FileText },
+  { title: "Configuración", url: "/admin/partner-settings", icon: Settings },
 ];
 
 function AdminSidebar() {
@@ -36,9 +37,12 @@ function AdminSidebar() {
   const navigate = useNavigate();
   const { partnerScope } = useAuth();
 
-  // Partner-scoped admins only see Tenants. Global super admin sees everything.
+  // Partner-scoped admins see Tenants + Configuración (their own partner branding).
+  // Global super admins see everything.
   const visibleItems = partnerScope
-    ? navItems.filter((item) => item.url === "/admin/tenants")
+    ? navItems.filter((item) =>
+        ["/admin/tenants", "/admin/partner-settings"].includes(item.url),
+      )
     : navItems;
 
   const isActive = (path: string) =>
