@@ -95,23 +95,12 @@ const AdminTenants = () => {
 
       const tenantsWithCounts = await Promise.all(
         (tenantsData || []).map(async (tenant) => {
-          const { data: profiles } = await supabase
+          // Count ALL profiles in tenant (every profile = 1 seat, incl. owner/admin).
+          const { count } = await supabase
             .from('profiles')
-            .select('id')
-            .eq('tenant_id', tenant.id)
-            .eq('status', 'active');
-
-          let usersCount = 0;
-          if (profiles && profiles.length > 0) {
-            const { count } = await supabase
-              .from('user_roles')
-              .select('*', { count: 'exact', head: true })
-              .in('user_id', profiles.map((p) => p.id))
-              .eq('global_role', 'user');
-            usersCount = count || 0;
-          }
-
-          return { ...tenant, users_count: usersCount, contacts_count: 0 };
+            .select('id', { count: 'exact', head: true })
+            .eq('tenant_id', tenant.id);
+          return { ...tenant, users_count: count || 0, contacts_count: 0 };
         })
       );
 
