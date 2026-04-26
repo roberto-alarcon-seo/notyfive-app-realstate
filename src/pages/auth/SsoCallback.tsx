@@ -19,6 +19,7 @@ const SsoCallback = () => {
 
   const token = params.get("token");
   const redirect = params.get("redirect") || "/";
+  const mode = params.get("mode") || "";
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -35,6 +36,12 @@ const SsoCallback = () => {
         // CRITICAL: Always sign out the current session before starting the SSO
         // flow. Otherwise the existing session (e.g. a super_admin) survives
         // the magic-link redirect and the user lands back in the admin area.
+        if (mode === "impersonation") {
+          sessionStorage.setItem("noty5_admin_impersonation", "1");
+        } else {
+          sessionStorage.removeItem("noty5_admin_impersonation");
+        }
+
         setStatusText("Cerrando sesión actual…");
         try {
           await supabase.auth.signOut();
@@ -49,6 +56,9 @@ const SsoCallback = () => {
         );
         ssoUrl.searchParams.set("token", token);
         ssoUrl.searchParams.set("redirect", redirect);
+        if (mode) {
+          ssoUrl.searchParams.set("mode", mode);
+        }
 
         // Full-page navigation: the Edge Function responds with a 302 to the
         // Supabase magic link, which redirects back to `redirect` with a
@@ -59,7 +69,7 @@ const SsoCallback = () => {
         navigate("/welcome?error=sso_denied&reason=client_error", { replace: true });
       }
     })();
-  }, [token, redirect, navigate]);
+  }, [token, redirect, mode, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
