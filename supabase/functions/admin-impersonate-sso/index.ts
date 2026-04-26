@@ -122,25 +122,38 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 5. Pick a target user (prefer administrador, then any active profile)
-    const { data: adminProfile } = await supabaseAdmin
-      .from('user_roles')
-      .select('user_id, profiles!inner(id, email, status, tenant_id)')
-      .eq('tenant_role', 'administrador')
-      .eq('profiles.tenant_id', tenant.id)
-      .eq('profiles.status', 'active')
-      .limit(1)
-      .maybeSingle();
+    // 5. Pick a target user. Strategy (in order):
+    //    a) owner role with any status
+    //    b) administrador role with any status
+    //    c) any profile in the tenant (active first, then inactive/invited)
+    let targetEmail: string | null = null;
+    let targetUserId: string | null = null;
 
-    let targetEmail: string | null = (adminProfile?.profiles as { email?: string } | undefined)?.email ?? null;
-    let targetUserId: string | null = (adminProfile?.profiles as { id?: string } | undefined)?.id ?? null;
+    for (const role of ['owner', 'administrador'] as const) {
+      const { data: roleProfile } = await supabaseAdmin
+        .from('user_roles')
+        .select('user_id, profiles!inner(id, email, status, tenant_id)')
+        .eq('tenant_role', role)
+        .eq('profiles.tenant_id', tenant.id)
+        .limit(1)
+        .maybeSingle();
+
+      const profile = roleProfile?.profiles as
+        | { id?: string; email?: string }
+        | undefined;
+      if (profile?.email) {
+        targetEmail = profile.email;
+        targetUserId = profile.id ?? null;
+        break;
+      }
+    }
 
     if (!targetEmail) {
       const { data: anyProfile } = await supabaseAdmin
         .from('profiles')
         .select('id, email')
         .eq('tenant_id', tenant.id)
-        .eq('status', 'active')
+        .order('status', { ascending: true }) // 'active' before 'inactive'
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -149,7 +162,7 @@ Deno.serve(async (req) => {
     }
 
     if (!targetEmail) {
-      return json({ error: 'No active user found for tenant' }, 404);
+      return json({ error: 'No user found for this tenant' }, 404);
     }
 
     // 6. Sign JWT (5-minute expiry)
