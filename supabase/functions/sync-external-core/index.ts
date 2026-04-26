@@ -15,9 +15,9 @@ type UpsertTenantBody = {
   owner_name?: string;
   max_users?: number;
   country_code?: string;
-  // Optional explicit partner association. When omitted we infer it from the
-  // API key used (per-partner secrets). Accepts a partners.id (e.g. "mls_latam").
-  partner_id?: string;
+  // REQUIRED partner association. Forms a composite key (partner_id + external_id).
+  // Must match the API key's partner when key is partner-scoped.
+  partner_id: string;
 };
 
 type SyncUserBody = {
@@ -27,6 +27,8 @@ type SyncUserBody = {
   name?: string;
   tenant_role?: string;
   status?: string; // 'active' | 'inactive' | 'suspended'
+  // REQUIRED — tenants are looked up by (partner_id, external_id).
+  partner_id: string;
 };
 
 type SyncPropertyBody = {
@@ -43,6 +45,8 @@ type SyncPropertyBody = {
   status?: string;
   is_active?: boolean;
   ai_description_template?: string | null;
+  // REQUIRED — tenants are looked up by (partner_id, external_id).
+  partner_id: string;
   // metadata bag with technical fields & accepted credits
   metadata?: {
     bedrooms?: number | null;
@@ -81,6 +85,8 @@ type UpdateBillingBody = {
   // Optional description override. When omitted we generate a sensible
   // default like "Recarga automática vía API Core - Plan Premium MX".
   description?: string | null;
+  // REQUIRED — tenants are looked up by (partner_id, external_id).
+  partner_id: string;
 };
 
 type RequestBody =
