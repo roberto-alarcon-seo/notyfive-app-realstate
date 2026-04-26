@@ -24,7 +24,6 @@ import { DateSeparator } from "@/components/inbox/DateSeparator";
 import { PipelineHeaderSelect } from "@/components/inbox/PipelineHeaderSelect";
 import { toast } from "sonner";
 import { useNewLeadSound } from "@/hooks/useNewLeadSound";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function Inbox() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,9 +34,12 @@ export default function Inbox() {
 
   // Play notification sound on new inbound messages
   useNewLeadSound();
-  // Clear PWA badge when opening inbox
-  const { clearBadge } = usePushNotifications();
-  useEffect(() => { clearBadge(); }, [clearBadge]);
+  // Clear PWA badge when opening inbox (if supported)
+  useEffect(() => {
+    if ("clearAppBadge" in navigator) {
+      (navigator as any).clearAppBadge?.().catch?.(() => {});
+    }
+  }, []);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterNeedsHuman, setFilterNeedsHuman] = useState(false);

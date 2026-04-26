@@ -1,44 +1,73 @@
 ## Objetivo
+Remover la capa completa de Web Push / VAPID para simplificar el setup. Tras esta acción, el sistema arrancará sin necesidad de configurar `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` ni `VAPID_SUBJECT`.
 
-Actualizar la contraseña del Super Admin existente `roberto@responde.mx` al nuevo valor `P4dr1n0s`, sin tocar el resto del usuario ni sus permisos.
+> ⚠️ Se mantiene el resto del PWA (manifest + service worker para caché/instalación) **opcionalmente**, pero por simplicidad recomiendo **eliminar también el Service Worker** ya que su único uso real era recibir push + manejar badges. La instalación "Add to Home Screen" sigue funcionando solo con `manifest.json`.
 
-## Estado actual confirmado
+---
 
-Consulté la base de datos y el usuario existe:
-- **Email**: `roberto@responde.mx`
-- **Nombre**: Roberto (Super Admin)
-- **ID**: `b42a5fe1-6f05-4385-bf74-76fce7454324`
-- **Rol global**: `super_admin` ✅
+## 1. Frontend — Hooks y Componentes
 
-No hay que crear nada nuevo, solo cambiar el password.
+### Eliminar archivos
+- `src/hooks/usePushNotifications.ts`
+- `src/components/pwa/PushNotificationPrompt.tsx`
+- `src/lib/registerSW.ts`
+- `public/sw.js` (Service Worker — ya no se necesita sin push)
 
-## Plan de ejecución
+### Editar archivos
+- **`src/main.tsx`**: eliminar `import { registerServiceWorker }` y la llamada `registerServiceWorker()`. Añadir un pequeño guard que des-registre cualquier SW previamente instalado en navegadores de usuarios existentes (evita caché fantasma).
+- **`src/pages/Dashboard.tsx`**: eliminar `import { PushNotificationPrompt }` y el render `<PushNotificationPrompt />` (línea 44).
+- **`src/pages/Inbox.tsx`**: eliminar `import { usePushNotifications }` y el `useEffect` que llama `clearBadge()`.
 
-1. **Actualizar la edge function `seed-super-admin`**  
-   Cambiar el password hardcodeado de `C0c02024` → `P4dr1n0s` en `supabase/functions/seed-super-admin/index.ts` (líneas 36 y 59). La función ya tiene la lógica de "si el usuario existe, actualiza el password", así que es el único cambio necesario.
+### Mantener
+- `public/manifest.json` y los iconos `pwa-icon-*.png` → permiten instalación PWA básica (Add to Home Screen) sin requerir VAPID.
+- `src/hooks/usePWAUpdate.ts` y `src/components/pwa/PWAUpdateBanner.tsx` → **se eliminan también**, ya que dependían del Service Worker.
 
-2. **Invocar la edge function una vez**  
-   Ejecutar la función vía `curl` para que aplique el cambio de password al usuario existente. Esto usa `supabaseAdmin.auth.admin.updateUserById()` con el service role key, que es la forma segura de cambiar contraseñas server-side sin necesidad de saber la contraseña anterior.
+> Si prefieres conservar `usePWAUpdate` / `PWAUpdateBanner` para futuro, indícamelo; sin SW dejarían de funcionar y conviene quitarlos.
 
-3. **Verificar el cambio**  
-   Confirmar en logs que la respuesta sea `{ success: true, message: "Super admin password updated" }`.
+---
 
-## Consideraciones de seguridad
+## 2. Backend — Edge Functions
 
-⚠️ **Importante**: Tener el password hardcodeado en una edge function pública del repo no es ideal a largo plazo. Una vez aplicado el cambio, te recomiendo:
-- Cambiar el password manualmente desde la app (ir a Settings → Seguridad e introducir uno nuevo).
-- O bien, mover el password a un secreto (`SUPER_ADMIN_SEED_PASSWORD`) para no dejarlo visible en el código.
+### Eliminar
+- `supabase/functions/send-push-notification/index.ts`
+- `supabase/functions/push-vapid-key/index.ts`
 
-Pero para este pedido puntual, el camino más rápido es el descrito arriba.
+Ambas serán removidas también del deployment vía `supabase--delete_edge_functions`.
 
-## Archivos afectados
+### Editar
+- **`supabase/functions/twilio-inbound-webhook/index.ts`** (líneas 397-417): eliminar el bloque `SEND PUSH NOTIFICATION (fire-and-forget)` que llama a `send-push-notification`. El resto del webhook (lead scoring, AI reply, ledger, etc.) queda intacto.
 
-- `supabase/functions/seed-super-admin/index.ts` (1 archivo, 2 líneas)
+---
+
+## 3. Base de Datos
+
+Eliminar la tabla `push_subscriptions` mediante migración:
+```sql
+DROP TABLE IF EXISTS public.push_subscriptions CASCADE;
+```
+Esto remueve la tabla, sus políticas RLS y cualquier índice asociado. Los tipos generados en `src/integrations/supabase/types.ts` se regenerarán automáticamente.
+
+---
+
+## 4. Secrets
+
+Los secretos `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` quedarán huérfanos pero **no necesitan eliminarse** (son ignorados si nada los lee). Si quieres limpiarlos, lo hacemos vía `delete_secret` después de la migración.
+
+---
+
+## 5. Memoria del Proyecto
+
+Actualizar memorias para reflejar que la PWA ya no incluye push notifications:
+- `mem://infrastructure/pwa-push-notifications` → marcar como **deprecated/eliminado**
+- `mem://infrastructure/pwa-lifecycle-updates` → eliminar (dependía del SW)
+- `mem://index.md` → quitar referencias a PWA Notifications y PWA Lifecycle, actualizar Core con: "Sin push notifications. Setup mínimo: Supabase URL/keys + SSO_SECRET."
+
+---
 
 ## Resultado esperado
+- Setup mínimo para arrancar la app: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SSO_SECRET` (+ `EXTERNAL_CORE_API_KEY`, `RESEND_*`, `APP_BASE_URL` para integraciones funcionales).
+- Sin Service Worker activo en el navegador (se des-registra el existente al cargar).
+- Sin alertas push, sin banner de "Activar notificaciones", sin tabla `push_subscriptions`.
+- El audio in-app de nuevos mensajes (`useNewLeadSound`) sigue funcionando — eso es independiente de Web Push.
 
-Podrás iniciar sesión en `/auth` con:
-- **Email**: `roberto@responde.mx`
-- **Password**: `P4dr1n0s`
-
-Y serás redirigido automáticamente a `/admin` (panel de Super Admin).
+¿Procedo con la implementación?
