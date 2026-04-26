@@ -52,6 +52,7 @@ interface Tenant {
   managed_externally?: boolean;
   max_users?: number;
   partner_id?: string | null;
+  partner?: { id: string; name: string } | null;
 }
 
 const PLAN_CONFIG = {
@@ -92,7 +93,7 @@ const AdminTenants = () => {
     try {
       let query = supabase
         .from('tenants')
-        .select('*')
+        .select('*, partner:partners(id, name)')
         .order('created_at', { ascending: false });
       if (partnerScope) {
         query = query.eq('partner_id', partnerScope);
@@ -245,6 +246,42 @@ const AdminTenants = () => {
     if (billingState === 'CREDITS_EXHAUSTED' || credits <= 0) return 'Sin saldo';
     if (credits <= 100) return 'Bajo';
     return 'Activo';
+  };
+
+  // Visual styles per partner. Uses semantic-friendly tailwind utilities so it
+  // adapts to the active theme while still giving each partner a distinct color.
+  const PARTNER_STYLES: Record<string, { label: string; className: string }> = {
+    mls_latam: {
+      label: 'MLS Latam',
+      className: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
+    },
+    responde: {
+      label: 'Responde',
+      className: 'border-violet-500/40 text-violet-400 bg-violet-500/10',
+    },
+    brokia: {
+      label: 'Brokia24',
+      className: 'border-indigo-500/40 text-indigo-400 bg-indigo-500/10',
+    },
+  };
+
+  const renderPartnerBadge = (tenant: Tenant) => {
+    if (!tenant.partner_id) {
+      return (
+        <Badge variant="outline" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          Sin asignar
+        </Badge>
+      );
+    }
+    const style = PARTNER_STYLES[tenant.partner_id];
+    const label = style?.label ?? tenant.partner?.name ?? tenant.partner_id;
+    const className =
+      style?.className ?? 'border-muted-foreground/40 text-muted-foreground bg-muted/20';
+    return (
+      <Badge variant="outline" className={`text-[10px] uppercase tracking-wider ${className}`}>
+        {label}
+      </Badge>
+    );
   };
 
   const handleSuspendTenant = async (tenant: Tenant) => {
@@ -438,6 +475,7 @@ const AdminTenants = () => {
               <tr className="border-b border-border">
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Empresa</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Origen</th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">Partner</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Plan</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Estado</th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground">Asientos</th>
@@ -482,6 +520,7 @@ const AdminTenants = () => {
                         </Badge>
                       )}
                     </td>
+                    <td className="p-4">{renderPartnerBadge(tenant)}</td>
                     <td className="p-4">
                       <Badge variant="secondary" className="capitalize">
                         {getPlanLabel(tenant.plan)}
