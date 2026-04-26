@@ -15,6 +15,9 @@ type UpsertTenantBody = {
   owner_name?: string;
   max_users?: number;
   country_code?: string;
+  // Optional explicit partner association. When omitted we infer it from the
+  // API key used (per-partner secrets). Accepts a partners.id (e.g. "mls_latam").
+  partner_id?: string;
 };
 
 type SyncUserBody = {
@@ -171,17 +174,32 @@ Deno.serve(async (req) => {
   try {
     // 1. Validate API key against EXTERNAL_CORE_API_KEY secret BEFORE touching DB.
     const apiKey = req.headers.get('x-api-key');
-    const expectedKey = Deno.env.get('EXTERNAL_CORE_API_KEY');
-
-    if (!expectedKey) {
-      console.error('sync-external-core: EXTERNAL_CORE_API_KEY secret is not configured');
-      return jsonResponse({ error: 'Server misconfiguration' }, 500);
+    // Per-partner keys allow each Core (MLS Latam, Responde, ...) to have its
+    // own credential. We resolve the partner_id from whichever key matches.
+    // Fallback: legacy global EXTERNAL_CORE_API_KEY (no partner association).
+    const PARTNER_KEYS: Array<{ env: string; partner_id: string }> = [
+      { env: 'EXTERNAL_CORE_API_KEY_MLS_LATAM', partner_id: 'mls_latam' },
+      { env: 'EXTERNAL_CORE_API_KEY_RESPONDE', partner_id: 'responde' },
+      { env: 'EXTERNAL_CORE_API_KEY_BROKIA', partner_id: 'brokia' },
+    ];
+    let resolvedPartnerId: string | null = null;
+    let authed = false;
+    if (apiKey) {
+      for (const k of PARTNER_KEYS) {
+        const v = Deno.env.get(k.env);
+        if (v && v === apiKey) {
+          authed = true;
+          resolvedPartnerId = k.partner_id;
+          break;
+        }
+      }
+      if (!authed) {
+        const legacy = Deno.env.get('EXTERNAL_CORE_API_KEY');
+        if (legacy && legacy === apiKey) authed = true;
+      }
     }
-
-    if (!apiKey || apiKey !== expectedKey) {
-      console.warn('sync-external-core: unauthorized request', {
-        hasHeader: Boolean(apiKey),
-      });
+    if (!authed) {
+      console.warn('sync-external-core: unauthorized request', { hasHeader: Boolean(apiKey) });
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
@@ -247,7 +265,7 @@ Deno.serve(async (req) => {
 
     // 4. Route by action
     if (action === 'upsert_tenant') {
-      return await handleUpsertTenant(supabase, merged as UpsertTenantBody, serviceName);
+      return await handleUpsertTenant(supabase, merged as UpsertTenantBody, serviceName, resolvedPartnerId);
     }
     if (action === 'sync_user') {
       return await handleSyncUser(supabase, merged as SyncUserBody, serviceName);
@@ -270,8 +288,26 @@ async function handleUpsertTenant(
   supabase: SupabaseClient,
   body: UpsertTenantBody,
   serviceName: string,
+  resolvedPartnerId: string | null,
 ): Promise<Response> {
-  const { external_id, name, plan, owner_email, owner_name, max_users, country_code } = body;
+  const { external_id, name, plan, owner_email, owner_name, max_users, country_code, partner_id } = body;
+
+  // Final partner_id: explicit payload value wins, then API-key inference.
+  // We validate it against the partners catalog before persisting.
+  let finalPartnerId: string | null = null;
+  const candidatePartnerId =
+    typeof partner_id === 'string' && partner_id.trim().length > 0
+      ? partner_id.trim()
+      : resolvedPartnerId;
+  if (candidatePartnerId) {
+    const { data: partnerRow } = await supabase
+      .from('partners').select('id').eq('id', candidatePartnerId).maybeSingle();
+    if (partnerRow?.id) {
+      finalPartnerId = partnerRow.id;
+    } else {
+      console.warn('sync-external-core: unknown partner_id received, ignoring', candidatePartnerId);
+    }
+  }
 
   // Validate input
   if (!external_id || typeof external_id !== 'string' || external_id.trim().length === 0) {
@@ -337,6 +373,7 @@ async function handleUpsertTenant(
         managed_externally: true,
         ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
         ...(resolvedCountryCode !== undefined ? { country_code: resolvedCountryCode } : {}),
+        ...(finalPartnerId ? { partner_id: finalPartnerId } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
@@ -396,6 +433,7 @@ async function handleUpsertTenant(
       initial_credits_granted: false,
       ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
       ...(resolvedCountryCode !== undefined ? { country_code: resolvedCountryCode } : {}),
+      ...(finalPartnerId ? { partner_id: finalPartnerId } : {}),
     })
     .select('id, name, plan, external_id, managed_externally, billing_state, message_credits, max_users, country_code')
     .single();
