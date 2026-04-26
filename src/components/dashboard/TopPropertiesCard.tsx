@@ -63,16 +63,15 @@ export function TopPropertiesCard({ properties, maxInterest, isLoading }: TopPro
           const percentage = maxInterest > 0 ? (property.interestedCount / maxInterest) * 100 : 0;
           
           return (
-            <div 
-              key={property.id} 
-              className="group cursor-pointer"
-              onClick={() => navigate(`/properties/${property.id}`)}
+            <div
+              key={property.id}
+              className="group"
             >
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-muted-foreground w-5">{index + 1}</span>
                 <Building2 className="h-4 w-4 text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                  <p className="text-sm font-medium truncate">
                     {property.title.toUpperCase()}
                   </p>
                 </div>
