@@ -152,23 +152,20 @@ export const THEME_PRESETS: Record<string, { label: string; theme: PartnerTheme 
       theme_preset: "carbon_gray",
     },
   },
-};
-
-// Light-mode presets are kept separate so the dropdown can render them with
-// distinct iconography if desired.
-THEME_PRESETS.mls_latam_light = {
-  label: "MLS Latam (Claro / Naranja)",
-  theme: {
-    // Soft white app surface, slightly warm gray cards, white sidebar with
-    // black text and the signature MLS orange (#F34C3D) as the accent.
-    app_bg: "0 0% 100%",
-    card_bg: "0 0% 100%",
-    sidebar_bg: "0 0% 100%",
-    sidebar_text: "0 0% 10%",
-    sidebar_style: "contrast",
-    primary_color: "4 89% 60%", // #F34C3D
-    mode: "light",
-    theme_preset: "mls_latam_light",
+  mls_latam_light: {
+    label: "MLS Latam (Claro / Naranja)",
+    theme: {
+      // Crisp white surfaces, dark text and the signature MLS orange (#F34C3D)
+      // as accent. Sidebar stays white with dark text for readability.
+      app_bg: "0 0% 100%",
+      card_bg: "0 0% 100%",
+      sidebar_bg: "0 0% 100%",
+      sidebar_text: "0 0% 10%",
+      sidebar_style: "contrast",
+      primary_color: "4 89% 60%",
+      mode: "light",
+      theme_preset: "mls_latam_light",
+    },
   },
 };
 
