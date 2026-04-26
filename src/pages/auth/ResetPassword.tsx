@@ -19,6 +19,7 @@ const passwordRequirements: PasswordRequirement[] = [
 ];
 
 const ResetPassword = () => {
+  const { partner } = usePartnerBranding();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
