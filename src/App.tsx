@@ -12,7 +12,6 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MobileRouteGuard } from "@/components/layout/MobileRouteGuard";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect as useEffectReact } from "react";
 import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import Contacts from "./pages/Contacts";
