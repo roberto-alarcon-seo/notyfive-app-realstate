@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Loader2, Search, MoreHorizontal, Shield, User as UserIcon, Trash2, Mail } from 'lucide-react';
+import { Plus, Loader2, Search, MoreHorizontal, Shield, User as UserIcon, Trash2, Mail, Lock } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -49,6 +55,7 @@ interface TenantUserRow {
   status: string;
   tenant_id: string | null;
   tenant_name: string | null;
+  tenant_managed_externally: boolean;
   global_role: string;
   tenant_role: string | null;
   created_at: string;
@@ -112,7 +119,7 @@ const AdminUsers = () => {
     try {
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, email, name, status, tenant_id, created_at, last_login_at, tenants(name)')
+        .select('id, email, name, status, tenant_id, created_at, last_login_at, tenants(name, managed_externally)')
         .order('created_at', { ascending: false })
         .limit(500);
       if (error) throw error;
@@ -137,6 +144,7 @@ const AdminUsers = () => {
         status: p.status,
         tenant_id: p.tenant_id,
         tenant_name: p.tenants?.name ?? null,
+        tenant_managed_externally: Boolean(p.tenants?.managed_externally),
         global_role: rolesMap[p.id]?.global_role ?? 'user',
         tenant_role: rolesMap[p.id]?.tenant_role ?? null,
         created_at: p.created_at,
