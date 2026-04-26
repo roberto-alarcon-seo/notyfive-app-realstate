@@ -421,7 +421,11 @@ const AdminTenants = () => {
                 const accumulated = tenant.accumulated_credits ?? 0;
                 const totalCredits = monthlyRemaining + accumulated;
                 return (
-                  <tr key={tenant.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
+                  <tr
+                    key={tenant.id}
+                    onClick={() => navigate(`/admin/tenants/${tenant.id}`)}
+                    className="border-b border-border last:border-0 hover:bg-secondary/30 cursor-pointer"
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -476,7 +480,7 @@ const AdminTenants = () => {
                     <td className="p-4 text-muted-foreground text-sm">
                       {new Date(tenant.created_at).toLocaleDateString('es-MX')}
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
@@ -484,7 +488,7 @@ const AdminTenants = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setSelectedTenant(tenant)}>
+                          <DropdownMenuItem onClick={() => navigate(`/admin/tenants/${tenant.id}`)}>
                             <ExternalLink className="h-4 w-4 mr-2" />
                             Ver detalles
                           </DropdownMenuItem>
@@ -539,14 +543,6 @@ const AdminTenants = () => {
           tenantId={selectedTenantForTwilio.id}
           tenantName={selectedTenantForTwilio.name}
           onSuccess={() => fetchTenants()}
-        />
-      )}
-
-      {selectedTenant && (
-        <TenantDetailPanel
-          tenant={selectedTenant}
-          onClose={() => setSelectedTenant(null)}
-          onTenantUpdate={fetchTenants}
         />
       )}
 
