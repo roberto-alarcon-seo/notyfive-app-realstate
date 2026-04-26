@@ -13,6 +13,7 @@ type UpsertTenantBody = {
   plan?: string;
   owner_email?: string;
   owner_name?: string;
+  max_users?: number;
 };
 
 type RequestBody = UpsertTenantBody;
@@ -124,7 +125,7 @@ async function handleUpsertTenant(
   body: UpsertTenantBody,
   serviceName: string,
 ): Promise<Response> {
-  const { external_id, name, plan, owner_email, owner_name } = body;
+  const { external_id, name, plan, owner_email, owner_name, max_users } = body;
 
   // Validate input
   if (!external_id || typeof external_id !== 'string' || external_id.trim().length === 0) {
@@ -144,6 +145,15 @@ async function handleUpsertTenant(
     if (typeof owner_email !== 'string' || !isValidEmail(owner_email)) {
       return jsonResponse({ error: 'owner_email must be a valid email' }, 400);
     }
+  }
+
+  // Validate max_users (seats)
+  let resolvedMaxUsers: number | undefined;
+  if (max_users !== undefined && max_users !== null) {
+    if (typeof max_users !== 'number' || !Number.isInteger(max_users) || max_users < 1 || max_users > 1000) {
+      return jsonResponse({ error: 'max_users must be an integer between 1 and 1000' }, 400);
+    }
+    resolvedMaxUsers = max_users;
   }
 
   // Check if tenant exists
@@ -166,10 +176,11 @@ async function handleUpsertTenant(
         name: name.trim(),
         plan: resolvedPlan,
         managed_externally: true,
+        ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
-      .select('id, name, plan, external_id, managed_externally, billing_state, message_credits')
+      .select('id, name, plan, external_id, managed_externally, billing_state, message_credits, max_users')
       .single();
 
     if (updateError) {
@@ -202,8 +213,9 @@ async function handleUpsertTenant(
       accumulated_credits: 0,
       extra_credits: 0,
       initial_credits_granted: false,
+      ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
     })
-    .select('id, name, plan, external_id, managed_externally, billing_state, message_credits')
+    .select('id, name, plan, external_id, managed_externally, billing_state, message_credits, max_users')
     .single();
 
   if (createError) {
