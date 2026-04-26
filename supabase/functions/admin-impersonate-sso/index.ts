@@ -115,13 +115,6 @@ Deno.serve(async (req) => {
 
     if (tenantErr || !tenant) return json({ error: 'Tenant not found' }, 404);
 
-    if (!tenant.external_id) {
-      return json(
-        { error: 'Tenant has no external_id; cannot generate SSO token.' },
-        400,
-      );
-    }
-
     // 5. Pick a target user. Strategy (in order):
     //    a) owner role with any status
     //    b) administrador role with any status
@@ -170,7 +163,8 @@ Deno.serve(async (req) => {
     const token = await signJwtHs256(
       {
         email: targetEmail,
-        tenant_external_id: tenant.external_id,
+        tenant_external_id: tenant.external_id ?? null,
+        tenant_id: tenant.id,
         iat: now,
         exp: now + 300,
         purpose: 'admin_impersonation',
