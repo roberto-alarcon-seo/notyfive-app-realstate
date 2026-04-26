@@ -47,6 +47,7 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import CompleteSignup from "./pages/auth/CompleteSignup";
 import Admin from "./pages/Admin";
 import AdminTenants from "./pages/admin/AdminTenants";
+import TenantAdminDetail from "./pages/admin/TenantAdminDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminLogs from "./pages/admin/AdminLogs";
 import ApiDocs from "./pages/developers/ApiDocs";
@@ -95,6 +96,7 @@ const App = () => (
               <Route path="/auth/complete-signup" element={<CompleteSignup />} />
               <Route path="/admin" element={<Navigate to="/admin/tenants" replace />} />
               <Route path="/admin/tenants" element={<ProtectedRoute requireSuperAdmin><AdminTenants /></ProtectedRoute>} />
+              <Route path="/admin/tenants/:id" element={<ProtectedRoute requireSuperAdmin><TenantAdminDetail /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute requireSuperAdmin><AdminUsers /></ProtectedRoute>} />
               <Route path="/admin/logs" element={<ProtectedRoute requireSuperAdmin><AdminLogs /></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
