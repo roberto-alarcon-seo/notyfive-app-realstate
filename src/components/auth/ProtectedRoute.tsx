@@ -19,6 +19,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isSupportMode } = useSupportMode();
   const location = useLocation();
   const isAdminImpersonation = typeof window !== 'undefined' && sessionStorage.getItem('noty5_admin_impersonation') === '1';
+  // Users provisioned via SSO never need to complete a manual signup or set a password.
+  const userMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const isSsoUser = userMeta.sso_user === true || userMeta.provisioned_via === 'sso';
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -62,10 +65,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Check if user needs to complete signup (inactive status, first_login_required, or no password set yet)
-  // Super admins bypass this check
+  // Super admins and SSO-provisioned users bypass this check
   if (
     !isSuperAdmin &&
     !isAdminImpersonation &&
+    !isSsoUser &&
     (profile.status === 'inactive' || profile.first_login_required || !profile.password_set_at)
   ) {
     return <Navigate to="/auth/complete-signup" replace />;

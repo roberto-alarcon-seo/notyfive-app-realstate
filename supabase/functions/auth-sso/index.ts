@@ -256,7 +256,11 @@ Deno.serve(async (req) => {
       .createUser({
         email,
         email_confirm: true,
-        user_metadata: { name: claimName, provisioned_via: "sso" },
+        user_metadata: {
+          name: claimName,
+          provisioned_via: "sso",
+          sso_user: true,
+        },
       });
 
     if (createUserErr || !newUser?.user) {
@@ -298,6 +302,28 @@ Deno.serve(async (req) => {
       status: "active",
       tenant_id: tenant.id,
     };
+  }
+
+  // For existing SSO-resolved users, ensure the metadata flags are present so
+  // the frontend never asks them to complete signup or set a password.
+  if (resolvedProfile?.id) {
+    try {
+      const { data: existing } = await supabase.auth.admin.getUserById(
+        resolvedProfile.id,
+      );
+      const meta = existing?.user?.user_metadata ?? {};
+      if (!meta.sso_user || !meta.provisioned_via) {
+        await supabase.auth.admin.updateUserById(resolvedProfile.id, {
+          user_metadata: {
+            ...meta,
+            provisioned_via: meta.provisioned_via ?? "sso",
+            sso_user: true,
+          },
+        });
+      }
+    } catch (err) {
+      console.warn("auth-sso: could not refresh sso metadata", err);
+    }
   }
 
   if (
