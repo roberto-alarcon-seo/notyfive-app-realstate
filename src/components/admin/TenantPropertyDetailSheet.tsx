@@ -197,9 +197,16 @@ export function TenantPropertyDetailSheet({
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-foreground">Resumen técnico</h3>
-                    <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
-                      {operationLabels[property.operation_type] ?? property.operation_type}
-                    </Badge>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
+                        {operationLabels[property.operation_type] ?? property.operation_type}
+                      </Badge>
+                      {property.property_type && property.property_type.trim().length > 0 && (
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+                          {property.property_type}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <SpecCell label="Precio" value={formatPrice(property.price, property.currency)} />
