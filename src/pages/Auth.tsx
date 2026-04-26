@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, Mail, Lock, Sparkles } from 'lucide-react';
-import authLogo from '@/assets/responde-logo.png';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePartnerBranding } from '@/contexts/PartnerBrandingContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { signIn, signOut, user, isSuperAdmin, isLoading: authLoading } = useAuth();
+  const { partner } = usePartnerBranding();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -141,8 +142,8 @@ const Auth = () => {
             {/* Logo */}
             <div className="flex justify-center mb-6">
               <img
-                src={authLogo}
-                alt="Responde Logo"
+                src={partner.logoUrl}
+                alt={`${partner.name} Logo`}
                 className="h-12 w-auto object-contain"
               />
             </div>
