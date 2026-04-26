@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import authHero from '@/assets/auth-hero-realestate.jpg';
-import authLogo from '@/assets/brokia-logo.png';
+import { Eye, EyeOff, Loader2, Mail, Lock, Sparkles } from 'lucide-react';
+import authLogo from '@/assets/responde-logo.png';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -26,16 +24,14 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  // Load remembered email on mount
+  // Load remembered email on mount (still supported silently)
   useEffect(() => {
     const savedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
     if (savedEmail) {
       setEmail(savedEmail);
-      setRememberMe(true);
     }
   }, []);
 
@@ -120,12 +116,8 @@ const Auth = () => {
         }
       }
 
-      // Handle remember me - save or remove email from localStorage
-      if (rememberMe) {
-        localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
-      } else {
-        localStorage.removeItem(REMEMBERED_EMAIL_KEY);
-      }
+      // Always remember the admin email for convenience
+      localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
 
       toast.success('Inicio de sesión exitoso');
       navigate('/admin/tenants');
@@ -137,179 +129,93 @@ const Auth = () => {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Left Panel - Hero Image */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden">
-        {/* Background Image */}
-        <img 
-          src={authHero} 
-          alt="Propiedad de lujo" 
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" />
-        
-        {/* Content Overlay */}
-        <div className="relative z-10 flex flex-col justify-between p-8 xl:p-12 w-full">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <img 
-              src={authLogo} 
-              alt="Brokia24 Logo" 
-              className="h-12 w-12 object-contain"
-            />
-            <span className="text-2xl font-semibold text-white tracking-tight">Brokia24</span>
-          </div>
-          
-          {/* Bottom Content */}
-          <div className="space-y-6">
-            {/* Tagline */}
-            <div className="space-y-3">
-              <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
-                Impulsa Tus
-                <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-rose-400">
-                  Ventas
-                </span>
-              </h1>
-              <p className="text-lg text-white/80 max-w-md">
-                Gestiona campañas de WhatsApp, automatiza seguimientos y conecta con tus clientes de forma inteligente.
-              </p>
-            </div>
-            
-            {/* Stats */}
-            <div className="flex gap-8 pt-4">
-              <div className="space-y-1">
-                <div className="text-3xl font-bold text-white">10x</div>
-                <div className="text-sm text-white/60">Más Respuestas</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-3xl font-bold text-white">85%</div>
-                <div className="text-sm text-white/60">Tasa Apertura</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-3xl font-bold text-white">24/7</div>
-                <div className="text-sm text-white/60">Automatización</div>
-              </div>
-            </div>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#07060d] relative overflow-hidden px-4">
+      {/* Ambient purple glow */}
+      <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-[#942CCC]/20 blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[#4F2BCC]/20 blur-[120px]" />
 
-            {/* Carousel Dots */}
-            <div className="flex gap-2 pt-2">
-              <div className="w-8 h-2 rounded-full bg-white" />
-              <div className="w-2 h-2 rounded-full bg-white/40" />
-              <div className="w-2 h-2 rounded-full bg-white/40" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel - Login Form */}
-      <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col bg-background overflow-y-auto">
-        {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-border shrink-0">
-          <div className="flex items-center gap-2">
-            <img 
-              src={authLogo} 
-              alt="Brokia24 Logo" 
-              className="h-10 w-10 object-contain"
-            />
-            <span className="text-xl font-semibold">Brokia24</span>
-          </div>
-        </div>
-
-        {/* Desktop Sign In Button */}
-        <div className="hidden lg:flex justify-end p-6 shrink-0">
-          <Button variant="outline" className="rounded-full px-6" disabled>
-            Iniciar Sesión
-          </Button>
-        </div>
-
-        {/* Form Container */}
-        <div className="flex-1 flex items-center justify-center p-6 lg:p-12 min-h-0">
-          <div className="w-full max-w-md animate-fade-in">
-            {/* Logo & Header */}
-            <div className="text-center mb-8 lg:mb-10">
-              <img 
-                src={authLogo} 
-                alt="Brokia24 Logo" 
-                className="h-16 w-16 object-contain mx-auto mb-4"
+      {/* Card with gradient border */}
+      <div className="relative w-full max-w-md animate-fade-in">
+        <div className="rounded-2xl p-[1px] bg-gradient-to-b from-[#3b6fff] via-[#942CCC]/40 to-[#3b6fff]/30">
+          <div className="rounded-2xl bg-[#0c0a16] px-8 py-10 sm:px-10 sm:py-12">
+            {/* Logo */}
+            <div className="flex justify-center mb-6">
+              <img
+                src={authLogo}
+                alt="Responde Logo"
+                className="h-12 w-auto object-contain"
               />
-              <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-3">
-                Acceso Administradores
-              </h1>
-              <p className="text-muted-foreground">
-                Solo administradores globales del sistema
-              </p>
             </div>
+
+            {/* Title */}
+            <h1 className="text-center text-3xl sm:text-4xl font-bold text-white tracking-tight">
+              Bienvenido de vuelta
+            </h1>
+            <p className="text-center text-sm text-white/60 mt-2 mb-8">
+              Accede a tu consola y a la academia
+            </p>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email */}
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-foreground">
-                  Tu Email
+                <label htmlFor="email" className="text-sm font-medium text-white/80">
+                  Email
                 </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="correo@ejemplo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 bg-secondary/50 border-border hover:border-primary/50 focus:border-primary transition-colors rounded-xl"
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="correo@ejemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-11 pl-10 bg-white/[0.06] border-white/10 text-white placeholder:text-white/30 hover:border-white/20 focus-visible:border-[#942CCC] focus-visible:ring-0 rounded-lg transition-colors"
+                    disabled={isLoading}
+                    autoComplete="email"
+                  />
+                </div>
                 {errors.email && (
-                  <p className="text-xs text-destructive">{errors.email}</p>
+                  <p className="text-xs text-red-400">{errors.email}</p>
                 )}
               </div>
 
               {/* Password */}
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
+                <label htmlFor="password" className="text-sm font-medium text-white/80">
                   Contraseña
                 </label>
                 <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
+                    placeholder="••••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-12 bg-secondary/50 border-border hover:border-primary/50 focus:border-primary transition-colors rounded-xl pr-12"
+                    className="h-11 pl-10 pr-11 bg-white/[0.06] border-white/10 text-white placeholder:text-white/30 hover:border-white/20 focus-visible:border-[#942CCC] focus-visible:ring-0 rounded-lg transition-colors"
                     disabled={isLoading}
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-lg hover:bg-secondary"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors p-1"
                     tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-xs text-destructive">{errors.password}</p>
+                  <p className="text-xs text-red-400">{errors.password}</p>
                 )}
               </div>
 
-              {/* Remember me & Forgot password */}
-              <div className="flex items-center justify-between py-1">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="remember"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked === true)}
-                    disabled={isLoading}
-                    className="rounded"
-                  />
-                  <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
-                    Recordarme
-                  </label>
-                </div>
+              {/* Forgot password */}
+              <div className="flex justify-end">
                 <Link
                   to="/auth/forgot-password"
-                  className="text-sm text-primary hover:text-primary/80 transition-colors font-medium"
+                  className="text-xs text-white/50 hover:text-white/80 transition-colors"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
@@ -318,7 +224,7 @@ const Auth = () => {
               {/* Submit */}
               <Button
                 type="submit"
-                className="w-full h-12 rounded-xl gradient-primary hover:opacity-90 transition-all font-semibold text-base shadow-lg hover:shadow-xl"
+                className="w-full h-12 rounded-lg bg-gradient-to-r from-[#b266ff] to-[#5b3bff] hover:opacity-95 transition-all font-semibold text-white text-base shadow-[0_8px_24px_-8px_rgba(148,44,204,0.6)] border-0"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -327,18 +233,14 @@ const Auth = () => {
                     Iniciando sesión...
                   </>
                 ) : (
-                  'Iniciar Sesión'
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Iniciar sesión
+                  </>
                 )}
               </Button>
             </form>
           </div>
-        </div>
-
-        {/* Footer Branding */}
-        <div className="p-6 text-center">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Brokia24. Todos los derechos reservados.
-          </p>
         </div>
       </div>
     </div>
