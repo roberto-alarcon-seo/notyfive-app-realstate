@@ -79,6 +79,14 @@ const RecoveryHashRedirector = () => {
   return null;
 };
 
+// Tenants no longer manage inventory locally — it's synced from Brokia24 Core.
+const PropertiesRedirect = () => {
+  useEffect(() => {
+    toast.info("El inventario es gestionado desde Brokia24 Core");
+  }, []);
+  return <Navigate to="/" replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
