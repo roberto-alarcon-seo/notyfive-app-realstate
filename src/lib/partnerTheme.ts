@@ -219,18 +219,26 @@ export function applyPartnerTheme(theme: PartnerTheme): void {
 
   // Text + ancillary tokens that flip with the surface mode
   if (isLight) {
-    root.style.setProperty("--foreground", "0 0% 10%");
-    root.style.setProperty("--card-foreground", "0 0% 10%");
-    root.style.setProperty("--popover-foreground", "0 0% 10%");
-    root.style.setProperty("--secondary", "0 0% 96%");
-    root.style.setProperty("--secondary-foreground", "0 0% 10%");
-    root.style.setProperty("--muted", "0 0% 96%");
-    root.style.setProperty("--muted-foreground", "0 0% 35%");
-    root.style.setProperty("--accent", "0 0% 96%");
-    root.style.setProperty("--accent-foreground", "0 0% 10%");
-    root.style.setProperty("--border", "0 0% 90%");
-    root.style.setProperty("--input", "0 0% 90%");
-    root.style.setProperty("--message-incoming", "0 0% 94%");
+    // Light mode — derive warm neutrals from the app background's hue so
+    // borders/secondary surfaces feel cohesive with the brand (per MLS spec
+    // they're slightly tinted vs pure gray).
+    const bgMatch = theme.app_bg.trim().match(
+      /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/,
+    );
+    const bgHue = bgMatch ? Math.round(parseFloat(bgMatch[1])) : 340;
+    root.style.setProperty("--foreground", "220 26% 14%");
+    root.style.setProperty("--card-foreground", "220 26% 14%");
+    root.style.setProperty("--popover-foreground", "220 26% 14%");
+    root.style.setProperty("--secondary", `${bgHue} 20% 95%`);
+    root.style.setProperty("--secondary-foreground", "220 26% 14%");
+    root.style.setProperty("--muted", `${bgHue} 15% 93%`);
+    root.style.setProperty("--muted-foreground", "220 9% 46%");
+    // In light mode the accent matches the brand primary (per spec).
+    root.style.setProperty("--accent", theme.primary_color);
+    root.style.setProperty("--accent-foreground", "0 0% 100%");
+    root.style.setProperty("--border", `${bgHue} 15% 90%`);
+    root.style.setProperty("--input", "0 0% 100%");
+    root.style.setProperty("--message-incoming", `${bgHue} 15% 93%`);
   } else {
     root.style.setProperty("--foreground", "0 0% 100%");
     root.style.setProperty("--card-foreground", "0 0% 100%");
