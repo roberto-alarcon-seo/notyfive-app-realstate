@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useTenantWallet, useTenantWalletTransactions, useAddMessages } from '@/hooks/useWallet';
+import { useTenantWallet, useAddMessages } from '@/hooks/useWallet';
 import { useAdminTenantCredits, getPlanMonthlyCredits } from '@/hooks/useTenantCredits';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -21,14 +21,50 @@ const reasonLabels: Record<string, string> = {
   outbound_message: 'Mensaje saliente',
   campaign_message: 'Mensaje de campaña',
   template_message: 'Template',
+  ai_reply: 'Respuesta IA',
   manual_adjustment: 'Ajuste manual',
+  external_recharge: 'Recarga vía Core',
+  core_adjustment: 'Ajuste vía Core',
+  revert_send_failed: 'Reverso (envío fallido)',
 };
+
+interface LedgerEntry {
+  id: string;
+  tenant_id: string;
+  movement_type: 'credit' | 'debit';
+  amount: number;
+  reason: string;
+  description: string | null;
+  metadata: Record<string, unknown> | null;
+  balance_before: number;
+  balance_after: number;
+  created_at: string;
+}
 
 export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
   const { data: credits, isLoading: creditsLoading } = useAdminTenantCredits(tenantId);
   const { data: wallet, isLoading: walletLoading } = useTenantWallet(tenantId);
-  const { data: transactions, isLoading: txLoading } = useTenantWalletTransactions(tenantId);
   const addMessages = useAddMessages();
+
+  // Movement history is read directly from the canonical `wallet_ledger`
+  // table, which records every credit / debit including external recharges
+  // pushed by the Core via `sync-external-core`.
+  const { data: ledger, isLoading: ledgerLoading } = useQuery({
+    queryKey: ['wallet-ledger', tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('wallet_ledger')
+        .select(
+          'id, tenant_id, movement_type, amount, reason, description, metadata, balance_before, balance_after, created_at',
+        )
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as unknown as LedgerEntry[];
+    },
+    enabled: !!tenantId,
+  });
 
   // Tenant context: detect whether this tenant's billing is managed by the
   // external Core. When true we lock manual adjustments and surface a banner.
@@ -93,7 +129,7 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
     setMessagesToAdd('');
   };
 
-  if (creditsLoading || walletLoading || txLoading) {
+  if (creditsLoading || walletLoading || ledgerLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -126,9 +162,12 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
     ? format(new Date(credits.next_refill_at), "d MMM yyyy", { locale: es })
     : "—";
 
-  // Calculate totals from transactions
-  const totalTopups = transactions?.filter(t => t.type === 'topup').reduce((sum, t) => sum + t.messages, 0) || 0;
-  const totalDebits = transactions?.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.messages, 0) || 0;
+  // Aggregate totals from the canonical wallet_ledger so the dashboard
+  // counters reflect every movement (including Core recharges).
+  const totalTopups =
+    ledger?.filter((l) => l.movement_type === 'credit').reduce((sum, l) => sum + l.amount, 0) || 0;
+  const totalDebits =
+    ledger?.filter((l) => l.movement_type === 'debit').reduce((sum, l) => sum + l.amount, 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -241,42 +280,69 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
             <History className="h-4 w-4 text-muted-foreground" />
             <h3 className="font-medium text-foreground">Historial de Movimientos</h3>
           </div>
-          <Badge variant="outline">{transactions?.length || 0} movimientos</Badge>
+          <Badge variant="outline">{ledger?.length || 0} movimientos</Badge>
         </div>
-        
-        {transactions && transactions.length > 0 ? (
-          <div className="space-y-1">
-            {transactions.map((tx) => (
-              <div 
-                key={tx.id} 
-                className="flex items-center justify-between py-3 border-b border-border last:border-0"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-1.5 rounded-lg ${
-                    tx.type === 'topup' ? 'bg-success/10' : 'bg-muted'
-                  }`}>
-                    {tx.type === 'topup' ? (
-                      <TrendingUp className="h-4 w-4 text-success" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {reasonLabels[tx.reason] || tx.reason}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleString('es-MX')}
-                    </p>
-                  </div>
-                </div>
-                <span className={`text-sm font-medium ${
-                  tx.type === 'topup' ? 'text-success' : 'text-foreground'
-                }`}>
-                  {tx.type === 'topup' ? '+' : '-'}{tx.messages}
-                </span>
-              </div>
-            ))}
+
+        {ledger && ledger.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-muted-foreground border-b border-border">
+                  <th className="text-left font-medium py-2 pr-3">Fecha y hora</th>
+                  <th className="text-left font-medium py-2 pr-3">Concepto</th>
+                  <th className="text-right font-medium py-2 pr-3">Monto</th>
+                  <th className="text-right font-medium py-2">Saldo resultante</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledger.map((entry) => {
+                  const isCredit = entry.movement_type === 'credit';
+                  const label = reasonLabels[entry.reason] || entry.reason;
+                  const description = entry.description?.trim();
+                  return (
+                    <tr key={entry.id} className="border-b border-border last:border-0 align-top">
+                      <td className="py-3 pr-3 text-foreground whitespace-nowrap">
+                        {format(new Date(entry.created_at), "dd/MM/yyyy hh:mm a", { locale: es })}
+                      </td>
+                      <td className="py-3 pr-3">
+                        <div className="flex items-start gap-2">
+                          <div
+                            className={`mt-0.5 p-1 rounded-md ${
+                              isCredit ? 'bg-success/10' : 'bg-muted'
+                            }`}
+                          >
+                            {isCredit ? (
+                              <TrendingUp className="h-3.5 w-3.5 text-success" />
+                            ) : (
+                              <TrendingDown className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground">{label}</p>
+                            {description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td
+                        className={`py-3 pr-3 text-right font-medium whitespace-nowrap ${
+                          isCredit ? 'text-success' : 'text-foreground'
+                        }`}
+                      >
+                        {isCredit ? '+' : '-'}
+                        {entry.amount.toLocaleString('es-MX')}
+                      </td>
+                      <td className="py-3 text-right text-foreground whitespace-nowrap">
+                        {entry.balance_after.toLocaleString('es-MX')}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-4">
