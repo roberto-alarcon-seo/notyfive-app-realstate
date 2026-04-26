@@ -80,13 +80,13 @@ const Landing = () => {
         )}
 
         <Button
-          asChild
+          onClick={() => {
+            window.location.href = coreUrl || window.location.origin;
+          }}
           className="w-full h-12 rounded-xl gradient-primary hover:opacity-90 transition-all font-semibold"
         >
-          <a href={coreUrl} target="_blank" rel="noopener noreferrer">
-            Ir al panel principal
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </a>
+          Ir al panel principal
+          <ExternalLink className="ml-2 h-4 w-4" />
         </Button>
       </div>
 
