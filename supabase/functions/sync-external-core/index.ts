@@ -636,29 +636,19 @@ async function handleSyncUser(
     );
   }
 
-  // Seat validation: count active non-admin users in the tenant.
-  const { data: adminRoles } = await supabase
-    .from('user_roles')
-    .select('user_id')
-    .in('tenant_role', ADMIN_TENANT_ROLES);
-  const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
-
-  let seatQuery = supabase
+  // Seat validation: count ALL profiles in the tenant (including owners/admins).
+  // Every user occupies one seat, so the limit must cover the entire team.
+  const { count: currentUsers, error: countErr } = await supabase
     .from('profiles')
     .select('id', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-    .eq('status', 'active');
-  if (adminIds.length > 0) {
-    seatQuery = seatQuery.not('id', 'in', `(${adminIds.map((id) => `"${id}"`).join(',')})`);
-  }
-  const { count: currentUsers, error: countErr } = await seatQuery;
+    .eq('tenant_id', tenantId);
+
   if (countErr) {
     console.error('sync_user: seat count error', countErr);
     return jsonResponse({ error: 'Failed to count seats', details: countErr.message }, 500);
   }
 
-  const willCountAgainstSeats = !ADMIN_TENANT_ROLES.includes(resolvedRole);
-  if (willCountAgainstSeats && (currentUsers ?? 0) >= (tenant.max_users ?? 0)) {
+  if ((currentUsers ?? 0) >= (tenant.max_users ?? 0)) {
     return jsonResponse(
       {
         error: 'Tenant has reached the maximum number of seats.',
