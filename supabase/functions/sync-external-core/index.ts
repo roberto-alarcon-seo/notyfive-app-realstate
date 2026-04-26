@@ -193,7 +193,7 @@ async function handleUpsertTenant(
   body: UpsertTenantBody,
   serviceName: string,
 ): Promise<Response> {
-  const { external_id, name, plan, owner_email, owner_name, max_users } = body;
+  const { external_id, name, plan, owner_email, owner_name, max_users, country_code } = body;
 
   // Validate input
   if (!external_id || typeof external_id !== 'string' || external_id.trim().length === 0) {
@@ -224,6 +224,18 @@ async function handleUpsertTenant(
     resolvedMaxUsers = max_users;
   }
 
+  // Validate country_code (ISO 3166-1 alpha-2). Optional.
+  let resolvedCountryCode: string | undefined;
+  if (country_code !== undefined && country_code !== null) {
+    if (typeof country_code !== 'string' || !COUNTRY_CODE_REGEX.test(country_code.toUpperCase())) {
+      return jsonResponse(
+        { error: 'country_code must be a 2-letter ISO code (e.g. MX, CO, AR)' },
+        400,
+      );
+    }
+    resolvedCountryCode = country_code.toUpperCase();
+  }
+
   // Check if tenant exists
   const { data: existing, error: fetchError } = await supabase
     .from('tenants')
@@ -245,10 +257,11 @@ async function handleUpsertTenant(
         plan: resolvedPlan,
         managed_externally: true,
         ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
+        ...(resolvedCountryCode !== undefined ? { country_code: resolvedCountryCode } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
-      .select('id, name, plan, external_id, managed_externally, billing_state, message_credits, max_users')
+      .select('id, name, plan, external_id, managed_externally, billing_state, message_credits, max_users, country_code')
       .single();
 
     if (updateError) {
@@ -269,6 +282,7 @@ async function handleUpsertTenant(
             name: name.trim(),
             plan: resolvedPlan,
             ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
+            ...(resolvedCountryCode !== undefined ? { country_code: resolvedCountryCode } : {}),
           },
         },
       });
@@ -302,8 +316,9 @@ async function handleUpsertTenant(
       extra_credits: 0,
       initial_credits_granted: false,
       ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
+      ...(resolvedCountryCode !== undefined ? { country_code: resolvedCountryCode } : {}),
     })
-    .select('id, name, plan, external_id, managed_externally, billing_state, message_credits, max_users')
+    .select('id, name, plan, external_id, managed_externally, billing_state, message_credits, max_users, country_code')
     .single();
 
   if (createError) {
