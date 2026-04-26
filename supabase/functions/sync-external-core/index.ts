@@ -1110,6 +1110,10 @@ async function handleSyncProperty(
 
   // ---- Build payload (only include defined keys for partial updates) ----
   const updatePayload: Record<string, unknown> = {};
+  // partner_id MUST always be present to satisfy multi-tenant isolation on
+  // the properties table (NOT NULL + composite-key enforcement). Source it
+  // from the validated partner that owns the api_key, never from raw input.
+  updatePayload.partner_id = partnerId;
   if (title !== undefined) updatePayload.title = title;
   if (zone !== undefined) updatePayload.zone = zone;
   if (address !== undefined) updatePayload.address = address;
@@ -1182,6 +1186,7 @@ async function handleSyncProperty(
     // Required fields for INSERT (NOT NULL): title, zone, operation_type
     const insertPayload = {
       tenant_id: tenantId,
+      partner_id: partnerId,
       property_code: property_code.trim(),
       title: title ?? property_code.trim(),
       zone: zone ?? '',
