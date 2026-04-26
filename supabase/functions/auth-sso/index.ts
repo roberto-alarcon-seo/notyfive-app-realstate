@@ -183,15 +183,128 @@ Deno.serve(async (req) => {
     .ilike("email", email)
     .maybeSingle();
 
-  if (profileErr || !profile) {
-    console.warn("auth-sso: profile not found", { email, tenantId: tenant.id });
-    return denyRedirect(origin, "user_not_found");
-  }
-
   const isAdminImpersonation = mode === "impersonation"
     || claims.purpose === "admin_impersonation";
 
-  if (profile.status && profile.status !== "active" && !isAdminImpersonation) {
+  // ---------- Lazy provisioning ----------
+  // If the profile does not exist yet, auto-create it as long as the tenant
+  // still has free seats (max_users). Impersonation flows must NOT create
+  // users — they require the target user to already exist.
+  let resolvedProfile = profile;
+  if (profileErr) {
+    console.error("auth-sso: profile fetch error", profileErr);
+    return denyRedirect(origin, "user_not_found");
+  }
+
+  if (!resolvedProfile) {
+    if (isAdminImpersonation) {
+      console.warn("auth-sso: impersonation target not found", {
+        email,
+        tenantId: tenant.id,
+      });
+      return denyRedirect(origin, "user_not_found");
+    }
+
+    // Step A: load tenant seat limit
+    const { data: tenantLimits } = await supabase
+      .from("tenants")
+      .select("max_users")
+      .eq("id", tenant.id)
+      .maybeSingle();
+    const maxUsers = typeof tenantLimits?.max_users === "number"
+      ? tenantLimits.max_users
+      : 1;
+
+    // Count active profiles in this tenant
+    const { count: activeCount, error: countErr } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenant.id)
+      .eq("status", "active");
+
+    if (countErr) {
+      console.error("auth-sso: count profiles failed", countErr);
+      return denyRedirect(origin, "user_not_found");
+    }
+
+    if ((activeCount ?? 0) >= maxUsers) {
+      console.warn("auth-sso: tenant seat limit reached", {
+        tenantId: tenant.id,
+        maxUsers,
+        activeCount,
+      });
+      return denyRedirect(origin, "max_users_reached");
+    }
+
+    // Step C: provision new user (auth + profile + role)
+    const claimName = typeof claims.name === "string" && claims.name.trim().length > 0
+      ? (claims.name as string).trim()
+      : email.split("@")[0];
+    const claimRoleRaw = typeof claims.tenant_role === "string"
+      ? (claims.tenant_role as string).trim()
+      : "asesor";
+    const VALID_ROLES = [
+      "owner",
+      "administrador",
+      "manager",
+      "marketer",
+      "asesor",
+    ];
+    const claimRole = VALID_ROLES.includes(claimRoleRaw) ? claimRoleRaw : "asesor";
+
+    const { data: newUser, error: createUserErr } = await supabase.auth.admin
+      .createUser({
+        email,
+        email_confirm: true,
+        user_metadata: { name: claimName, provisioned_via: "sso" },
+      });
+
+    if (createUserErr || !newUser?.user) {
+      // If user already exists in auth.users (different tenant?), fail clearly.
+      console.error("auth-sso: failed to provision auth user", createUserErr);
+      return denyRedirect(origin, "user_not_found");
+    }
+
+    const newUserId = newUser.user.id;
+
+    const { error: insertProfileErr } = await supabase
+      .from("profiles")
+      .insert({
+        id: newUserId,
+        tenant_id: tenant.id,
+        name: claimName,
+        email,
+        status: "active",
+        first_login_required: false,
+      });
+
+    if (insertProfileErr) {
+      console.error("auth-sso: failed to insert profile", insertProfileErr);
+      // Roll back auth user to keep state consistent.
+      await supabase.auth.admin.deleteUser(newUserId).catch(() => {});
+      return denyRedirect(origin, "user_not_found");
+    }
+
+    await supabase
+      .from("user_roles")
+      .upsert(
+        { user_id: newUserId, global_role: "user", tenant_role: claimRole },
+        { onConflict: "user_id" },
+      );
+
+    resolvedProfile = {
+      id: newUserId,
+      email,
+      status: "active",
+      tenant_id: tenant.id,
+    };
+  }
+
+  if (
+    resolvedProfile.status &&
+    resolvedProfile.status !== "active" &&
+    !isAdminImpersonation
+  ) {
     return denyRedirect(origin, "user_inactive");
   }
 
@@ -201,7 +314,7 @@ Deno.serve(async (req) => {
   const { data: linkData, error: linkErr } = await supabase.auth.admin
     .generateLink({
       type: "magiclink",
-      email: profile.email,
+      email: resolvedProfile.email,
       options: { redirectTo: redirectUrl },
     });
 
@@ -214,11 +327,11 @@ Deno.serve(async (req) => {
   try {
     await supabase.from("security_events").insert({
       tenant_id: tenant.id,
-      user_id: profile.id,
+      user_id: resolvedProfile.id,
       event_type: "sso_login",
       metadata: {
         source: "core",
-        email: profile.email,
+        email: resolvedProfile.email,
         tenant_external_id: tenantExternalId,
       },
     });

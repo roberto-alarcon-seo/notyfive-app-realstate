@@ -30,6 +30,8 @@ const Landing = () => {
       user_inactive: 'Tu usuario está inactivo. Contacta al administrador.',
       link_generation_failed: 'No se pudo generar la sesión. Intenta de nuevo.',
       server_misconfigured: 'El servidor SSO no está configurado correctamente.',
+      max_users_reached:
+        'Se ha alcanzado el límite de usuarios permitidos para esta cuenta. Por favor, solicita más asientos en tu panel principal.',
     };
     const detail = reasonMap[ssoError] ?? 'Acceso denegado o sesión expirada.';
     toast.error('Acceso denegado o sesión expirada', { description: detail });
