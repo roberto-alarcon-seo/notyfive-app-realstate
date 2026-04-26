@@ -12,8 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Lock } from "lucide-react";
 import { Property } from "@/hooks/useProperties";
 import { useEffectiveTenantId } from "@/hooks/useEffectiveTenantId";
+import { useTenantContext } from "@/hooks/useTenantContext";
 
 interface PropertyInfoTabProps {
   formData: Partial<Property>;
@@ -45,14 +49,56 @@ const STATUS_OPTIONS = [
 const CURRENCY_OPTIONS = [
   { value: "MXN", label: "MXN" },
   { value: "USD", label: "USD" },
+  { value: "COP", label: "COP" },
+  { value: "ARS", label: "ARS" },
+  { value: "CLP", label: "CLP" },
+  { value: "PEN", label: "PEN" },
+  { value: "EUR", label: "EUR" },
 ];
 
-const CREDIT_OPTIONS = [
-  { value: "INFONAVIT", label: "INFONAVIT" },
-  { value: "COFINAVIT", label: "COFINAVIT" },
-  { value: "FOVISSSTE", label: "FOVISSSTE" },
-  { value: "ISFAM", label: "ISFAM" },
-  { value: "CFE", label: "CFE" },
+// Region-specific credit / financing options.
+// Always includes universal options (CONTADO, BANK).
+const CREDIT_OPTIONS_BY_COUNTRY: Record<string, { value: string; label: string }[]> = {
+  MX: [
+    { value: "INFONAVIT", label: "INFONAVIT" },
+    { value: "COFINAVIT", label: "COFINAVIT" },
+    { value: "FOVISSSTE", label: "FOVISSSTE" },
+    { value: "ISFAM", label: "ISFAM" },
+    { value: "CFE", label: "CFE" },
+    { value: "BANK", label: "Bancario" },
+    { value: "CONTADO", label: "Contado" },
+  ],
+  CO: [
+    { value: "FNA", label: "FNA" },
+    { value: "SUBSIDIO_MIVIVIENDA", label: "Subsidio Mi Casa Ya" },
+    { value: "LEASING", label: "Leasing habitacional" },
+    { value: "BANK", label: "Bancario" },
+    { value: "CONTADO", label: "Contado" },
+  ],
+  AR: [
+    { value: "PROCREAR", label: "Procrear" },
+    { value: "BANK", label: "Bancario" },
+    { value: "CONTADO", label: "Contado" },
+  ],
+  CL: [
+    { value: "SUBSIDIO_DS1", label: "Subsidio DS1" },
+    { value: "BANK", label: "Bancario" },
+    { value: "CONTADO", label: "Contado" },
+  ],
+  PE: [
+    { value: "MIVIVIENDA", label: "MiVivienda" },
+    { value: "TECHO_PROPIO", label: "Techo Propio" },
+    { value: "BANK", label: "Bancario" },
+    { value: "CONTADO", label: "Contado" },
+  ],
+  ES: [
+    { value: "HIPOTECA", label: "Hipoteca" },
+    { value: "BANK", label: "Bancario" },
+    { value: "CONTADO", label: "Contado" },
+  ],
+};
+
+const DEFAULT_CREDIT_OPTIONS = [
   { value: "BANK", label: "Bancario" },
   { value: "CONTADO", label: "Contado" },
 ];
@@ -63,6 +109,19 @@ export default function PropertyInfoTab({
   propertyId,
 }: PropertyInfoTabProps) {
   const tenantId = useEffectiveTenantId();
+  const { data: tenantCtx } = useTenantContext();
+  const isExternallyManaged = !!tenantCtx?.managed_externally;
+  const countryCode = tenantCtx?.country_code ?? "MX";
+  const creditOptionsForCountry =
+    CREDIT_OPTIONS_BY_COUNTRY[countryCode] ?? DEFAULT_CREDIT_OPTIONS;
+
+  // When managed externally, show every credit currently set on the property even
+  // if it is not in the local catalog (e.g. Core sent a code we don't know yet).
+  const knownValues = new Set(creditOptionsForCountry.map((c) => c.value));
+  const extraSelectedCredits = (formData.accepted_credits ?? [])
+    .filter((c) => !knownValues.has(c))
+    .map((value) => ({ value, label: value }));
+  const renderedCreditOptions = [...creditOptionsForCountry, ...extraSelectedCredits];
 
   // Fetch only users with 'asesor' role for property assignment
   const { data: asesores } = useQuery({
@@ -97,6 +156,7 @@ export default function PropertyInfoTab({
   });
 
   const handleCreditToggle = (credit: string) => {
+    if (isExternallyManaged) return;
     const current = formData.accepted_credits || [];
     const updated = current.includes(credit)
       ? current.filter((c) => c !== credit)
@@ -105,7 +165,17 @@ export default function PropertyInfoTab({
   };
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
+      {isExternallyManaged && (
+        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+          <Lock className="h-4 w-4" />
+          <span>
+            Esta propiedad es gestionada por el <strong>Sistema Core</strong>.
+            Los campos técnicos y créditos son de solo lectura.
+          </span>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Basic Info */}
         <Card>
@@ -121,6 +191,7 @@ export default function PropertyInfoTab({
                   value={formData.property_code || ""}
                   onChange={(e) => updateField("property_code", e.target.value)}
                   placeholder="PROP-001"
+                  disabled={isExternallyManaged}
                 />
               </div>
               <div className="space-y-2">
@@ -153,6 +224,7 @@ export default function PropertyInfoTab({
                 value={formData.title || ""}
                 onChange={(e) => updateField("title", e.target.value)}
                 placeholder="Penthouse en Condesa"
+                disabled={isExternallyManaged}
               />
             </div>
 
@@ -164,6 +236,7 @@ export default function PropertyInfoTab({
                   value={formData.zone || ""}
                   onChange={(e) => updateField("zone", e.target.value)}
                   placeholder="Condesa, CDMX"
+                  disabled={isExternallyManaged}
                 />
               </div>
               <div className="space-y-2">
@@ -173,6 +246,7 @@ export default function PropertyInfoTab({
                   value={formData.address || ""}
                   onChange={(e) => updateField("address", e.target.value)}
                   placeholder="Calle, Número"
+                  disabled={isExternallyManaged}
                 />
               </div>
             </div>
@@ -183,6 +257,7 @@ export default function PropertyInfoTab({
                 <Select
                   value={formData.operation_type || "sale"}
                   onValueChange={(v) => updateField("operation_type", v)}
+                  disabled={isExternallyManaged}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -203,6 +278,7 @@ export default function PropertyInfoTab({
                   onValueChange={(v) =>
                     updateField("property_type", v === "none" ? null : v)
                   }
+                  disabled={isExternallyManaged}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar" />
@@ -227,6 +303,7 @@ export default function PropertyInfoTab({
                   type="number"
                   value={formData.price || 0}
                   onChange={(e) => updateField("price", Number(e.target.value))}
+                  disabled={isExternallyManaged}
                 />
               </div>
               <div className="space-y-2">
@@ -234,6 +311,7 @@ export default function PropertyInfoTab({
                 <Select
                   value={formData.currency || "MXN"}
                   onValueChange={(v) => updateField("currency", v)}
+                  disabled={isExternallyManaged}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -255,6 +333,7 @@ export default function PropertyInfoTab({
                 <Select
                   value={formData.status || "available"}
                   onValueChange={(v) => updateField("status", v)}
+                  disabled={isExternallyManaged}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -269,7 +348,9 @@ export default function PropertyInfoTab({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="maintenance_fee">Mantenimiento (MXN)</Label>
+                <Label htmlFor="maintenance_fee">
+                  Mantenimiento ({formData.currency || "MXN"})
+                </Label>
                 <Input
                   id="maintenance_fee"
                   type="number"
@@ -281,7 +362,98 @@ export default function PropertyInfoTab({
                     )
                   }
                   placeholder="0"
+                  disabled={isExternallyManaged}
                 />
+              </div>
+            </div>
+
+            {/* Technical specs */}
+            <div className="space-y-3 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Características técnicas</Label>
+                {isExternallyManaged && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="gap-1">
+                        <Lock className="h-3 w-3" /> Solo lectura
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Estos valores son controlados por el Sistema Core
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bedrooms">Recámaras</Label>
+                  <Input
+                    id="bedrooms"
+                    type="number"
+                    min={0}
+                    value={formData.bedrooms ?? ""}
+                    onChange={(e) =>
+                      updateField(
+                        "bedrooms",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
+                    placeholder="0"
+                    disabled={isExternallyManaged}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bathrooms">Baños</Label>
+                  <Input
+                    id="bathrooms"
+                    type="number"
+                    min={0}
+                    step="0.5"
+                    value={formData.bathrooms ?? ""}
+                    onChange={(e) =>
+                      updateField(
+                        "bathrooms",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
+                    placeholder="0"
+                    disabled={isExternallyManaged}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="parking_spots">Estacionamientos</Label>
+                  <Input
+                    id="parking_spots"
+                    type="number"
+                    min={0}
+                    value={formData.parking_spots ?? ""}
+                    onChange={(e) =>
+                      updateField(
+                        "parking_spots",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
+                    placeholder="0"
+                    disabled={isExternallyManaged}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sq_meters">Metros cuadrados</Label>
+                  <Input
+                    id="sq_meters"
+                    type="number"
+                    min={0}
+                    value={formData.sq_meters ?? ""}
+                    onChange={(e) =>
+                      updateField(
+                        "sq_meters",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
+                    placeholder="0"
+                    disabled={isExternallyManaged}
+                  />
+                </div>
               </div>
             </div>
 
@@ -290,6 +462,7 @@ export default function PropertyInfoTab({
                 id="is_active"
                 checked={formData.is_active ?? true}
                 onCheckedChange={(v) => updateField("is_active", v)}
+                disabled={isExternallyManaged}
               />
               <Label htmlFor="is_active">Propiedad activa</Label>
             </div>
@@ -308,34 +481,47 @@ export default function PropertyInfoTab({
               </Label>
               <Textarea
                 id="ai_prompt"
-                value={formData.ai_prompt || ""}
+                value={formData.ai_description_template || formData.ai_prompt || ""}
                 onChange={(e) => updateField("ai_prompt", e.target.value)}
                 placeholder="Incluye características, condiciones, créditos, disponibilidad, objeciones, etc."
                 className="min-h-[200px]"
+                disabled={isExternallyManaged}
               />
               <p className="text-xs text-muted-foreground">
-                Esta información será utilizada por la IA para responder
-                consultas sobre la propiedad.
+                {isExternallyManaged && formData.ai_description_template
+                  ? "Plantilla enviada por el Sistema Core. Usada por la IA para responder consultas."
+                  : "Esta información será utilizada por la IA para responder consultas sobre la propiedad."}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label>Créditos aceptados</Label>
+              <div className="flex items-center justify-between">
+                <Label>Créditos aceptados</Label>
+                <span className="text-xs text-muted-foreground">
+                  Región: {countryCode}
+                </span>
+              </div>
               <div className="flex flex-wrap gap-2">
-                {CREDIT_OPTIONS.map((opt) => (
+                {renderedCreditOptions.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
                     onClick={() => handleCreditToggle(opt.value)}
+                    disabled={isExternallyManaged}
                     className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                       formData.accepted_credits?.includes(opt.value)
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-muted border-border hover:border-primary/50"
-                    }`}
+                    } ${isExternallyManaged ? "opacity-70 cursor-not-allowed hover:border-border" : ""}`}
                   >
                     {opt.label}
                   </button>
                 ))}
+                {renderedCreditOptions.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No hay opciones de crédito configuradas para la región {countryCode}.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -347,11 +533,13 @@ export default function PropertyInfoTab({
                 onChange={(e) => updateField("internal_notes", e.target.value)}
                 placeholder="Notas visibles solo para el equipo..."
                 className="min-h-[100px]"
+                disabled={isExternallyManaged}
               />
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
+    </TooltipProvider>
   );
 }

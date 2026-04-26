@@ -24,6 +24,11 @@ export interface Property {
   visit_availability: string | null;
   accepted_credits: string[] | null;
   youtube_url: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  parking_spots: number | null;
+  sq_meters: number | null;
+  ai_description_template: string | null;
   created_at: string;
   updated_at: string;
   cover_image?: string | null;
