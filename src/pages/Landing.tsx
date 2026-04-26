@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ExternalLink, AlertTriangle } from 'lucide-react';
-import authLogo from '@/assets/brokia-logo.png';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { usePartnerBranding } from '@/contexts/PartnerBrandingContext';
 
 /**
  * Public landing page shown when an unauthenticated user lands on `/`.
@@ -11,10 +11,10 @@ import { toast } from 'sonner';
  * the master Core platform. Manual login is reserved for global super admins
  * at `/rs_admin`.
  */
-const CORE_URL = 'https://app.brokia24.com';
-
 const Landing = () => {
   const [params, setParams] = useSearchParams();
+  const { partner } = usePartnerBranding();
+  const coreUrl = `https://${partner.primaryDomain}`;
   const ssoError = params.get('error') === 'sso_denied'
     ? params.get('reason') ?? 'unknown'
     : null;
@@ -44,12 +44,12 @@ const Landing = () => {
       <div className="w-full max-w-md text-center space-y-8 animate-fade-in">
         <div className="flex flex-col items-center gap-3">
           <img
-            src={authLogo}
-            alt="Brokia24"
+            src={partner.logoUrl}
+            alt={partner.name}
             className="h-16 w-16 object-contain"
           />
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Brokia24 CRM
+            {partner.name} CRM
           </h1>
         </div>
 
@@ -59,8 +59,8 @@ const Landing = () => {
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
             El acceso a esta plataforma se realiza exclusivamente desde su
-            aplicación maestra Brokia24. Allí podrá entrar al CRM con un solo
-            clic, sin necesidad de credenciales adicionales.
+            aplicación maestra {partner.name}. Allí podrá entrar al CRM con un
+            solo clic, sin necesidad de credenciales adicionales.
           </p>
         </div>
 
@@ -78,7 +78,7 @@ const Landing = () => {
           asChild
           className="w-full h-12 rounded-xl gradient-primary hover:opacity-90 transition-all font-semibold"
         >
-          <a href={CORE_URL} target="_blank" rel="noopener noreferrer">
+          <a href={coreUrl} target="_blank" rel="noopener noreferrer">
             Ir al panel principal
             <ExternalLink className="ml-2 h-4 w-4" />
           </a>

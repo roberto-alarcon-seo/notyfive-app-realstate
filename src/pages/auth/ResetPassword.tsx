@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader2, ArrowLeft, CheckCircle, AlertCircle, Eye, EyeOff, Check, X } from 'lucide-react';
-import authLogo from '@/assets/auth-logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { usePartnerBranding } from '@/contexts/PartnerBrandingContext';
 
 interface PasswordRequirement {
   label: string;
@@ -19,6 +19,7 @@ const passwordRequirements: PasswordRequirement[] = [
 ];
 
 const ResetPassword = () => {
+  const { partner } = usePartnerBranding();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -284,8 +285,8 @@ const ResetPassword = () => {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <img 
-            src={authLogo} 
-            alt="NotyFive Logo" 
+            src={partner.logoUrl} 
+            alt={`${partner.name} Logo`}
             className="h-24 w-24 object-contain" 
           />
         </div>

@@ -16,7 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
 import { useFollowupBadgeCount } from "@/hooks/useFollowupBadgeCount";
 import { useAuth } from "@/contexts/AuthContext";
-import logo from "@/assets/brokia-logo.png";
+import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", badgeKey: null },
@@ -39,6 +39,7 @@ export function IconSidebar() {
   const totalUnread = useTotalUnreadCount();
   const followupBadge = useFollowupBadgeCount();
   const { tenantRole, isSuperAdmin } = useAuth();
+  const { partner } = usePartnerBranding();
   
   const badgeCounts: Record<string, number> = {
     inbox: totalUnread,
@@ -53,8 +54,8 @@ export function IconSidebar() {
       {/* Logo */}
       <div className="flex items-center justify-center h-16 border-b border-[#2b2b2b]">
         <img 
-          src={logo} 
-          alt="Brokia24 Logo" 
+          src={partner.logoUrl} 
+          alt={`${partner.name} Logo`}
           className="h-10 w-10 object-contain" 
         />
       </div>
