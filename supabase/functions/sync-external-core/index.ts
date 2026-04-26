@@ -50,6 +50,9 @@ type SyncPropertyBody = {
     accepted_credits?: string[] | null;
     visit_availability?: string | null;
     youtube_url?: string | null;
+    images?: string[] | null;
+    documents?: Array<{ url: string; name?: string; type?: string }> | null;
+    faqs?: Array<{ question: string; answer: string }> | null;
     [key: string]: unknown;
   };
   // Multimedia & FAQ payloads (Core-managed). When provided, they fully
