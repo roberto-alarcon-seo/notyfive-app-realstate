@@ -45,6 +45,7 @@ import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import CompleteSignup from "./pages/auth/CompleteSignup";
+import SsoCallback from "./pages/auth/SsoCallback";
 import Admin from "./pages/Admin";
 import AdminTenants from "./pages/admin/AdminTenants";
 import TenantAdminDetail from "./pages/admin/TenantAdminDetail";
@@ -94,6 +95,7 @@ const App = () => (
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/reset-password" element={<ResetPassword />} />
               <Route path="/auth/complete-signup" element={<CompleteSignup />} />
+              <Route path="/auth/sso" element={<SsoCallback />} />
               <Route path="/admin" element={<Navigate to="/admin/tenants" replace />} />
               <Route path="/admin/tenants" element={<ProtectedRoute requireSuperAdmin><AdminTenants /></ProtectedRoute>} />
               <Route path="/admin/tenants/:id" element={<ProtectedRoute requireSuperAdmin><TenantAdminDetail /></ProtectedRoute>} />

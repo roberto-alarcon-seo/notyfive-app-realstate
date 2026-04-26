@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import authHero from '@/assets/auth-hero-realestate.jpg';
 import authLogo from '@/assets/brokia-logo.png';
@@ -19,6 +19,7 @@ const REMEMBERED_EMAIL_KEY = 'notyfive_remembered_email';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { signIn, user, isSuperAdmin, isLoading: authLoading } = useAuth();
   
   const [email, setEmail] = useState('');
@@ -36,6 +37,31 @@ const Auth = () => {
       setRememberMe(true);
     }
   }, []);
+
+  // Show SSO error from query params (set by /auth/sso flow)
+  useEffect(() => {
+    const err = searchParams.get('error');
+    if (err === 'sso_denied') {
+      const reason = searchParams.get('reason') || '';
+      const reasonMap: Record<string, string> = {
+        invalid_token: 'El enlace de acceso es inválido.',
+        missing_token: 'Falta el token de acceso.',
+        invalid_claims: 'El token no contiene la información necesaria.',
+        tenant_not_found: 'La cuenta no existe en este sistema.',
+        user_not_found: 'No se encontró tu usuario en este tenant.',
+        user_inactive: 'Tu usuario está inactivo. Contacta al administrador.',
+        link_generation_failed: 'No se pudo generar la sesión. Intenta de nuevo.',
+        server_misconfigured: 'El servidor SSO no está configurado correctamente.',
+      };
+      const detail = reasonMap[reason] ?? 'Acceso denegado o sesión expirada.';
+      toast.error('Acceso denegado o sesión expirada', { description: detail });
+      // Clean the URL so the toast doesn't repeat on re-renders
+      const next = new URLSearchParams(searchParams);
+      next.delete('error');
+      next.delete('reason');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Redirect authenticated users based on role
   useEffect(() => {
