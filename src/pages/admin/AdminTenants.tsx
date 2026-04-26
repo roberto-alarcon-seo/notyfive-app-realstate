@@ -140,6 +140,22 @@ const AdminTenants = () => {
 
     setIsCreating(true);
     try {
+      // Strict validation: if a partner scope is going to be applied,
+      // verify it exists and is active in the partners catalog before
+      // inserting the tenant. Prevents linking tenants to phantom partners.
+      if (partnerScope) {
+        const { data: partnerRow, error: partnerErr } = await supabase
+          .from('partners')
+          .select('id, is_active')
+          .eq('id', partnerScope)
+          .maybeSingle();
+        if (partnerErr || !partnerRow?.id || partnerRow.is_active !== true) {
+          toast.error('El Partner ID proporcionado no es válido o no está activo.');
+          setIsCreating(false);
+          return;
+        }
+      }
+
       const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
         .insert({
