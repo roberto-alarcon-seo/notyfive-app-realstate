@@ -11,17 +11,20 @@ import {
   ExternalLink,
   Plus,
   Loader2,
+  Lock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   usePropertyImages,
   usePropertyDocuments,
   usePropertyImageMutations,
   usePropertyDocumentMutations,
 } from "@/hooks/useProperties";
+import { useTenantContext } from "@/hooks/useTenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -41,6 +44,8 @@ function extractYoutubeId(url: string): string | null {
 export default function PropertyMultimediaTab({ propertyId, youtubeUrl: externalYoutubeUrl, onYoutubeUrlChange }: PropertyMultimediaTabProps) {
   const { data: images, isLoading: loadingImages } = usePropertyImages(propertyId);
   const { data: documents, isLoading: loadingDocs } = usePropertyDocuments(propertyId);
+  const { data: tenantContext } = useTenantContext();
+  const isExternallyManaged = !!tenantContext?.managed_externally;
   
   // Always call hooks unconditionally
   const imageMutations = usePropertyImageMutations(propertyId || "placeholder");
@@ -149,12 +154,31 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
 
   return (
     <div className="space-y-6">
+      {isExternallyManaged && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+          <Lock className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <div>
+            <p className="font-medium text-amber-700 dark:text-amber-300">
+              Multimedia gestionada externamente
+            </p>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              El video, imágenes y documentos se sincronizan automáticamente desde el sistema central. La edición manual está deshabilitada.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* YouTube */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Youtube className="h-5 w-5 text-red-500" />
             Video de YouTube
+            {isExternallyManaged && (
+              <Badge variant="secondary" className="ml-2 gap-1">
+                <Lock className="h-3 w-3" /> Sincronizado
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -163,10 +187,14 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               placeholder="https://youtube.com/watch?v=..."
+              disabled={isExternallyManaged}
+              readOnly={isExternallyManaged}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Se guarda automáticamente al presionar "Guardar"
-            </p>
+            {!isExternallyManaged && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Se guarda automáticamente al presionar "Guardar"
+              </p>
+            )}
           </div>
           {youtubeId && (
             <div className="aspect-video rounded-lg overflow-hidden bg-muted">
@@ -186,10 +214,17 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
           <CardTitle className="flex items-center gap-2">
             <ImageIcon className="h-5 w-5" />
             Imágenes
+            {isExternallyManaged && (
+              <Badge variant="secondary" className="ml-2 gap-1">
+                <Lock className="h-3 w-3" /> Sincronizadas
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Upload Area */}
+          {/* Upload Area (hidden when managed externally) */}
+          {!isExternallyManaged && (
+          <>
           <div
             className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
             onClick={() => imageInputRef.current?.click()}
@@ -232,6 +267,8 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
               <Plus className="h-4 w-4" />
             </Button>
           </div>
+          </>
+          )}
 
           {/* Image Grid */}
           {loadingImages ? (
@@ -242,7 +279,10 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
             </p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {images?.map((img, idx) => (
+              {images?.map((img) => {
+                const isCoreImg = img.source === 'core';
+                const canModify = !isCoreImg; // local users can't touch synced ones
+                return (
                 <div
                   key={img.id}
                   className="relative group aspect-square rounded-lg overflow-hidden bg-muted"
@@ -258,8 +298,14 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
                       Portada
                     </div>
                   )}
+                  {isCoreImg && (
+                    <div className="absolute top-2 right-2 bg-background/90 text-foreground text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 border">
+                      <Lock className="h-2.5 w-2.5" />
+                      Core
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    {!img.is_cover && (
+                    {!img.is_cover && canModify && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -271,17 +317,20 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
                         Portada
                       </Button>
                     )}
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      onClick={() => imageMutations.deleteImage.mutate(img.id)}
-                      title="Eliminar imagen"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canModify && (
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        onClick={() => imageMutations.deleteImage.mutate(img.id)}
+                        title="Eliminar imagen"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -293,10 +342,16 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Documentos
+            {isExternallyManaged && (
+              <Badge variant="secondary" className="ml-2 gap-1">
+                <Lock className="h-3 w-3" /> Sincronizados
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Upload Area */}
+          {/* Upload Area (hidden when managed externally) */}
+          {!isExternallyManaged && (
           <div
             className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
             onClick={() => docInputRef.current?.click()}
@@ -320,6 +375,7 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
               onChange={(e) => e.target.files && handleUploadDocs(e.target.files)}
             />
           </div>
+          )}
 
           {/* Document List */}
           {loadingDocs ? (
@@ -330,14 +386,23 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
             </p>
           ) : (
             <div className="space-y-2">
-              {documents?.map((doc) => (
+              {documents?.map((doc) => {
+                const isCoreDoc = doc.source === 'core';
+                return (
                 <div
                   key={doc.id}
                   className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30"
                 >
                   <FileText className="h-5 w-5 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                    <p className="text-sm font-medium truncate flex items-center gap-2">
+                      {doc.file_name}
+                      {isCoreDoc && (
+                        <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">
+                          <Lock className="h-2.5 w-2.5" /> Core
+                        </Badge>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground uppercase">
                       {doc.file_type}
                     </p>
@@ -349,16 +414,19 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => docMutations.deleteDocument.mutate(doc.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!isCoreDoc && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => docMutations.deleteDocument.mutate(doc.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
