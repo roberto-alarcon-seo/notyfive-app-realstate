@@ -1,0 +1,483 @@
+import { useState, useEffect } from 'react';
+import { Plus, Loader2, Search, MoreHorizontal, Shield, User as UserIcon, Trash2, Mail } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
+import { z } from 'zod';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface SuperAdminRow {
+  id: string;
+  email: string;
+  name: string | null;
+  status: string;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+interface TenantUserRow {
+  id: string;
+  email: string;
+  name: string | null;
+  status: string;
+  tenant_id: string | null;
+  tenant_name: string | null;
+  global_role: string;
+  tenant_role: string | null;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+const inviteSchema = z.object({
+  name: z.string().trim().min(2, 'Nombre muy corto').max(100),
+  email: z.string().trim().email('Email inválido'),
+});
+
+const AdminUsers = () => {
+  const { user: currentUser } = useAuth();
+  const [tab, setTab] = useState<'super_admins' | 'all_users'>('super_admins');
+
+  // Super admins state
+  const [superAdmins, setSuperAdmins] = useState<SuperAdminRow[]>([]);
+  const [loadingSA, setLoadingSA] = useState(true);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '' });
+  const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
+  const [saToDelete, setSaToDelete] = useState<SuperAdminRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // All users state
+  const [allUsers, setAllUsers] = useState<TenantUserRow[]>([]);
+  const [loadingAll, setLoadingAll] = useState(true);
+  const [searchAll, setSearchAll] = useState('');
+
+  const fetchSuperAdmins = async () => {
+    setLoadingSA(true);
+    try {
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('global_role', 'super_admin');
+      if (rolesError) throw rolesError;
+      const ids = (roles || []).map((r) => r.user_id);
+      if (ids.length === 0) {
+        setSuperAdmins([]);
+        return;
+      }
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, name, status, created_at, last_login_at')
+        .in('id', ids)
+        .order('created_at', { ascending: false });
+      if (profilesError) throw profilesError;
+      setSuperAdmins(profiles || []);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Error al cargar super admins');
+    } finally {
+      setLoadingSA(false);
+    }
+  };
+
+  const fetchAllUsers = async () => {
+    setLoadingAll(true);
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, email, name, status, tenant_id, created_at, last_login_at, tenants(name)')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (error) throw error;
+
+      const ids = (profiles || []).map((p: any) => p.id);
+      let rolesMap: Record<string, { global_role: string; tenant_role: string | null }> = {};
+      if (ids.length > 0) {
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('user_id, global_role, tenant_role')
+          .in('user_id', ids);
+        rolesMap = (roles || []).reduce((acc, r: any) => {
+          acc[r.user_id] = { global_role: r.global_role, tenant_role: r.tenant_role };
+          return acc;
+        }, {} as Record<string, { global_role: string; tenant_role: string | null }>);
+      }
+
+      const rows: TenantUserRow[] = (profiles || []).map((p: any) => ({
+        id: p.id,
+        email: p.email,
+        name: p.name,
+        status: p.status,
+        tenant_id: p.tenant_id,
+        tenant_name: p.tenants?.name ?? null,
+        global_role: rolesMap[p.id]?.global_role ?? 'user',
+        tenant_role: rolesMap[p.id]?.tenant_role ?? null,
+        created_at: p.created_at,
+        last_login_at: p.last_login_at,
+      }));
+      setAllUsers(rows);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Error al cargar usuarios');
+    } finally {
+      setLoadingAll(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuperAdmins();
+    fetchAllUsers();
+  }, []);
+
+  const handleInviteSuperAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteErrors({});
+    const result = inviteSchema.safeParse(inviteForm);
+    if (!result.success) {
+      const errs: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        errs[err.path[0] as string] = err.message;
+      });
+      setInviteErrors(errs);
+      return;
+    }
+
+    setIsInviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-invite-super-admin', {
+        body: { email: inviteForm.email, name: inviteForm.name },
+      });
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Error al invitar');
+      }
+      toast.success('Super admin invitado. Le enviamos un enlace de activación.');
+      setInviteOpen(false);
+      setInviteForm({ name: '', email: '' });
+      fetchSuperAdmins();
+      fetchAllUsers();
+    } catch (err: any) {
+      toast.error(err.message || 'Error al invitar super admin');
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleDeleteSuperAdmin = async () => {
+    if (!saToDelete) return;
+    if (saToDelete.id === currentUser?.id) {
+      toast.error('No puedes eliminar tu propia cuenta');
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-invite-super-admin', {
+        body: { action: 'delete', userId: saToDelete.id },
+      });
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Error al eliminar');
+      }
+      toast.success('Super admin eliminado');
+      setSaToDelete(null);
+      fetchSuperAdmins();
+      fetchAllUsers();
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const filteredAll = allUsers.filter((u) => {
+    const q = searchAll.toLowerCase();
+    return (
+      !q ||
+      u.email.toLowerCase().includes(q) ||
+      (u.name || '').toLowerCase().includes(q) ||
+      (u.tenant_name || '').toLowerCase().includes(q)
+    );
+  });
+
+  const getRoleLabel = (u: TenantUserRow) => {
+    if (u.global_role === 'super_admin') return 'Super Admin';
+    return u.tenant_role || 'Usuario';
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge variant="default">Activo</Badge>;
+      case 'inactive':
+        return <Badge variant="secondary">Inactivo</Badge>;
+      case 'suspended':
+        return <Badge variant="destructive">Suspendido</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const headerActions =
+    tab === 'super_admins' ? (
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogTrigger asChild>
+          <Button className="gradient-primary">
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Super Admin
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invitar Super Admin</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleInviteSuperAdmin} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nombre completo</label>
+              <Input
+                value={inviteForm.name}
+                onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })}
+                placeholder="Nombre del administrador"
+                disabled={isInviting}
+              />
+              {inviteErrors.name && <p className="text-xs text-destructive">{inviteErrors.name}</p>}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                placeholder="admin@ejemplo.com"
+                disabled={isInviting}
+              />
+              {inviteErrors.email && <p className="text-xs text-destructive">{inviteErrors.email}</p>}
+            </div>
+            <p className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded-md">
+              💡 El usuario recibirá un correo con un enlace seguro para establecer su contraseña.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setInviteOpen(false)} disabled={isInviting}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="gradient-primary" disabled={isInviting}>
+                {isInviting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Invitando...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Enviar invitación
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    ) : null;
+
+  return (
+    <AdminLayout
+      title="Usuarios"
+      description="Administra super admins y usuarios de todos los tenants"
+      actions={headerActions}
+    >
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
+        <TabsList>
+          <TabsTrigger value="super_admins">
+            <Shield className="h-4 w-4 mr-2" />
+            Super Admins
+          </TabsTrigger>
+          <TabsTrigger value="all_users">
+            <UserIcon className="h-4 w-4 mr-2" />
+            Todos los usuarios
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="super_admins" className="mt-4">
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            {loadingSA ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : superAdmins.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No hay super admins registrados
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Nombre</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Email</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Estado</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Último acceso</th>
+                    <th className="text-right p-4 text-sm font-medium text-muted-foreground"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {superAdmins.map((sa) => (
+                    <tr key={sa.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Shield className="h-4 w-4 text-primary" />
+                          </div>
+                          <span className="font-medium text-foreground">{sa.name || '—'}</span>
+                          {sa.id === currentUser?.id && (
+                            <Badge variant="outline" className="text-xs">Tú</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 text-sm text-foreground">{sa.email}</td>
+                      <td className="p-4">{getStatusBadge(sa.status)}</td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {sa.last_login_at
+                          ? new Date(sa.last_login_at).toLocaleString('es-MX')
+                          : 'Nunca'}
+                      </td>
+                      <td className="p-4 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" disabled={sa.id === currentUser?.id}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setSaToDelete(sa)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="all_users" className="mt-4 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre, email o tenant..."
+              value={searchAll}
+              onChange={(e) => setSearchAll(e.target.value)}
+              className="pl-10 bg-card"
+            />
+          </div>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            {loadingAll ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : filteredAll.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No se encontraron usuarios</div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Usuario</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Tenant</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Rol</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Estado</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Último acceso</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAll.map((u) => (
+                    <tr key={u.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
+                      <td className="p-4">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{u.name || '—'}</span>
+                          <span className="text-xs text-muted-foreground">{u.email}</span>
+                        </div>
+                      </td>
+                      <td className="p-4 text-sm text-foreground">
+                        {u.tenant_name || (
+                          <span className="text-muted-foreground italic">Sin tenant</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <Badge variant={u.global_role === 'super_admin' ? 'default' : 'secondary'} className="capitalize">
+                          {getRoleLabel(u)}
+                        </Badge>
+                      </td>
+                      <td className="p-4">{getStatusBadge(u.status)}</td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {u.last_login_at
+                          ? new Date(u.last_login_at).toLocaleString('es-MX')
+                          : 'Nunca'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Mostrando hasta 500 usuarios. La gestión de usuarios por tenant se realiza desde el detalle de cada tenant.
+          </p>
+        </TabsContent>
+      </Tabs>
+
+      <AlertDialog open={!!saToDelete} onOpenChange={(open) => !open && setSaToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Eliminar super admin</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de eliminar permanentemente a <strong>{saToDelete?.email}</strong>?
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSuperAdmin}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AdminLayout>
+  );
+};
+
+export default AdminUsers;
