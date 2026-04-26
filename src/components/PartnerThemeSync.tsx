@@ -11,15 +11,17 @@ import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
  * <PartnerBrandingProvider> through `setActivePartnerId`.
  */
 export function PartnerThemeSync() {
-  const { tenant, isLoading } = useAuth();
+  const { tenant, partnerScope, isLoading } = useAuth();
   const { setActivePartnerId } = usePartnerBranding();
 
   useEffect(() => {
     if (isLoading) return;
-    // When there's no tenant (logged out, super admin without tenant,
-    // or auth still resolving), fall back to hostname resolution.
-    setActivePartnerId(tenant?.partner_id ?? null);
-  }, [tenant?.partner_id, isLoading, setActivePartnerId]);
+    // Resolution priority:
+    //   1. partnerScope for partner_admin users
+    //   2. tenant.partner_id for tenant-scoped users
+    //   3. null => fallback to hostname resolution
+    setActivePartnerId(partnerScope ?? tenant?.partner_id ?? null);
+  }, [partnerScope, tenant?.partner_id, isLoading, setActivePartnerId]);
 
   return null;
 }
