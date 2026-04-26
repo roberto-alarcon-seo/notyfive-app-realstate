@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SupportModeProvider } from "@/contexts/SupportModeContext";
 import { PartnerBrandingProvider } from "@/contexts/PartnerBrandingContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PartnerThemeSync } from "@/components/PartnerThemeSync";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MobileRouteGuard } from "@/components/layout/MobileRouteGuard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -112,6 +113,7 @@ const App = () => (
         <BrowserRouter>
           <RecoveryHashRedirector />
           <AuthProvider>
+            <PartnerThemeSync />
             <SupportModeProvider>
             <MobileRouteGuard>
             <Routes>

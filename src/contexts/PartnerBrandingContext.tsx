@@ -46,6 +46,13 @@ interface PartnerBrandingContextValue {
    * Pass `null` to revert to the saved partner theme.
    */
   setLiveTheme: (theme: PartnerTheme | null) => void;
+  /**
+   * Switch the active partner branding to a specific partner_id.
+   * Used by the auth bridge to apply the theme of the tenant's partner
+   * once the user is authenticated. Pass `null` to revert to the
+   * hostname-resolved partner (anonymous default).
+   */
+  setActivePartnerId: (partnerId: string | null) => void;
 }
 
 const PartnerBrandingContext = createContext<PartnerBrandingContextValue | undefined>(
@@ -104,6 +111,12 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [liveTheme, setLiveThemeState] = useState<PartnerTheme | null>(null);
+  // Active partner_id requested by the auth bridge. When set, overrides
+  // the hostname-based resolution so each tenant sees its own branding
+  // even when multiple tenants share the same domain (e.g. *.lovable.app).
+  const [activePartnerId, setActivePartnerIdState] = useState<string | null>(
+    null,
+  );
 
   // Apply CSS vars on mount + whenever partner OR live preview changes
   useEffect(() => {
@@ -114,15 +127,18 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
     }
   }, [partner, liveTheme]);
 
-  // Hydrate from DB
+  // Hydrate partner branding from DB. Re-runs whenever the auth bridge
+  // requests a different active partner so the theme follows the tenant.
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
+      setIsLoading(true);
       try {
-        const hostname = window.location.hostname.toLowerCase().replace(/:\d+$/, "");
+        const hostname = window.location.hostname
+          .toLowerCase()
+          .replace(/:\d+$/, "");
 
-        // Try to find partner by primary_domain or alt_domains
         const { data, error } = await supabase
           .from("partners")
           .select("*")
@@ -133,11 +149,20 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const match = data.find(
-          (p) =>
-            p.primary_domain === hostname ||
-            (p.alt_domains as string[] | null)?.includes(hostname),
-        ) ?? data.find((p) => p.id === DEFAULT_PARTNER_ID);
+        // Resolution priority:
+        //   1. Explicit activePartnerId (from authenticated tenant).
+        //   2. Hostname match (primary_domain or alt_domains).
+        //   3. DEFAULT_PARTNER_ID fallback.
+        const match =
+          (activePartnerId
+            ? data.find((p) => p.id === activePartnerId)
+            : null) ??
+          data.find(
+            (p) =>
+              p.primary_domain === hostname ||
+              (p.alt_domains as string[] | null)?.includes(hostname),
+          ) ??
+          data.find((p) => p.id === DEFAULT_PARTNER_ID);
 
         if (match) {
           const savedTheme = (match.branding ?? null) as Partial<PartnerTheme> | null;
@@ -145,7 +170,6 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
           const mergedTheme: PartnerTheme = {
             ...baseTheme,
             ...(savedTheme && typeof savedTheme === "object" ? savedTheme : {}),
-            // Always keep primary_color in sync with the dedicated column if branding is empty
             primary_color: savedTheme?.primary_color || match.primary_color_hsl,
           };
           setPartner({
@@ -166,7 +190,6 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
           });
         }
       } catch (e) {
-        // Silent: keep static fallback
         console.warn("[PartnerBranding] hydrate failed", e);
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -176,13 +199,14 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activePartnerId]);
 
   const value = useMemo<PartnerBrandingContextValue>(
     () => ({
       partner,
       isLoading,
       setLiveTheme: (theme) => setLiveThemeState(theme),
+      setActivePartnerId: (id) => setActivePartnerIdState(id),
     }),
     [partner, isLoading],
   );

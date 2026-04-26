@@ -42,6 +42,7 @@ interface Tenant {
   max_contacts: number;
   created_at: string;
   updated_at: string;
+  partner_id?: string | null;
 }
 
 interface AuthState {
