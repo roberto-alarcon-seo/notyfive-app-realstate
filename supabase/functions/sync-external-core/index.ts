@@ -52,6 +52,13 @@ type SyncPropertyBody = {
     youtube_url?: string | null;
     [key: string]: unknown;
   };
+  // Multimedia & FAQ payloads (Core-managed). When provided, they fully
+  // replace the existing 'core' entries for this property; manual entries
+  // created locally remain untouched.
+  youtube_url?: string | null;
+  images?: string[];
+  documents?: Array<{ url: string; name?: string; type?: string }>;
+  faqs?: Array<{ question: string; answer: string }>;
 };
 
 type RequestBody = UpsertTenantBody | SyncUserBody | SyncPropertyBody;
