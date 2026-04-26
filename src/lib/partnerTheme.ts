@@ -19,6 +19,12 @@ export interface PartnerTheme {
   sidebar_style: "solid" | "gradient" | "contrast";
   /** Primary / accent color (used for buttons, active states, links). HSL */
   primary_color: string;
+  /**
+   * Surface mode. Controls foreground/text and border tokens so light
+   * presets (white app bg) render readable text instead of inheriting the
+   * default dark theme tokens. Defaults to "dark" when missing.
+   */
+  mode?: "dark" | "light";
   /** Optional preset key the user picked, for UX recall. */
   theme_preset?: string;
 }
