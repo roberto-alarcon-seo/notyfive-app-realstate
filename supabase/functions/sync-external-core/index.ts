@@ -57,6 +57,25 @@ Deno.serve(async (req) => {
 
     const apiKeyHash = await hashApiKey(apiKey);
 
+    // Bootstrap: if EXTERNAL_CORE_API_KEY env var matches the incoming key
+    // and no record exists for "core" service yet, auto-register it.
+    const envCoreKey = Deno.env.get('EXTERNAL_CORE_API_KEY');
+    if (envCoreKey && envCoreKey === apiKey) {
+      const { data: coreRecord } = await supabase
+        .from('internal_system_auth')
+        .select('id')
+        .eq('service_name', 'core')
+        .maybeSingle();
+      if (!coreRecord) {
+        await supabase.from('internal_system_auth').insert({
+          service_name: 'core',
+          api_key_hash: apiKeyHash,
+          description: 'External Core system (auto-registered from EXTERNAL_CORE_API_KEY env)',
+          is_active: true,
+        });
+      }
+    }
+
     const { data: authRecord, error: authError } = await supabase
       .from('internal_system_auth')
       .select('id, service_name, is_active')
