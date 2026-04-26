@@ -355,33 +355,126 @@ export default function PartnerSettings() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Color primario</Label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={partner.primary_color_hex}
-                      onChange={(e) => handleColorChange(e.target.value)}
-                      className="h-10 w-16 rounded cursor-pointer bg-transparent border border-border"
-                      aria-label="Selector de color primario"
-                    />
-                    <Input
-                      value={partner.primary_color_hex}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (/^#[0-9a-fA-F]{6}$/.test(v)) handleColorChange(v);
-                        else handleFieldChange("primary_color_hex", v);
-                      }}
-                      className="max-w-[140px] font-mono"
-                    />
-                    <div
-                      className="h-10 w-10 rounded border border-border"
-                      style={{ backgroundColor: partner.primary_color_hex }}
-                      aria-hidden
-                    />
+                {/* THEME ENGINE — full design tokens */}
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-5">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Palette className="h-4 w-4" /> Motor de tematización
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Controla la estética completa: fondo, sidebar y acento.
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Wand2 className="h-4 w-4" /> Cargar plantilla
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {Object.entries(THEME_PRESETS).map(([key, p]) => (
+                          <DropdownMenuItem
+                            key={key}
+                            onClick={() => handleApplyPreset(key as keyof typeof THEME_PRESETS)}
+                            className="gap-2"
+                          >
+                            <span
+                              className="h-3 w-3 rounded-full border border-border"
+                              style={{ backgroundColor: `hsl(${p.theme.primary_color})` }}
+                              aria-hidden
+                            />
+                            {p.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {/* App background */}
+                    <div className="space-y-2">
+                      <Label>Tema de fondo</Label>
+                      <Select
+                        value={partner.branding.app_bg}
+                        onValueChange={(v) => updateBranding({ app_bg: v, theme_preset: undefined })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {APP_BG_PRESETS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="h-3 w-3 rounded border border-border"
+                                  style={{ backgroundColor: `hsl(${opt.value})` }}
+                                  aria-hidden
+                                />
+                                {opt.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Sidebar style */}
+                    <div className="space-y-2">
+                      <Label>Estilo de sidebar</Label>
+                      <Select
+                        value={partner.branding.sidebar_style}
+                        onValueChange={(v) =>
+                          updateBranding({
+                            sidebar_style: v as PartnerTheme["sidebar_style"],
+                            theme_preset: undefined,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SIDEBAR_STYLE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Accent color */}
+                  <div className="space-y-2">
+                    <Label>Color de acento</Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={partner.primary_color_hex}
+                        onChange={(e) => handleColorChange(e.target.value)}
+                        className="h-10 w-16 rounded cursor-pointer bg-transparent border border-border"
+                        aria-label="Selector de color de acento"
+                      />
+                      <Input
+                        value={partner.primary_color_hex}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (/^#[0-9a-fA-F]{6}$/.test(v)) handleColorChange(v);
+                          else handleFieldChange("primary_color_hex", v);
+                        }}
+                        className="max-w-[140px] font-mono"
+                      />
+                      <div
+                        className="h-10 w-10 rounded border border-border"
+                        style={{ backgroundColor: partner.primary_color_hex }}
+                        aria-hidden
+                      />
+                    </div>
+                  </div>
+
                   <p className="text-xs text-muted-foreground">
-                    Vista previa aplicada en vivo. Guarda para persistir el cambio.
+                    Vista previa aplicada en vivo en la app. Guarda para persistir.
                   </p>
                 </div>
 
