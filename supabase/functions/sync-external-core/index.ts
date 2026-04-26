@@ -16,9 +16,21 @@ type UpsertTenantBody = {
   max_users?: number;
 };
 
-type RequestBody = UpsertTenantBody;
+type SyncUserBody = {
+  action: 'sync_user';
+  tenant_external_id: string;
+  email: string;
+  name?: string;
+  tenant_role?: string;
+  status?: string; // 'active' | 'inactive' | 'suspended'
+};
+
+type RequestBody = UpsertTenantBody | SyncUserBody;
 
 const VALID_PLANS = ['trial', 'starter', 'growth', 'pro', 'scale', 'enterprise'];
+const VALID_TENANT_ROLES = ['owner', 'administrador', 'manager', 'marketer', 'asesor'];
+const ADMIN_TENANT_ROLES = ['owner', 'administrador'];
+const VALID_USER_STATUSES = ['active', 'inactive', 'suspended'];
 
 async function hashApiKey(key: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -111,6 +123,9 @@ Deno.serve(async (req) => {
     // 4. Route by action
     if (body.action === 'upsert_tenant') {
       return await handleUpsertTenant(supabase, body, serviceName);
+    }
+    if (body.action === 'sync_user') {
+      return await handleSyncUser(supabase, body, serviceName);
     }
 
     return jsonResponse({ error: `Unknown action: ${(body as any).action}` }, 400);
