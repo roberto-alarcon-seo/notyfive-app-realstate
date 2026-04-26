@@ -359,53 +359,11 @@ async function handleUpsertTenant(
   supabase: SupabaseClient,
   body: UpsertTenantBody,
   serviceName: string,
-  resolvedPartnerId: string | null,
+  partnerId: string,
 ): Promise<Response> {
-  const { external_id, name, plan, owner_email, owner_name, max_users, country_code, partner_id } = body;
-
-  // Final partner_id: explicit payload value wins, then API-key inference.
-  // We STRICTLY validate it against the partners catalog before persisting.
-  // If a partner_id is supplied (explicitly or inferred) and it doesn't exist
-  // or is inactive, we reject the request with a 400 to prevent the creation
-  // of tenants linked to phantom/invalid partners.
-  let finalPartnerId: string | null = null;
-  const candidatePartnerId =
-    typeof partner_id === 'string' && partner_id.trim().length > 0
-      ? partner_id.trim()
-      : resolvedPartnerId;
-  if (candidatePartnerId) {
-    const { data: partnerRow, error: partnerErr } = await supabase
-      .from('partners')
-      .select('id, is_active')
-      .eq('id', candidatePartnerId)
-      .maybeSingle();
-    if (partnerErr) {
-      console.error('sync-external-core: partner lookup error', partnerErr);
-      return jsonResponse(
-        {
-          success: false,
-          error: 'partner_id_invalid',
-          message: 'El Partner ID proporcionado no es válido o no está activo.',
-        },
-        400,
-      );
-    }
-    if (!partnerRow?.id || partnerRow.is_active !== true) {
-      console.warn(
-        'sync-external-core: rejected unknown/inactive partner_id',
-        candidatePartnerId,
-      );
-      return jsonResponse(
-        {
-          success: false,
-          error: 'partner_id_invalid',
-          message: 'El Partner ID proporcionado no es válido o no está activo.',
-        },
-        400,
-      );
-    }
-    finalPartnerId = partnerRow.id;
-  }
+  const { external_id, name, plan, owner_email, owner_name, max_users, country_code } = body;
+  // partnerId is already validated upstream and forms the composite key.
+  const finalPartnerId = partnerId;
 
   // Validate input
   if (!external_id || typeof external_id !== 'string' || external_id.trim().length === 0) {
@@ -449,11 +407,12 @@ async function handleUpsertTenant(
     resolvedCountryCode = country_code.toUpperCase();
   }
 
-  // Check if tenant exists
+  // Check if tenant exists — composite key (partner_id, external_id).
   const { data: existing, error: fetchError } = await supabase
     .from('tenants')
     .select('id, name, plan, managed_externally, external_id')
     .eq('external_id', external_id.trim())
+    .eq('partner_id', finalPartnerId)
     .maybeSingle();
 
   if (fetchError) {
@@ -471,7 +430,7 @@ async function handleUpsertTenant(
         managed_externally: true,
         ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
         ...(resolvedCountryCode !== undefined ? { country_code: resolvedCountryCode } : {}),
-        ...(finalPartnerId ? { partner_id: finalPartnerId } : {}),
+        partner_id: finalPartnerId,
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
@@ -531,7 +490,7 @@ async function handleUpsertTenant(
       initial_credits_granted: false,
       ...(resolvedMaxUsers !== undefined ? { max_users: resolvedMaxUsers } : {}),
       ...(resolvedCountryCode !== undefined ? { country_code: resolvedCountryCode } : {}),
-      ...(finalPartnerId ? { partner_id: finalPartnerId } : {}),
+      partner_id: finalPartnerId,
     })
     .select('id, name, plan, external_id, managed_externally, billing_state, message_credits, max_users, country_code')
     .single();
