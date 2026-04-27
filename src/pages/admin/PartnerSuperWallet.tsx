@@ -293,8 +293,18 @@ export default function PartnerSuperWallet() {
                     Sin movimientos
                   </TableCell></TableRow>
                 ) : (
-                  ledger!.map((row) => (
-                    <TableRow key={row.id}>
+                  ledger!.map((row) => {
+                    const isAdjust = row.movement_type === 'ADJUSTMENT';
+                    const sign = row.amount > 0 ? '+' : row.amount < 0 ? '' : '';
+                    const amountClass =
+                      isAdjust
+                        ? row.amount >= 0 ? 'text-emerald-600' : 'text-destructive'
+                        : row.movement_type === 'TOPUP' ? 'text-emerald-600' : 'text-amber-600';
+                    const amountPrefix =
+                      isAdjust ? sign
+                        : row.movement_type === 'TOPUP' ? '+' : '-';
+                    return (
+                    <TableRow key={row.id} className={isAdjust ? 'bg-muted/40' : undefined}>
                       <TableCell className="whitespace-nowrap text-sm">
                         {format(new Date(row.created_at), "dd MMM yyyy HH:mm", { locale: es })}
                       </TableCell>
@@ -309,18 +319,21 @@ export default function PartnerSuperWallet() {
                             <ArrowDownCircle className="h-3 w-3" /> Asignación
                           </Badge>
                         )}
-                        {row.movement_type === 'ADJUSTMENT' && (
-                          <Badge variant="outline">Ajuste</Badge>
+                        {isAdjust && (
+                          <Badge variant="outline" className="gap-1 text-foreground border-foreground/30">
+                            <Wrench className="h-3 w-3" /> Ajuste
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell>{row.tenant?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
-                      <TableCell className={`text-right font-medium ${row.movement_type === 'TOPUP' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {row.movement_type === 'TOPUP' ? '+' : '-'}{row.amount.toLocaleString('es-MX')}
+                      <TableCell className={`text-right font-medium ${amountClass}`}>
+                        {amountPrefix}{Math.abs(row.amount).toLocaleString('es-MX')}
                       </TableCell>
                       <TableCell className="text-right">{row.balance_after.toLocaleString('es-MX')}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{row.description ?? '—'}</TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
