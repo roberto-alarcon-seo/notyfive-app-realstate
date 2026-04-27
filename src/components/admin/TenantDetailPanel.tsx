@@ -12,6 +12,7 @@ import { TenantSupportTab } from './TenantSupportTab';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { extractEdgeFunctionError } from '@/lib/edgeFunctionError';
 
 interface Tenant {
   id: string;
@@ -44,18 +45,30 @@ export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDet
         'admin-impersonate-sso',
         { body: { tenant_id: tenant.id } },
       );
-      if (error || !data?.sso_path) {
-        const detail = (error as { message?: string } | null)?.message
-          ?? (data as { error?: string } | null)?.error
+      if (error) {
+        const detail = await extractEdgeFunctionError(
+          error,
+          'No se pudo generar el acceso SSO.',
+        );
+        toast.error('Error al iniciar impersonación', { description: detail });
+        return;
+      }
+      if (!data?.sso_path) {
+        const detail = (data as { error?: string } | null)?.error
           ?? 'No se pudo generar el acceso SSO.';
         toast.error('Error al iniciar impersonación', { description: detail });
         return;
       }
+      sessionStorage.setItem('noty5_admin_impersonation', '1');
       toast.success(`Accediendo como ${data.target_email}`);
       window.location.assign(data.sso_path as string);
     } catch (err) {
       console.error(err);
-      toast.error('Error inesperado al generar SSO');
+      const detail = await extractEdgeFunctionError(
+        err,
+        'Error inesperado al generar SSO',
+      );
+      toast.error('Error al iniciar impersonación', { description: detail });
     } finally {
       setIsImpersonating(false);
     }

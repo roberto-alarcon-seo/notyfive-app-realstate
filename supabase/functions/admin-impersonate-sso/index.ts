@@ -89,31 +89,72 @@ Deno.serve(async (req) => {
     }
     const caller = userData.user;
 
-    // 2. Verify super_admin
+    // 2. Verify caller is super_admin (global or partner-scoped)
     const { data: roleRow, error: roleErr } = await supabaseAdmin
       .from('user_roles')
-      .select('global_role')
+      .select('global_role, partner_scope')
       .eq('user_id', caller.id)
-      .single();
+      .maybeSingle();
 
-    if (roleErr || roleRow?.global_role !== 'super_admin') {
-      return json({ error: 'Access denied. Super admin only.' }, 403);
+    if (roleErr) {
+      console.error('admin-impersonate-sso: role lookup failed', roleErr);
+      return json({ error: 'No se pudo verificar tu rol de administrador.' }, 500);
     }
+    if (roleRow?.global_role !== 'super_admin') {
+      return json(
+        { error: 'Acceso denegado. Esta acción requiere rol de Super Admin.' },
+        403,
+      );
+    }
+    const partnerScope: string | null = roleRow?.partner_scope ?? null;
 
     // 3. Parse body
     const { tenant_id } = await req.json().catch(() => ({}));
     if (!tenant_id || typeof tenant_id !== 'string') {
-      return json({ error: 'Missing tenant_id' }, 400);
+      return json({ error: 'Falta el parámetro tenant_id.' }, 400);
     }
 
-    // 4. Resolve tenant
+    // 4. Resolve tenant (incluye partner_id para validación multi-tenant)
     const { data: tenant, error: tenantErr } = await supabaseAdmin
       .from('tenants')
-      .select('id, name, external_id')
+      .select('id, name, external_id, partner_id')
       .eq('id', tenant_id)
       .maybeSingle();
 
-    if (tenantErr || !tenant) return json({ error: 'Tenant not found' }, 404);
+    if (tenantErr) {
+      console.error('admin-impersonate-sso: tenant lookup failed', tenantErr);
+      return json({ error: 'No se pudo cargar el tenant solicitado.' }, 500);
+    }
+    if (!tenant) return json({ error: 'El tenant solicitado no existe.' }, 404);
+
+    // 4.b. Multi-tenant security: si el caller tiene partner_scope, el tenant
+    // debe pertenecer a ese mismo partner. Caso contrario -> auditar y bloquear.
+    if (partnerScope && tenant.partner_id !== partnerScope) {
+      try {
+        await supabaseAdmin.from('security_events').insert({
+          event_type: 'admin_impersonation_denied_partner_scope',
+          user_id: caller.id,
+          tenant_id: tenant.id,
+          ip_address: req.headers.get('x-forwarded-for') ?? 'unknown',
+          user_agent: req.headers.get('user-agent') ?? 'unknown',
+          metadata: {
+            actor_email: caller.email,
+            caller_partner_scope: partnerScope,
+            tenant_partner_id: tenant.partner_id,
+            tenant_name: tenant.name,
+          },
+        });
+      } catch (auditErr) {
+        console.warn('Failed to audit denied impersonation', auditErr);
+      }
+      return json(
+        {
+          error:
+            'Este tenant no pertenece a tu partner. Solo puedes acceder a tenants de tu marca.',
+        },
+        403,
+      );
+    }
 
     // 5. Pick a target user. Strategy (in order):
     //    a) owner role with any status
