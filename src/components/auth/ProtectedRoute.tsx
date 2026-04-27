@@ -82,16 +82,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Global admin routes (/admin/*) are reserved for global super admins
   // WITHOUT a partner_scope. Partner-scoped admins must use their own
-  // partner dashboard (PartnerSettings) and cannot access cross-tenant
-  // global tools.
-  if (
-    requireSuperAdmin &&
-    isSuperAdmin &&
-    partnerScope &&
-    location.pathname !== '/admin/partner-settings'
-  ) {
-    // Redirect partner-scoped admins to their partner-specific settings page
-    return <Navigate to="/admin/partner-settings" replace />;
+  // partner dashboard and tenant management. They cannot access
+  // cross-tenant global tools (global users, system logs, etc.).
+  if (requireSuperAdmin && isSuperAdmin && partnerScope) {
+    // Routes a partner-scoped super admin is allowed to access.
+    // Includes /admin/tenants and any sub-route (e.g. tenant detail),
+    // plus their partner-specific settings page.
+    const partnerAllowedPrefixes = ['/admin/tenants', '/admin/partner-settings'];
+    const isAllowed = partnerAllowedPrefixes.some(
+      (prefix) =>
+        location.pathname === prefix || location.pathname.startsWith(prefix + '/'),
+    );
+    if (!isAllowed) {
+      // Tenant management is the operational priority for partner admins,
+      // so unauthorized admin routes (logs, global users) land them there.
+      return <Navigate to="/admin/tenants" replace />;
+    }
   }
 
   // Super admin should always be redirected to /admin/tenants (unless already in /admin/* or in support mode)
@@ -101,10 +107,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     !isSupportMode &&
     !location.pathname.startsWith('/admin')
   ) {
-    // Partner-scoped admins go to their partner settings instead of the
-    // cross-tenant tenants list.
-    const adminLanding = partnerScope ? '/admin/partner-settings' : '/admin/tenants';
-    return <Navigate to={adminLanding} replace />;
+    // Both global super admins and partner-scoped admins land on the
+    // tenants list. Partner-scoped admins see only their own tenants
+    // (filtered by RLS + the explicit partner_id filter in AdminTenants).
+    return <Navigate to="/admin/tenants" replace />;
   }
 
   // For super admin on /admin route, allow access
