@@ -15,6 +15,7 @@ import { TenantUsersTab } from '@/components/admin/TenantUsersTab';
 import { TenantLogsTab } from '@/components/admin/TenantLogsTab';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { extractEdgeFunctionError } from '@/lib/edgeFunctionError';
 
 interface TenantRecord {
   id: string;
@@ -76,19 +77,33 @@ export default function TenantAdminDetail() {
         'admin-impersonate-sso',
         { body: { tenant_id: tenant.id } },
       );
-      if (error || !data?.sso_path) {
-        const detail = (error as { message?: string } | null)?.message
-          ?? (data as { error?: string } | null)?.error
+      if (error) {
+        const detail = await extractEdgeFunctionError(
+          error,
+          'No se pudo generar el acceso SSO.',
+        );
+        toast.error('Error al iniciar impersonación', { description: detail });
+        return;
+      }
+      if (!data?.sso_path) {
+        const detail = (data as { error?: string } | null)?.error
           ?? 'No se pudo generar el acceso SSO.';
         toast.error('Error al iniciar impersonación', { description: detail });
         return;
       }
+      // Activate support-mode flag BEFORE the navigation so the new session
+      // boots into impersonation mode immediately.
+      sessionStorage.setItem('noty5_admin_impersonation', '1');
       toast.success(`Accediendo como ${data.target_email}`);
       // Full-page navigation so the new session replaces the current one.
       window.location.assign(data.sso_path as string);
     } catch (err) {
       console.error(err);
-      toast.error('Error inesperado al generar SSO');
+      const detail = await extractEdgeFunctionError(
+        err,
+        'Error inesperado al generar SSO',
+      );
+      toast.error('Error al iniciar impersonación', { description: detail });
     } finally {
       setIsImpersonating(false);
     }
