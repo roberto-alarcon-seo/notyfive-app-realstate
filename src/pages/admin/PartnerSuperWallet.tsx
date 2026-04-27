@@ -426,21 +426,54 @@ export default function PartnerSuperWallet() {
             </div>
             <div>
               <label className="text-sm font-medium">
-                Descripción / motivo <span className="text-destructive">*</span>
+                Motivo <span className="text-destructive">*</span>
               </label>
-              <Textarea
-                value={adjustReason}
-                onChange={(e) => setAdjustReason(e.target.value)}
-                placeholder="Explica el motivo del ajuste (obligatorio)"
-                rows={3}
-              />
+              <Select value={adjustReasonType} onValueChange={setAdjustReasonType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Error de digitación">Error de digitación</SelectItem>
+                  <SelectItem value="Bonificación comercial">Bonificación comercial</SelectItem>
+                  <SelectItem value="Compensación técnica">Compensación técnica</SelectItem>
+                  <SelectItem value="Anulación de duplicado">Anulación de duplicado</SelectItem>
+                  <SelectItem value="Anulación por cancelación">Anulación por cancelación</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            {adjustReasonType && (
+              <div>
+                <label className="text-sm font-medium">
+                  {adjustReasonType === 'Otro' ? (
+                    <>Descripción <span className="text-destructive">*</span></>
+                  ) : (
+                    <>Nota adicional <span className="text-muted-foreground">(opcional)</span></>
+                  )}
+                </label>
+                <Textarea
+                  value={adjustReason}
+                  onChange={(e) => setAdjustReason(e.target.value)}
+                  placeholder={
+                    adjustReasonType === 'Otro'
+                      ? 'Explica el motivo del ajuste'
+                      : 'Detalle opcional que se agregará al motivo'
+                  }
+                  rows={3}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdjustOpen(false)}>Cancelar</Button>
             <Button
               onClick={handleAdjust}
-              disabled={adjust.isPending || !adjustAmount || !adjustReason.trim()}
+              disabled={
+                adjust.isPending ||
+                !adjustAmount ||
+                !adjustReasonType ||
+                (adjustReasonType === 'Otro' && !adjustReason.trim())
+              }
             >
               {adjust.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Aplicar ajuste
