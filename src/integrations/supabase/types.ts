@@ -2033,6 +2033,98 @@ export type Database = {
           },
         ]
       }
+      partner_super_wallets: {
+        Row: {
+          balance_credits: number
+          created_at: string
+          id: string
+          low_balance_threshold: number
+          partner_id: string
+          updated_at: string
+        }
+        Insert: {
+          balance_credits?: number
+          created_at?: string
+          id?: string
+          low_balance_threshold?: number
+          partner_id: string
+          updated_at?: string
+        }
+        Update: {
+          balance_credits?: number
+          created_at?: string
+          id?: string
+          low_balance_threshold?: number
+          partner_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_super_wallets_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_wallet_ledger: {
+        Row: {
+          actor_user_id: string | null
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json
+          movement_type: string
+          partner_id: string
+          tenant_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          movement_type: string
+          partner_id: string
+          tenant_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          movement_type?: string
+          partner_id?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_wallet_ledger_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_wallet_ledger_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           accent_color_hex: string | null
@@ -3943,6 +4035,45 @@ export type Database = {
       is_tenant_manager_or_admin: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      partner_wallet_redeem_to_tenant: {
+        Args: {
+          _amount: number
+          _description?: string
+          _partner_id: string
+          _tenant_id: string
+        }
+        Returns: {
+          balance_credits: number
+          created_at: string
+          id: string
+          low_balance_threshold: number
+          partner_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "partner_super_wallets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      partner_wallet_topup: {
+        Args: { _amount: number; _description?: string; _partner_id: string }
+        Returns: {
+          balance_credits: number
+          created_at: string
+          id: string
+          low_balance_threshold: number
+          partner_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "partner_super_wallets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
