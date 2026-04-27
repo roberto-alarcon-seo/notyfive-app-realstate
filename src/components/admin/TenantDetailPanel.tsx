@@ -9,6 +9,7 @@ import { TenantWhatsAppTab } from './TenantWhatsAppTab';
 import { TenantUsageTab } from './TenantUsageTab';
 import { TenantAutomationTab } from './TenantAutomationTab';
 import { TenantSupportTab } from './TenantSupportTab';
+import { TenantSuperWalletTab } from './TenantSuperWalletTab';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -26,6 +27,7 @@ interface Tenant {
   external_id?: string | null;
   managed_externally?: boolean;
   max_users?: number;
+  partner_id?: string | null;
 }
 
 interface TenantDetailPanelProps {
@@ -126,6 +128,12 @@ export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDet
             >
               Wallet
             </TabsTrigger>
+            <TabsTrigger
+              value="super-wallet"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
+            >
+              Super Wallet
+            </TabsTrigger>
             <TabsTrigger 
               value="whatsapp"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
@@ -158,6 +166,9 @@ export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDet
             </TabsContent>
             <TabsContent value="wallet" className="mt-0 p-6">
               <TenantWalletTab tenantId={tenant.id} />
+            </TabsContent>
+            <TabsContent value="super-wallet" className="mt-0 p-6">
+              <TenantSuperWalletTab tenantId={tenant.id} partnerId={tenant.partner_id ?? null} />
             </TabsContent>
             <TabsContent value="whatsapp" className="mt-0 p-6">
               <TenantWhatsAppTab tenantId={tenant.id} tenantName={tenant.name} />
