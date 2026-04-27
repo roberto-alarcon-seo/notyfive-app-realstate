@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Wallet, Plus, AlertTriangle, ArrowDownCircle, ArrowUpCircle, Loader2 } from 'lucide-react';
+import { Wallet, Plus, AlertTriangle, ArrowDownCircle, ArrowUpCircle, Loader2, Wrench } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -21,8 +21,9 @@ import {
 } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Textarea } from '@/components/ui/textarea';
 import {
-  usePartnerWallet, usePartnerLedger, useTopupPartnerWallet,
+  usePartnerWallet, usePartnerLedger, useTopupPartnerWallet, useAdjustPartnerWallet,
   type LedgerFilters,
 } from '@/hooks/usePartnerWallet';
 
@@ -76,6 +77,12 @@ export default function PartnerSuperWallet() {
   const [topupNote, setTopupNote] = useState('');
   const topup = useTopupPartnerWallet();
 
+  // Adjustment dialog (global super admin only)
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustAmount, setAdjustAmount] = useState<string>('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const adjust = useAdjustPartnerWallet();
+
   const handleTopup = async () => {
     if (!activePartnerId) return;
     try {
@@ -89,6 +96,34 @@ export default function PartnerSuperWallet() {
       setTopupNote('');
     } catch (e) {
       toast.error('Error al abonar', { description: (e as Error).message });
+    }
+  };
+
+  const handleAdjust = async () => {
+    if (!activePartnerId) return;
+    const parsed = parseInt(adjustAmount, 10);
+    if (!Number.isFinite(parsed) || parsed === 0) {
+      toast.error('Ingresa un monto válido distinto de 0');
+      return;
+    }
+    if (!adjustReason.trim()) {
+      toast.error('La descripción/motivo es obligatoria');
+      return;
+    }
+    try {
+      await adjust.mutateAsync({
+        partnerId: activePartnerId,
+        amount: parsed,
+        description: adjustReason.trim(),
+      });
+      toast.success(
+        `Ajuste aplicado: ${parsed > 0 ? '+' : ''}${parsed.toLocaleString('es-MX')} créditos`,
+      );
+      setAdjustOpen(false);
+      setAdjustAmount('');
+      setAdjustReason('');
+    } catch (e) {
+      toast.error('Error al aplicar el ajuste', { description: (e as Error).message });
     }
   };
 
@@ -114,9 +149,19 @@ export default function PartnerSuperWallet() {
       description="Saldo de créditos y movimientos por marca (partner)"
       actions={
         isGlobal ? (
-          <Button onClick={() => setTopupOpen(true)} disabled={!activePartnerId} className="gap-2">
-            <Plus className="h-4 w-4" /> Abonar saldo
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setTopupOpen(true)} disabled={!activePartnerId} className="gap-2">
+              <Plus className="h-4 w-4" /> Abonar saldo
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setAdjustOpen(true)}
+              disabled={!activePartnerId}
+              className="gap-2"
+            >
+              <Wrench className="h-4 w-4" /> Ajuste de saldo
+            </Button>
+          </div>
         ) : null
       }
     >
@@ -248,8 +293,18 @@ export default function PartnerSuperWallet() {
                     Sin movimientos
                   </TableCell></TableRow>
                 ) : (
-                  ledger!.map((row) => (
-                    <TableRow key={row.id}>
+                  ledger!.map((row) => {
+                    const isAdjust = row.movement_type === 'ADJUSTMENT';
+                    const sign = row.amount > 0 ? '+' : row.amount < 0 ? '' : '';
+                    const amountClass =
+                      isAdjust
+                        ? row.amount >= 0 ? 'text-emerald-600' : 'text-destructive'
+                        : row.movement_type === 'TOPUP' ? 'text-emerald-600' : 'text-amber-600';
+                    const amountPrefix =
+                      isAdjust ? sign
+                        : row.movement_type === 'TOPUP' ? '+' : '-';
+                    return (
+                    <TableRow key={row.id} className={isAdjust ? 'bg-muted/40' : undefined}>
                       <TableCell className="whitespace-nowrap text-sm">
                         {format(new Date(row.created_at), "dd MMM yyyy HH:mm", { locale: es })}
                       </TableCell>
@@ -264,18 +319,21 @@ export default function PartnerSuperWallet() {
                             <ArrowDownCircle className="h-3 w-3" /> Asignación
                           </Badge>
                         )}
-                        {row.movement_type === 'ADJUSTMENT' && (
-                          <Badge variant="outline">Ajuste</Badge>
+                        {isAdjust && (
+                          <Badge variant="outline" className="gap-1 text-foreground border-foreground/30">
+                            <Wrench className="h-3 w-3" /> Ajuste
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell>{row.tenant?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
-                      <TableCell className={`text-right font-medium ${row.movement_type === 'TOPUP' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {row.movement_type === 'TOPUP' ? '+' : '-'}{row.amount.toLocaleString('es-MX')}
+                      <TableCell className={`text-right font-medium ${amountClass}`}>
+                        {amountPrefix}{Math.abs(row.amount).toLocaleString('es-MX')}
                       </TableCell>
                       <TableCell className="text-right">{row.balance_after.toLocaleString('es-MX')}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{row.description ?? '—'}</TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -322,6 +380,57 @@ export default function PartnerSuperWallet() {
             <Button onClick={handleTopup} disabled={topup.isPending}>
               {topup.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Abonar {topupAmount.toLocaleString('es-MX')} créditos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Adjustment dialog (global super admin only) */}
+      <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="h-4 w-4" /> Ajuste manual de saldo
+            </DialogTitle>
+            <DialogDescription>
+              Suma (positivo) o resta (negativo) créditos del saldo actual del partner.
+              Queda registrado como <span className="font-medium">ADJUSTMENT</span> en la auditoría.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Monto (puede ser negativo)</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={adjustAmount}
+                onChange={(e) => setAdjustAmount(e.target.value)}
+                placeholder="Ej: 1500 ó -500"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Saldo actual: {balance.toLocaleString('es-MX')} créditos
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">
+                Descripción / motivo <span className="text-destructive">*</span>
+              </label>
+              <Textarea
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                placeholder="Explica el motivo del ajuste (obligatorio)"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdjustOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleAdjust}
+              disabled={adjust.isPending || !adjustAmount || !adjustReason.trim()}
+            >
+              {adjust.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Aplicar ajuste
             </Button>
           </DialogFooter>
         </DialogContent>
