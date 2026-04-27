@@ -81,6 +81,7 @@ export default function PartnerSuperWallet() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustAmount, setAdjustAmount] = useState<string>('');
   const [adjustReason, setAdjustReason] = useState('');
+  const [adjustReasonType, setAdjustReasonType] = useState<string>('');
   const adjust = useAdjustPartnerWallet();
 
   const handleTopup = async () => {
@@ -106,15 +107,26 @@ export default function PartnerSuperWallet() {
       toast.error('Ingresa un monto válido distinto de 0');
       return;
     }
-    if (!adjustReason.trim()) {
-      toast.error('La descripción/motivo es obligatoria');
+    if (!adjustReasonType) {
+      toast.error('Selecciona un motivo');
       return;
     }
+    if (adjustReasonType === 'Otro' && !adjustReason.trim()) {
+      toast.error('Describe el motivo cuando seleccionas "Otro"');
+      return;
+    }
+    const note = adjustReason.trim();
+    const finalDescription =
+      adjustReasonType === 'Otro'
+        ? note
+        : note
+          ? `${adjustReasonType}: ${note}`
+          : adjustReasonType;
     try {
       await adjust.mutateAsync({
         partnerId: activePartnerId,
         amount: parsed,
-        description: adjustReason.trim(),
+        description: finalDescription,
       });
       toast.success(
         `Ajuste aplicado: ${parsed > 0 ? '+' : ''}${parsed.toLocaleString('es-MX')} créditos`,
@@ -122,6 +134,7 @@ export default function PartnerSuperWallet() {
       setAdjustOpen(false);
       setAdjustAmount('');
       setAdjustReason('');
+      setAdjustReasonType('');
     } catch (e) {
       toast.error('Error al aplicar el ajuste', { description: (e as Error).message });
     }
