@@ -4058,6 +4058,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      partner_wallet_redeem_to_tenant_service: {
+        Args: {
+          _amount: number
+          _description?: string
+          _metadata?: Json
+          _partner_id: string
+          _tenant_id: string
+        }
+        Returns: {
+          balance_credits: number
+          created_at: string
+          id: string
+          low_balance_threshold: number
+          partner_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "partner_super_wallets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       partner_wallet_topup: {
         Args: { _amount: number; _description?: string; _partner_id: string }
         Returns: {
