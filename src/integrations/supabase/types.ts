@@ -2402,10 +2402,13 @@ export type Database = {
           bedrooms: number | null
           created_at: string
           currency: string
+          description: string | null
           id: string
           internal_notes: string | null
           is_active: boolean
+          location_url: string | null
           maintenance_fee: number | null
+          metadata: Json
           operation_type: string
           parking_spots: number | null
           partner_id: string | null
@@ -2432,10 +2435,13 @@ export type Database = {
           bedrooms?: number | null
           created_at?: string
           currency?: string
+          description?: string | null
           id?: string
           internal_notes?: string | null
           is_active?: boolean
+          location_url?: string | null
           maintenance_fee?: number | null
+          metadata?: Json
           operation_type?: string
           parking_spots?: number | null
           partner_id?: string | null
@@ -2462,10 +2468,13 @@ export type Database = {
           bedrooms?: number | null
           created_at?: string
           currency?: string
+          description?: string | null
           id?: string
           internal_notes?: string | null
           is_active?: boolean
+          location_url?: string | null
           maintenance_fee?: number | null
+          metadata?: Json
           operation_type?: string
           parking_spots?: number | null
           partner_id?: string | null
