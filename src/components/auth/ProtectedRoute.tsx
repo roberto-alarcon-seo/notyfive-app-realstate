@@ -88,7 +88,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Routes a partner-scoped super admin is allowed to access.
     // Includes /admin/tenants and any sub-route (e.g. tenant detail),
     // plus their partner-specific settings page.
-    const partnerAllowedPrefixes = ['/admin/tenants', '/admin/partner-settings'];
+    const partnerAllowedPrefixes = ['/admin/tenants', '/admin/partner-settings', '/admin/super-wallet'];
     const isAllowed = partnerAllowedPrefixes.some(
       (prefix) =>
         location.pathname === prefix || location.pathname.startsWith(prefix + '/'),

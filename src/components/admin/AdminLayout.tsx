@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Building2, Users, FileText, LogOut, User, Shield, Settings } from "lucide-react";
+import { Building2, Users, FileText, LogOut, User, Shield, Settings, Wallet } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { title: "Tenants", url: "/admin/tenants", icon: Building2 },
+  { title: "Super Wallet", url: "/admin/super-wallet", icon: Wallet },
   { title: "Usuarios", url: "/admin/users", icon: Users },
   { title: "Logs", url: "/admin/logs", icon: FileText },
   { title: "Configuración", url: "/admin/partner-settings", icon: Settings },
@@ -41,7 +42,7 @@ function AdminSidebar() {
   // Global super admins see everything.
   const visibleItems = partnerScope
     ? navItems.filter((item) =>
-        ["/admin/tenants", "/admin/partner-settings"].includes(item.url),
+        ["/admin/tenants", "/admin/super-wallet", "/admin/partner-settings"].includes(item.url),
       )
     : navItems;
 
