@@ -81,6 +81,7 @@ export default function PartnerSuperWallet() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustAmount, setAdjustAmount] = useState<string>('');
   const [adjustReason, setAdjustReason] = useState('');
+  const [adjustReasonType, setAdjustReasonType] = useState<string>('');
   const adjust = useAdjustPartnerWallet();
 
   const handleTopup = async () => {
@@ -106,15 +107,26 @@ export default function PartnerSuperWallet() {
       toast.error('Ingresa un monto válido distinto de 0');
       return;
     }
-    if (!adjustReason.trim()) {
-      toast.error('La descripción/motivo es obligatoria');
+    if (!adjustReasonType) {
+      toast.error('Selecciona un motivo');
       return;
     }
+    if (adjustReasonType === 'Otro' && !adjustReason.trim()) {
+      toast.error('Describe el motivo cuando seleccionas "Otro"');
+      return;
+    }
+    const note = adjustReason.trim();
+    const finalDescription =
+      adjustReasonType === 'Otro'
+        ? note
+        : note
+          ? `${adjustReasonType}: ${note}`
+          : adjustReasonType;
     try {
       await adjust.mutateAsync({
         partnerId: activePartnerId,
         amount: parsed,
-        description: adjustReason.trim(),
+        description: finalDescription,
       });
       toast.success(
         `Ajuste aplicado: ${parsed > 0 ? '+' : ''}${parsed.toLocaleString('es-MX')} créditos`,
@@ -122,6 +134,7 @@ export default function PartnerSuperWallet() {
       setAdjustOpen(false);
       setAdjustAmount('');
       setAdjustReason('');
+      setAdjustReasonType('');
     } catch (e) {
       toast.error('Error al aplicar el ajuste', { description: (e as Error).message });
     }
@@ -413,21 +426,54 @@ export default function PartnerSuperWallet() {
             </div>
             <div>
               <label className="text-sm font-medium">
-                Descripción / motivo <span className="text-destructive">*</span>
+                Motivo <span className="text-destructive">*</span>
               </label>
-              <Textarea
-                value={adjustReason}
-                onChange={(e) => setAdjustReason(e.target.value)}
-                placeholder="Explica el motivo del ajuste (obligatorio)"
-                rows={3}
-              />
+              <Select value={adjustReasonType} onValueChange={setAdjustReasonType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Error de digitación">Error de digitación</SelectItem>
+                  <SelectItem value="Bonificación comercial">Bonificación comercial</SelectItem>
+                  <SelectItem value="Compensación técnica">Compensación técnica</SelectItem>
+                  <SelectItem value="Anulación de duplicado">Anulación de duplicado</SelectItem>
+                  <SelectItem value="Anulación por cancelación">Anulación por cancelación</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            {adjustReasonType && (
+              <div>
+                <label className="text-sm font-medium">
+                  {adjustReasonType === 'Otro' ? (
+                    <>Descripción <span className="text-destructive">*</span></>
+                  ) : (
+                    <>Nota adicional <span className="text-muted-foreground">(opcional)</span></>
+                  )}
+                </label>
+                <Textarea
+                  value={adjustReason}
+                  onChange={(e) => setAdjustReason(e.target.value)}
+                  placeholder={
+                    adjustReasonType === 'Otro'
+                      ? 'Explica el motivo del ajuste'
+                      : 'Detalle opcional que se agregará al motivo'
+                  }
+                  rows={3}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdjustOpen(false)}>Cancelar</Button>
             <Button
               onClick={handleAdjust}
-              disabled={adjust.isPending || !adjustAmount || !adjustReason.trim()}
+              disabled={
+                adjust.isPending ||
+                !adjustAmount ||
+                !adjustReasonType ||
+                (adjustReasonType === 'Otro' && !adjustReason.trim())
+              }
             >
               {adjust.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Aplicar ajuste
