@@ -160,3 +160,31 @@ export function useRedeemPartnerWalletToTenant() {
     },
   });
 }
+
+export function useAdjustPartnerWallet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      partnerId,
+      amount,
+      description,
+    }: {
+      partnerId: string;
+      amount: number;
+      description: string;
+    }) => {
+      const { data, error } = await supabase.rpc('partner_wallet_adjust' as never, {
+        _partner_id: partnerId,
+        _amount: amount,
+        _description: description,
+      } as never);
+      if (error) throw error;
+      return data as unknown as PartnerWallet;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['partner-wallet'] });
+      qc.invalidateQueries({ queryKey: ['partner-wallets-all'] });
+      qc.invalidateQueries({ queryKey: ['partner-ledger'] });
+    },
+  });
+}
