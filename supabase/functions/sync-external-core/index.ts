@@ -1466,7 +1466,7 @@ async function handleUpdateBilling(
   const { data: tenant, error: fetchError } = await supabase
     .from('tenants')
     .select(
-      'id, external_id, name, plan, billing_state, message_credits, monthly_credits_remaining, accumulated_credits, extra_credits, managed_externally',
+      'id, external_id, name, plan, billing_state, message_credits, monthly_credits_remaining, accumulated_credits, extra_credits, managed_externally, partner_id',
     )
     .eq('external_id', tenant_external_id.trim())
     .eq('partner_id', partnerId)
@@ -1486,17 +1486,111 @@ async function handleUpdateBilling(
     message_credits: tenant.message_credits ?? 0,
   };
 
-  // Build tenant update payload. When credits are dictated by Core we map them
-  // entirely into `accumulated_credits` (the rollover bucket) and reset the
-  // monthly/extra buckets so the totals match exactly what Core sent.
+  // Sanitize the optional Core-provided external movement id once; it is
+  // reused both for the partner wallet ledger metadata and the legacy
+  // tenant wallet ledger entry below.
+  const safeMovementExternalId =
+    typeof movementExternalId === 'string' && movementExternalId.trim().length > 0
+      ? movementExternalId.trim().slice(0, 128)
+      : null;
+
+  // ============================================================
+  // STEP A — Credit top-up via the Partner's Super Wallet.
+  // ------------------------------------------------------------
+  // When the Core webhook ships `message_credits`, it represents the
+  // amount to abonar (additive) sourced from the partner's Super Wallet
+  // (mayorista). We invoke the SECURITY DEFINER service RPC instead of
+  // directly mutating `tenants.message_credits` so:
+  //   - the partner balance is decremented atomically;
+  //   - movements are auditable in `partner_wallet_ledger` with full
+  //     traceability (external_id of the Core payment in metadata);
+  //   - insufficient partner funds bubble up as HTTP 402 to the Core.
+  // ============================================================
+  if (resolvedCredits !== undefined && resolvedCredits > 0) {
+    const description =
+      typeof descriptionOverride === 'string' && descriptionOverride.trim().length > 0
+        ? descriptionOverride.trim().slice(0, 500)
+        : 'Abono automático vía Core Externo (Acción: update_billing)';
+
+    const ledgerMetadata: Record<string, unknown> = {
+      source: 'sync-external-core',
+      service: serviceName,
+      action: 'update_billing',
+      tenant_external_id: tenant.external_id,
+    };
+    if (safeMovementExternalId) ledgerMetadata.external_id = safeMovementExternalId;
+    if (reason) ledgerMetadata.reason = reason;
+
+    const { error: redeemErr } = await supabase.rpc(
+      'partner_wallet_redeem_to_tenant_service',
+      {
+        _partner_id: partnerId,
+        _tenant_id: tenant.id,
+        _amount: resolvedCredits,
+        _description: description,
+        _metadata: ledgerMetadata,
+      },
+    );
+
+    if (redeemErr) {
+      const msg = String(redeemErr.message ?? '');
+      const code = (redeemErr as { code?: string }).code ?? '';
+      console.error('update_billing: super wallet redeem error', { code, msg });
+
+      // P0003 (custom) → insufficient Super Wallet balance.
+      if (code === 'P0003' || /Saldo insuficiente/i.test(msg)) {
+        return jsonResponse(
+          {
+            success: false,
+            error: 'partner_super_wallet_insufficient_balance',
+            message:
+              'Saldo insuficiente en la Super Wallet del Partner. Recargue la bolsa mayorista para continuar abonando créditos a sus tenants.',
+            partner_id: partnerId,
+            requested_amount: resolvedCredits,
+            external_id: safeMovementExternalId,
+          },
+          402,
+        );
+      }
+      if (/Super Wallet no inicializada/i.test(msg)) {
+        return jsonResponse(
+          {
+            success: false,
+            error: 'partner_super_wallet_not_initialized',
+            message:
+              'La Super Wallet del Partner no ha sido inicializada. Realice un primer abono antes de redimir créditos.',
+            partner_id: partnerId,
+          },
+          402,
+        );
+      }
+      if (/no pertenece/i.test(msg)) {
+        return jsonResponse(
+          { success: false, error: 'tenant_partner_mismatch', message: msg },
+          403,
+        );
+      }
+      return jsonResponse(
+        { success: false, error: 'super_wallet_redeem_failed', message: msg },
+        500,
+      );
+    }
+  }
+
+  // ============================================================
+  // STEP B — Apply non-credit fields (billing_state, plan) and any
+  // explicit zero-credit reset. We never overwrite `message_credits`
+  // here when the Super Wallet RPC already credited the tenant.
+  // ============================================================
   const tenantUpdate: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
   if (resolvedBillingState !== undefined) tenantUpdate.billing_state = resolvedBillingState;
   if (resolvedPlan !== undefined) tenantUpdate.plan = resolvedPlan;
-  if (resolvedCredits !== undefined) {
-    tenantUpdate.message_credits = resolvedCredits;
-    tenantUpdate.accumulated_credits = resolvedCredits;
+  // Explicit zero from Core means "block sending" — keep legacy behavior.
+  if (resolvedCredits !== undefined && resolvedCredits === 0) {
+    tenantUpdate.message_credits = 0;
+    tenantUpdate.accumulated_credits = 0;
     tenantUpdate.monthly_credits_remaining = 0;
     tenantUpdate.extra_credits = 0;
   }
@@ -1519,8 +1613,12 @@ async function handleUpdateBilling(
   }
 
   // Sync legacy wallet balance to keep downstream code in sync.
+  // For Super-Wallet-driven top-ups (resolvedCredits > 0) the RPC already
+  // wrote to `partner_wallet_ledger` AND to `wallet_ledger`, so we skip
+  // this block entirely. We still run it for explicit zero-resets to keep
+  // the legacy `wallets` row aligned with the tenant.
   let walletLedgerEntry: Record<string, unknown> | null = null;
-  if (resolvedCredits !== undefined) {
+  if (resolvedCredits !== undefined && resolvedCredits === 0) {
     const { data: walletRow } = await supabase
       .from('wallets')
       .select('id, balance_messages')
@@ -1589,10 +1687,6 @@ async function handleUpdateBilling(
 
       // Prefer Core-provided external_id for idempotency so re-deliveries of
       // the same movement are de-duped. Fall back to a timestamped key.
-      const safeMovementExternalId =
-        typeof movementExternalId === 'string' && movementExternalId.trim().length > 0
-          ? movementExternalId.trim().slice(0, 128)
-          : null;
       const idempotency_key = safeMovementExternalId
         ? `core:${safeMovementExternalId}`
         : `external_adjustment:${tenant.id}:${Date.now()}`;
