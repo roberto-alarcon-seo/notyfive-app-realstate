@@ -211,7 +211,7 @@ serve(async (req) => {
     // Get active properties with their FAQs as additional knowledge
     const { data: propertiesData } = await supabase
       .from('properties')
-      .select('id, title, property_code, zone, price, currency, operation_type, property_type, status, address, accepted_credits, maintenance_fee, ai_prompt, visit_availability, youtube_url')
+      .select('id, title, property_code, zone, price, currency, operation_type, property_type, status, address, description, location_url, metadata, accepted_credits, maintenance_fee, ai_prompt, visit_availability, youtube_url')
       .eq('tenant_id', tenant_id)
       .eq('is_active', true);
 
@@ -277,13 +277,21 @@ serve(async (req) => {
           ? `\n  Fotos disponibles: Sí (${uniqueImages.length} fotos). Si el cliente pide fotos, responde con el texto [FOTOS:${p.property_code}] en tu mensaje.`
           : '\n  Fotos disponibles: No';
         
+        const meta = (p as any).metadata || {};
+        const constructionYear = meta.construction_year ?? null;
+        const estrato = meta.estrato ?? null;
+        const descriptionText = (p as any).description ? `\n  Descripción: ${(p as any).description}` : '';
+        const locationUrlText = (p as any).location_url ? `\n  Ubicación (mapa): ${(p as any).location_url}` : '';
+        const constructionYearText = constructionYear ? `\n  Año de construcción: ${constructionYear}` : '';
+        const estratoText = estrato !== null && estrato !== undefined ? `\n  Estrato: ${estrato}` : '';
+
         return `- ${p.title} (Código: ${p.property_code})
-  Zona: ${p.zone} | Precio: $${p.price.toLocaleString()} ${p.currency} | Tipo: ${p.operation_type}
-  Tipo de propiedad: ${p.property_type || 'No especificado'} | Estatus: ${p.status}
-  ${p.address ? `Dirección: ${p.address}` : ''}
-  ${creditText}${maintenanceText ? ` | ${maintenanceText}` : ''}
-  ${visitText ? `Disponibilidad de visitas: ${visitText}` : ''}
-  ${p.youtube_url ? `Video de YouTube disponible: Sí — Enlace: ${p.youtube_url}` : 'Video de YouTube disponible: No'}${aiPromptText}${photosText}${faqText}`;
+   Zona: ${p.zone} | Precio: $${p.price.toLocaleString()} ${p.currency} | Tipo: ${p.operation_type}
+   Tipo de propiedad: ${p.property_type || 'No especificado'} | Estatus: ${p.status}
+   ${p.address ? `Dirección: ${p.address}` : ''}${descriptionText}${locationUrlText}${constructionYearText}${estratoText}
+   ${creditText}${maintenanceText ? ` | ${maintenanceText}` : ''}
+   ${visitText ? `Disponibilidad de visitas: ${visitText}` : ''}
+   ${p.youtube_url ? `Video de YouTube disponible: Sí — Enlace: ${p.youtube_url}` : 'Video de YouTube disponible: No'}${aiPromptText}${photosText}${faqText}`;
       }).join('\n\n');
 
       propertiesContext = `\nPROPIEDADES DISPONIBLES:\n${propertyDetails}`;
