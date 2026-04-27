@@ -308,7 +308,7 @@ export default function PartnerSuperWallet() {
                 ) : (
                   ledger!.map((row) => {
                     const isAdjust = row.movement_type === 'ADJUSTMENT';
-                    const sign = row.amount > 0 ? '+' : row.amount < 0 ? '' : '';
+                    const sign = row.amount > 0 ? '+' : row.amount < 0 ? '-' : '';
                     const amountClass =
                       isAdjust
                         ? row.amount >= 0 ? 'text-emerald-600' : 'text-destructive'
