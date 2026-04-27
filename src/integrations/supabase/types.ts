@@ -4036,6 +4036,23 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      partner_wallet_adjust: {
+        Args: { _amount: number; _description: string; _partner_id: string }
+        Returns: {
+          balance_credits: number
+          created_at: string
+          id: string
+          low_balance_threshold: number
+          partner_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "partner_super_wallets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       partner_wallet_redeem_to_tenant: {
         Args: {
           _amount: number
