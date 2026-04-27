@@ -384,6 +384,57 @@ export default function PartnerSuperWallet() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Adjustment dialog (global super admin only) */}
+      <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="h-4 w-4" /> Ajuste manual de saldo
+            </DialogTitle>
+            <DialogDescription>
+              Suma (positivo) o resta (negativo) créditos del saldo actual del partner.
+              Queda registrado como <span className="font-medium">ADJUSTMENT</span> en la auditoría.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Monto (puede ser negativo)</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={adjustAmount}
+                onChange={(e) => setAdjustAmount(e.target.value)}
+                placeholder="Ej: 1500 ó -500"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Saldo actual: {balance.toLocaleString('es-MX')} créditos
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">
+                Descripción / motivo <span className="text-destructive">*</span>
+              </label>
+              <Textarea
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                placeholder="Explica el motivo del ajuste (obligatorio)"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdjustOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleAdjust}
+              disabled={adjust.isPending || !adjustAmount || !adjustReason.trim()}
+            >
+              {adjust.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Aplicar ajuste
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
