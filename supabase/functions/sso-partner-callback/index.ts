@@ -17,7 +17,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PARTNER_SSO_TOKEN = Deno.env.get("PARTNER_SSO_TOKEN") ?? "";
 
-const APP_ORIGIN = "https://notyfive-app-realstate.lovable.app";
+const FALLBACK_APP_ORIGIN = "https://notyfive-app-realstate.lovable.app";
 const REDIRECT_PATH = "/admin/super-wallet";
 const SUCCESS_REDIRECT_TO = "https://zitadel.com/blog/magic-links";
 
@@ -214,8 +214,23 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 4. Generate magic link
-  const redirectUrl = new URL(REDIRECT_PATH, APP_ORIGIN).toString();
+  // 4. Resolve partner domain to build the post-login redirect URL.
+  let appOrigin = FALLBACK_APP_ORIGIN;
+  try {
+    const { data: partnerRow } = await supabase
+      .from("partners")
+      .select("primary_domain")
+      .eq("id", partnerId)
+      .maybeSingle();
+    const domain = (partnerRow?.primary_domain ?? "").trim();
+    if (domain) {
+      appOrigin = domain.startsWith("http") ? domain : `https://${domain}`;
+    }
+  } catch (err) {
+    console.warn("sso-partner-callback: partner domain lookup failed", err);
+  }
+
+  const redirectUrl = new URL(REDIRECT_PATH, appOrigin).toString();
   const { data: linkData, error: linkErr } = await supabase.auth.admin
     .generateLink({
       type: "magiclink",
