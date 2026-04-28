@@ -19,7 +19,6 @@ const PARTNER_SSO_TOKEN = Deno.env.get("PARTNER_SSO_TOKEN") ?? "";
 
 const FALLBACK_APP_ORIGIN = "https://notyfive-app-realstate.lovable.app";
 const REDIRECT_PATH = "/";
-const SUCCESS_REDIRECT_TO = "https://zitadel.com/blog/magic-links";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -285,7 +284,6 @@ Deno.serve(async (req) => {
   // 5. Success response
   return json(200, {
     success: true,
-    redirectTo: SUCCESS_REDIRECT_TO,
     magic_link: linkData.properties.action_link,
   });
 });
