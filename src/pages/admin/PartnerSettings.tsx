@@ -225,6 +225,28 @@ export default function PartnerSettings() {
     }
   };
 
+  const handleSaveRedirects = async () => {
+    if (!partner) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("partners")
+        .update({
+          non_sso_redirect_url: partner.non_sso_redirect_url?.trim() || null,
+          logout_redirect_url: partner.logout_redirect_url?.trim() || null,
+        })
+        .eq("id", partner.id);
+      if (error) throw error;
+      toast.success("Redirecciones actualizadas");
+      setPartners((list) => list.map((p) => (p.id === partner.id ? partner : p)));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error desconocido";
+      toast.error(`No se pudo guardar: ${msg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogoUpload = async (file: File) => {
     if (!partner) return;
     if (file.size > 2 * 1024 * 1024) {
