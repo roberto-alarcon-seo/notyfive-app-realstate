@@ -79,7 +79,7 @@ export default function PartnerSettings() {
         let query = supabase
           .from("partners")
           .select(
-            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding, non_sso_redirect_url, logout_redirect_url",
+            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding, non_sso_redirect_url, logout_redirect_url, api_key, external_sync_enabled",
           )
           .order("name");
 
