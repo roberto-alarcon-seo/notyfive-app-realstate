@@ -70,6 +70,14 @@ const CompleteSignup = () => {
         } else {
           setUserEmail(session.user.email || null);
         }
+
+        // SSO-provisioned users must NEVER set a password — bounce them to the CRM home.
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        const meta = (currentUser?.user_metadata ?? {}) as Record<string, unknown>;
+        if (meta.sso_user === true || meta.provisioned_via === 'sso') {
+          navigate('/', { replace: true });
+          return;
+        }
       } catch (err) {
         console.error('Check session error:', err);
         setStatus('no-session');
@@ -79,7 +87,7 @@ const CompleteSignup = () => {
     };
 
     checkSession();
-  }, []);
+  }, [navigate]);
 
   const isPasswordValid = passwordRequirements.slice(0, 3).every(req => req.test(password));
   const doPasswordsMatch = password === confirmPassword && password.length > 0;

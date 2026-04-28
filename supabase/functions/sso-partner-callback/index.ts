@@ -231,6 +231,26 @@ Deno.serve(async (req) => {
 
   // Always redirect to the root of the partner domain (e.g. https://app.brokia24.com/)
   const redirectUrl = new URL(REDIRECT_PATH, appOrigin).toString();
+
+  // Ensure the auth user has SSO metadata flags so the frontend never asks
+  // them to complete signup or set a password.
+  try {
+    const { data: existing } = await supabase.auth.admin.getUserById(profile.id);
+    const meta = (existing?.user?.user_metadata ?? {}) as Record<string, unknown>;
+    if (!meta.sso_user || !meta.provisioned_via || !meta.email_confirmed) {
+      await supabase.auth.admin.updateUserById(profile.id, {
+        user_metadata: {
+          ...meta,
+          provisioned_via: meta.provisioned_via ?? "sso",
+          sso_user: true,
+          email_confirmed: true,
+        },
+      });
+    }
+  } catch (err) {
+    console.warn("sso-partner-callback: could not refresh sso metadata", err);
+  }
+
   const { data: linkData, error: linkErr } = await supabase.auth.admin
     .generateLink({
       type: "magiclink",
