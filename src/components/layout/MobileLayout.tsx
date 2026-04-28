@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
 import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useSignOutRedirect } from "@/hooks/useSignOutRedirect";
 
 const mobileMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -40,6 +40,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   const navigate = useNavigate();
   const totalUnread = useTotalUnreadCount();
   const { partner } = usePartnerBranding();
+  const signOutRedirect = useSignOutRedirect();
 
   const toggleTheme = () => {
     const next = currentTheme === "dark" ? "light" : "dark";
@@ -52,8 +53,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
 
   const handleLogout = async () => {
     setMenuOpen(false);
-    await supabase.auth.signOut();
-    navigate("/auth");
+    await signOutRedirect();
   };
 
   return (

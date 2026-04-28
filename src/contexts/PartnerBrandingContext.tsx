@@ -38,6 +38,10 @@ export interface PartnerBranding {
    * here from the CRM landing page, since access to the CRM is SSO-only.
    */
   dashboardUrl: string | null;
+  /** Optional redirect for unauthenticated users hitting the landing page. */
+  nonSsoRedirectUrl: string | null;
+  /** Optional redirect after the user signs out. */
+  logoutRedirectUrl: string | null;
   /** Full design tokens for this partner (loaded from `partners.branding`). */
   theme: PartnerTheme;
 }
@@ -82,6 +86,8 @@ function staticToBranding(p: PartnerStaticConfig): PartnerBranding {
     // Static fallback: assume the dashboard lives at the partner's primary
     // domain. The DB value (when available) takes precedence.
     dashboardUrl: p.primaryDomain ? `https://${p.primaryDomain}` : null,
+    nonSsoRedirectUrl: null,
+    logoutRedirectUrl: null,
     theme: buildDefaultTheme(p.primaryColorHsl),
   };
 }
@@ -197,6 +203,12 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
             dashboardUrl:
               (match as { dashboard_url?: string | null }).dashboard_url ??
               (match.primary_domain ? `https://${match.primary_domain}` : null),
+            nonSsoRedirectUrl:
+              (match as { non_sso_redirect_url?: string | null })
+                .non_sso_redirect_url ?? null,
+            logoutRedirectUrl:
+              (match as { logout_redirect_url?: string | null })
+                .logout_redirect_url ?? null,
             theme: mergedTheme,
           });
         }

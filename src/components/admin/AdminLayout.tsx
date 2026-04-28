@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSignOutRedirect } from "@/hooks/useSignOutRedirect";
 
 const navItems = [
   { title: "Tenants", url: "/admin/tenants", icon: Building2 },
@@ -109,13 +110,8 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, title, description, actions }: AdminLayoutProps) {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
+  const { user } = useAuth();
+  const handleSignOut = useSignOutRedirect();
 
   return (
     <SidebarProvider>

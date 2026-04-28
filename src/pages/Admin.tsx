@@ -35,6 +35,7 @@ import {
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSignOutRedirect } from '@/hooks/useSignOutRedirect';
 import { useNavigate } from 'react-router-dom';
 
 interface Tenant {
@@ -71,7 +72,7 @@ const tenantSchema = z.object({
 });
 
 const Admin = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,10 +100,7 @@ const Admin = () => {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
-  };
+  const handleSignOut = useSignOutRedirect();
 
   const fetchTenants = async () => {
     setIsLoading(true);

@@ -1,6 +1,7 @@
 import { LogOut, User, Shield, Building2, LifeBuoy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSignOutRedirect } from '@/hooks/useSignOutRedirect';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,12 +15,8 @@ import { Badge } from '@/components/ui/badge';
 
 export const UserMenu = () => {
   const navigate = useNavigate();
-  const { profile, tenant, isSuperAdmin, tenantRole, signOut } = useAuth();
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
-  };
+  const { profile, tenant, isSuperAdmin, tenantRole } = useAuth();
+  const handleSignOut = useSignOutRedirect();
 
   const getInitials = (name: string) => {
     return name

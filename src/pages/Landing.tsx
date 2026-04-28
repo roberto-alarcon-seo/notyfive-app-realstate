@@ -15,9 +15,13 @@ const Landing = () => {
   const [params, setParams] = useSearchParams();
   const { partner } = usePartnerBranding();
   // Dynamic redirect URL based on the partner resolved from the hostname.
-  // Falls back to the primary domain so the button always works.
+  // Priority: explicit non_sso_redirect_url (white-label) > dashboardUrl >
+  // primary domain. Ensures the landing button always sends the user to
+  // the partner's branded entry point.
   const coreUrl =
-    partner.dashboardUrl ?? `https://${partner.primaryDomain}`;
+    partner.nonSsoRedirectUrl?.trim() ||
+    partner.dashboardUrl ||
+    `https://${partner.primaryDomain}`;
   const ssoError = params.get('error') === 'sso_denied'
     ? params.get('reason') ?? 'unknown'
     : null;
@@ -43,6 +47,17 @@ const Landing = () => {
     next.delete('reason');
     setParams(next, { replace: true });
   }, [ssoError, params, setParams]);
+
+  // White-label redirect: if the partner has configured a non-SSO entry
+  // URL, send unauthenticated users straight there instead of showing
+  // the internal landing. Skipped when an SSO error is being displayed.
+  useEffect(() => {
+    if (ssoError) return;
+    const target = partner.nonSsoRedirectUrl?.trim();
+    if (target) {
+      window.location.replace(target);
+    }
+  }, [ssoError, partner.nonSsoRedirectUrl]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-12">

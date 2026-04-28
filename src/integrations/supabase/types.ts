@@ -2181,7 +2181,9 @@ export type Database = {
           is_active: boolean
           logo_mark_url: string | null
           logo_url: string
+          logout_redirect_url: string | null
           name: string
+          non_sso_redirect_url: string | null
           primary_color_hex: string
           primary_color_hsl: string
           primary_domain: string
@@ -2205,7 +2207,9 @@ export type Database = {
           is_active?: boolean
           logo_mark_url?: string | null
           logo_url: string
+          logout_redirect_url?: string | null
           name: string
+          non_sso_redirect_url?: string | null
           primary_color_hex: string
           primary_color_hsl: string
           primary_domain: string
@@ -2229,7 +2233,9 @@ export type Database = {
           is_active?: boolean
           logo_mark_url?: string | null
           logo_url?: string
+          logout_redirect_url?: string | null
           name?: string
+          non_sso_redirect_url?: string | null
           primary_color_hex?: string
           primary_color_hsl?: string
           primary_domain?: string

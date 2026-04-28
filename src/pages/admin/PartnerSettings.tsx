@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2 } from "lucide-react";
+import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -46,6 +46,8 @@ interface PartnerRow {
   email_sender_name: string;
   email_sender_address: string;
   branding: PartnerTheme;
+  non_sso_redirect_url: string | null;
+  logout_redirect_url: string | null;
 }
 
 export default function PartnerSettings() {
@@ -74,7 +76,7 @@ export default function PartnerSettings() {
         let query = supabase
           .from("partners")
           .select(
-            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding",
+            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding, non_sso_redirect_url, logout_redirect_url",
           )
           .order("name");
 
@@ -223,6 +225,28 @@ export default function PartnerSettings() {
     }
   };
 
+  const handleSaveRedirects = async () => {
+    if (!partner) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("partners")
+        .update({
+          non_sso_redirect_url: partner.non_sso_redirect_url?.trim() || null,
+          logout_redirect_url: partner.logout_redirect_url?.trim() || null,
+        })
+        .eq("id", partner.id);
+      if (error) throw error;
+      toast.success("Redirecciones actualizadas");
+      setPartners((list) => list.map((p) => (p.id === partner.id ? partner : p)));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error desconocido";
+      toast.error(`No se pudo guardar: ${msg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogoUpload = async (file: File) => {
     if (!partner) return;
     if (file.size > 2 * 1024 * 1024) {
@@ -333,6 +357,9 @@ export default function PartnerSettings() {
             </TabsTrigger>
             <TabsTrigger value="email" className="gap-2">
               <Mail className="h-4 w-4" /> Email
+            </TabsTrigger>
+            <TabsTrigger value="redirects" className="gap-2">
+              <ExternalLink className="h-4 w-4" /> Redireccionamiento
             </TabsTrigger>
           </TabsList>
 
@@ -624,6 +651,64 @@ export default function PartnerSettings() {
                   <p className="text-xs text-muted-foreground">
                     Guarda primero los cambios. Se enviará un correo de prueba con las credenciales almacenadas.
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* REDIRECCIONAMIENTO */}
+          <TabsContent value="redirects" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Redireccionamiento de marca blanca</CardTitle>
+                <CardDescription>
+                  Controla a dónde se envía a los usuarios cuando entran sin
+                  sesión o cuando cierran sesión, para mantener oculta la
+                  infraestructura interna del CRM.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="non-sso-url">Non SSO</Label>
+                  <Input
+                    id="non-sso-url"
+                    type="url"
+                    value={partner.non_sso_redirect_url ?? ""}
+                    onChange={(e) =>
+                      handleFieldChange("non_sso_redirect_url", e.target.value)
+                    }
+                    placeholder="https://app.tudominio.com/login"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Cuando un usuario llega a la página de bienvenida sin estar
+                    logueado, será redirigido a esta dirección externa en lugar
+                    de mostrarle la pantalla de acceso interna.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="logout-url">Logout</Label>
+                  <Input
+                    id="logout-url"
+                    type="url"
+                    value={partner.logout_redirect_url ?? ""}
+                    onChange={(e) =>
+                      handleFieldChange("logout_redirect_url", e.target.value)
+                    }
+                    placeholder="https://app.tudominio.com/"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Tras cerrar sesión, el usuario será enviado a esta
+                    dirección. Si lo dejas vacío, los super administradores
+                    seguirán el flujo interno por defecto.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <Button onClick={handleSaveRedirects} disabled={saving}>
+                    {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Guardar redirecciones
+                  </Button>
                 </div>
               </CardContent>
             </Card>
