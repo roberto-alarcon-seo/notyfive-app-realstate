@@ -27,6 +27,7 @@ interface ProfileRow {
   created_at: string;
   tenant_role: string | null;
   global_role: string | null;
+  provisioned_via: string | null;
 }
 
 const roleLabels: Record<string, string> = {
@@ -47,7 +48,7 @@ export function TenantUsersTab({ tenantId, managedExternally }: TenantUsersTabPr
       try {
         const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('id, name, email, status, first_login_required, last_login_at, created_at')
+          .select('id, name, email, status, first_login_required, last_login_at, created_at, provisioned_via')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: true });
         if (error) throw error;
@@ -155,7 +156,7 @@ export function TenantUsersTab({ tenantId, managedExternally }: TenantUsersTabPr
                       >
                         {u.status === 'active' ? 'Activo' : u.status}
                       </Badge>
-                      {u.first_login_required && (
+                      {u.first_login_required && u.provisioned_via !== 'sso' && (
                         <span className="ml-2 text-[10px] uppercase tracking-wider text-warning">
                           Pendiente activación
                         </span>

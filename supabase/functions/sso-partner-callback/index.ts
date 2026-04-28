@@ -98,6 +98,18 @@ Deno.serve(async (req) => {
     ? body.email.trim().toLowerCase()
     : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
+  const tenantRoleRaw = typeof body.tenant_role === "string"
+    ? body.tenant_role.trim().toLowerCase()
+    : "";
+  const VALID_ROLES = [
+    "owner",
+    "administrador",
+    "manager",
+    "marketer",
+    "asesor",
+    "readonly",
+  ];
+  const incomingRole = VALID_ROLES.includes(tenantRoleRaw) ? tenantRoleRaw : null;
 
   if (!tenantExternalId || !partnerId || !email) {
     await logAttempt(supabase, {
@@ -212,6 +224,35 @@ Deno.serve(async (req) => {
       error: "Acceso denegado: Usuario inactivo",
     });
   }
+
+  // Sync the tenant_role from the partner payload (if provided & valid) so
+  // the Core remains the source of truth for roles. Falls back to keeping
+  // whatever role the user already has.
+  if (incomingRole) {
+    try {
+      await supabase
+        .from("user_roles")
+        .upsert(
+          {
+            user_id: profile.id,
+            global_role: "user",
+            tenant_role: incomingRole,
+          },
+          { onConflict: "user_id" },
+        );
+    } catch (err) {
+      console.warn("sso-partner-callback: could not sync tenant_role", err);
+    }
+  }
+
+  // Mark profile as SSO-provisioned so the admin UI hides "pending activation".
+  try {
+    await supabase
+      .from("profiles")
+      .update({ provisioned_via: "sso", first_login_required: false })
+      .eq("id", profile.id)
+      .is("provisioned_via", null);
+  } catch (_) { /* ignore */ }
 
   // 4. Resolve partner domain to build the post-login redirect URL.
   let appOrigin = FALLBACK_APP_ORIGIN;

@@ -241,14 +241,15 @@ Deno.serve(async (req) => {
       ? (claims.name as string).trim()
       : email.split("@")[0];
     const claimRoleRaw = typeof claims.tenant_role === "string"
-      ? (claims.tenant_role as string).trim()
-      : "asesor";
+      ? (claims.tenant_role as string).trim().toLowerCase()
+      : "";
     const VALID_ROLES = [
       "owner",
       "administrador",
       "manager",
       "marketer",
       "asesor",
+      "readonly",
     ];
     const claimRole = VALID_ROLES.includes(claimRoleRaw) ? claimRoleRaw : "asesor";
 
@@ -281,6 +282,7 @@ Deno.serve(async (req) => {
         email,
         status: "active",
         first_login_required: false,
+        provisioned_via: "sso",
       });
 
     if (insertProfileErr) {
@@ -303,6 +305,48 @@ Deno.serve(async (req) => {
       status: "active",
       tenant_id: tenant.id,
     };
+  }
+
+  // ---------- Role sync for existing SSO users ----------
+  // Even if the profile already exists, the Core system may have changed the
+  // user's role. Re-apply the role from the JWT claim when it is valid.
+  if (resolvedProfile?.id) {
+    const incomingRoleRaw = typeof claims.tenant_role === "string"
+      ? (claims.tenant_role as string).trim().toLowerCase()
+      : "";
+    const VALID_ROLES = [
+      "owner",
+      "administrador",
+      "manager",
+      "marketer",
+      "asesor",
+      "readonly",
+    ];
+    if (incomingRoleRaw && VALID_ROLES.includes(incomingRoleRaw)) {
+      try {
+        await supabase
+          .from("user_roles")
+          .upsert(
+            {
+              user_id: resolvedProfile.id,
+              global_role: "user",
+              tenant_role: incomingRoleRaw,
+            },
+            { onConflict: "user_id" },
+          );
+      } catch (err) {
+        console.warn("auth-sso: could not sync tenant_role for existing user", err);
+      }
+    }
+
+    // Mark profile as SSO-provisioned for the admin UI.
+    try {
+      await supabase
+        .from("profiles")
+        .update({ provisioned_via: "sso", first_login_required: false })
+        .eq("id", resolvedProfile.id)
+        .is("provisioned_via", null);
+    } catch (_) { /* ignore */ }
   }
 
   // For existing SSO-resolved users, ensure the metadata flags are present so

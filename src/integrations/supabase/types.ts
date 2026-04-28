@@ -2390,6 +2390,7 @@ export type Database = {
           last_login_at: string | null
           name: string
           password_set_at: string | null
+          provisioned_via: string | null
           status: string
           tenant_id: string | null
           updated_at: string
@@ -2404,6 +2405,7 @@ export type Database = {
           last_login_at?: string | null
           name: string
           password_set_at?: string | null
+          provisioned_via?: string | null
           status?: string
           tenant_id?: string | null
           updated_at?: string
@@ -2418,6 +2420,7 @@ export type Database = {
           last_login_at?: string | null
           name?: string
           password_set_at?: string | null
+          provisioned_via?: string | null
           status?: string
           tenant_id?: string | null
           updated_at?: string
