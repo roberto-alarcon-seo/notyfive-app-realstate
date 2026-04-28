@@ -52,8 +52,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
 
   const handleLogout = async () => {
     setMenuOpen(false);
-    await supabase.auth.signOut();
-    navigate("/auth");
+    await signOutRedirect();
   };
 
   return (
