@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2, ExternalLink } from "lucide-react";
+import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2, ExternalLink, Key, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -48,6 +49,8 @@ interface PartnerRow {
   branding: PartnerTheme;
   non_sso_redirect_url: string | null;
   logout_redirect_url: string | null;
+  api_key: string | null;
+  external_sync_enabled: boolean;
 }
 
 export default function PartnerSettings() {
