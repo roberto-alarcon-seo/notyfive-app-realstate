@@ -250,6 +250,40 @@ export default function PartnerSettings() {
     }
   };
 
+  const handleSaveApiSettings = async () => {
+    if (!partner || !isSuperAdmin) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("partners")
+        .update({
+          external_sync_enabled: partner.external_sync_enabled,
+        })
+        .eq("id", partner.id);
+      if (error) throw error;
+      toast.success("Configuración de API actualizada");
+      setPartners((list) => list.map((p) => (p.id === partner.id ? partner : p)));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error desconocido";
+      toast.error(`No se pudo guardar: ${msg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCopyApiToken = async () => {
+    if (!partner?.api_key) {
+      toast.error("No hay token configurado");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(partner.api_key);
+      toast.success("Token copiado al portapapeles");
+    } catch {
+      toast.error("No se pudo copiar el token");
+    }
+  };
+
   const handleLogoUpload = async (file: File) => {
     if (!partner) return;
     if (file.size > 2 * 1024 * 1024) {
