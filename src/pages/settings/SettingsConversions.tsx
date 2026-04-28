@@ -5,11 +5,11 @@ import { MetaIntegrationCard } from "@/components/settings/conversions/MetaInteg
 import { ConversionEventLogsPanel } from "@/components/settings/conversions/ConversionEventLogsPanel";
 import { useConversionSettings } from "@/hooks/useConversionSettings";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PremiumGate, useHasPremiumAccess } from "@/components/settings/PremiumGate";
+import { PremiumGate, useFlagsAccess } from "@/components/settings/PremiumGate";
 
 export default function SettingsConversions() {
   const { settings, mappings, isLoading, saveSettings, saveMappings, resetMappingsToDefault } = useConversionSettings();
-  const hasPremium = useHasPremiumAccess();
+  const hasPremium = useFlagsAccess(["campaigns"]);
 
   if (!hasPremium) {
     return (
@@ -19,6 +19,8 @@ export default function SettingsConversions() {
         icon={BarChart3}
       >
         <PremiumGate
+          hasAccess={false}
+          requiredFlags={["campaigns"]}
           featureName="Conversiones & Meta CAPI"
           description="Configura tu conversión principal, conecta Meta Pixel y envía eventos server-side. Disponible en planes Pro."
         >

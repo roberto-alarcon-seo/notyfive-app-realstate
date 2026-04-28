@@ -5,7 +5,8 @@ export type FeatureName =
   | "segments"
   | "automations_builder"
   | "templates_library"
-  | "quick_automations";
+  | "quick_automations"
+  | "api_access";
 
 /**
  * Returns true if the current tenant has the given feature flag enabled.
