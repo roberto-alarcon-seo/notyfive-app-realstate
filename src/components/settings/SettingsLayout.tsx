@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useFeatureFlag, type FeatureName } from "@/hooks/useFeatureFlag";
 
 interface MenuItem {
   id: string;
@@ -15,6 +16,8 @@ interface MenuItem {
   title: string;
   description: string;
   group: string;
+  /** Flags that unlock this item (ANY enabled). Empty = no gating. */
+  unlockFlags?: FeatureName[];
 }
 
 const menuItems: MenuItem[] = [
@@ -89,6 +92,7 @@ const menuItems: MenuItem[] = [
     title: "Conversiones",
     description: "Meta Pixel y CAPI",
     group: "Avanzado",
+    unlockFlags: ["campaigns"],
   },
   {
     id: "developer",
@@ -97,6 +101,7 @@ const menuItems: MenuItem[] = [
     title: "Desarrollador",
     description: "API Webhooks y tokens",
     group: "Avanzado",
+    unlockFlags: ["automations_builder", "api_access"],
   },
 ];
 
@@ -119,6 +124,21 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
+
+  // Feature flag lookups for premium items (call hooks unconditionally)
+  const campaigns = useFeatureFlag("campaigns");
+  const automations = useFeatureFlag("automations_builder");
+  const apiAccess = useFeatureFlag("api_access");
+  const flagState: Record<FeatureName, boolean> = {
+    campaigns: campaigns.enabled,
+    segments: false,
+    automations_builder: automations.enabled,
+    templates_library: false,
+    quick_automations: false,
+    api_access: apiAccess.enabled,
+  };
+  const isItemUnlocked = (item: MenuItem) =>
+    !item.unlockFlags || item.unlockFlags.some((f) => flagState[f]);
 
   // Group menu items preserving canonical order
   const groupedItems = groupOrder
@@ -147,6 +167,8 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
             {groupedItems.map(([group, items]) => {
               const GroupIcon = groupIcons[group];
               const isPremiumGroup = group === "Avanzado";
+              const groupHasLocked =
+                isPremiumGroup && items.some((i) => !isItemUnlocked(i));
               return (
               <div key={group}>
                 <div className="px-2 mb-1 flex items-center gap-1.5">
@@ -154,7 +176,7 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
                   <p className="text-[10px] font-medium text-sidebar-foreground/60 uppercase tracking-wider">
                     {group}
                   </p>
-                  {isPremiumGroup && (
+                  {groupHasLocked && (
                     <span className="ml-auto text-[9px] font-semibold uppercase tracking-wider text-primary">
                       Pro
                     </span>
@@ -164,7 +186,8 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
                   {items.map((item) => {
                     const ItemIcon = item.icon;
                     const active = isActive(item.path);
-                    
+                    const unlocked = isItemUnlocked(item);
+                    const showProBadge = !!item.unlockFlags && !unlocked;
                     return (
                       <button
                         key={item.id}
@@ -186,6 +209,16 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
                         )}>
                           {item.title}
                         </span>
+                        {showProBadge && (
+                          <span className={cn(
+                            "ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded",
+                            active
+                              ? "bg-primary-foreground/20 text-primary-foreground"
+                              : "bg-primary/10 text-primary"
+                          )}>
+                            Pro
+                          </span>
+                        )}
                       </button>
                     );
                   })}
