@@ -2033,6 +2033,45 @@ export type Database = {
           },
         ]
       }
+      partner_sso_logs: {
+        Row: {
+          created_at: string
+          email: string
+          error_reason: string | null
+          id: string
+          ip: string | null
+          partner_id: string | null
+          success: boolean
+          tenant_external_id: string | null
+          tenant_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          error_reason?: string | null
+          id?: string
+          ip?: string | null
+          partner_id?: string | null
+          success?: boolean
+          tenant_external_id?: string | null
+          tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          error_reason?: string | null
+          id?: string
+          ip?: string | null
+          partner_id?: string | null
+          success?: boolean
+          tenant_external_id?: string | null
+          tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       partner_super_wallets: {
         Row: {
           balance_credits: number
