@@ -655,6 +655,64 @@ export default function PartnerSettings() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* REDIRECCIONAMIENTO */}
+          <TabsContent value="redirects" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Redireccionamiento de marca blanca</CardTitle>
+                <CardDescription>
+                  Controla a dónde se envía a los usuarios cuando entran sin
+                  sesión o cuando cierran sesión, para mantener oculta la
+                  infraestructura interna del CRM.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="non-sso-url">Non SSO</Label>
+                  <Input
+                    id="non-sso-url"
+                    type="url"
+                    value={partner.non_sso_redirect_url ?? ""}
+                    onChange={(e) =>
+                      handleFieldChange("non_sso_redirect_url", e.target.value)
+                    }
+                    placeholder="https://app.tudominio.com/login"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Cuando un usuario llega a la página de bienvenida sin estar
+                    logueado, será redirigido a esta dirección externa en lugar
+                    de mostrarle la pantalla de acceso interna.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="logout-url">Logout</Label>
+                  <Input
+                    id="logout-url"
+                    type="url"
+                    value={partner.logout_redirect_url ?? ""}
+                    onChange={(e) =>
+                      handleFieldChange("logout_redirect_url", e.target.value)
+                    }
+                    placeholder="https://app.tudominio.com/"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Tras cerrar sesión, el usuario será enviado a esta
+                    dirección. Si lo dejas vacío, los super administradores
+                    seguirán el flujo interno por defecto.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <Button onClick={handleSaveRedirects} disabled={saving}>
+                    {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Guardar redirecciones
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </AdminLayout>
