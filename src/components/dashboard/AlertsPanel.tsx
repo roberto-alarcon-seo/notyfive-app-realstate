@@ -45,7 +45,7 @@ export function AlertsPanel({ alerts, isLoading }: AlertsPanelProps) {
       icon: Wallet,
       label: 'Créditos bajos - recarga pronto',
       severity: 'warning' as const,
-      action: () => navigate('/settings/billing'),
+      action: () => navigate('/settings/whatsapp'),
     },
     {
       condition: alerts.unreadMessages > 5,

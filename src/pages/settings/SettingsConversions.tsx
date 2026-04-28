@@ -5,9 +5,28 @@ import { MetaIntegrationCard } from "@/components/settings/conversions/MetaInteg
 import { ConversionEventLogsPanel } from "@/components/settings/conversions/ConversionEventLogsPanel";
 import { useConversionSettings } from "@/hooks/useConversionSettings";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PremiumGate, useHasPremiumAccess } from "@/components/settings/PremiumGate";
 
 export default function SettingsConversions() {
   const { settings, mappings, isLoading, saveSettings, saveMappings, resetMappingsToDefault } = useConversionSettings();
+  const hasPremium = useHasPremiumAccess();
+
+  if (!hasPremium) {
+    return (
+      <SettingsLayout
+        title="Conversiones"
+        description="Define tu conversión principal y envía señales a Meta"
+        icon={BarChart3}
+      >
+        <PremiumGate
+          featureName="Conversiones & Meta CAPI"
+          description="Configura tu conversión principal, conecta Meta Pixel y envía eventos server-side. Disponible en planes Pro."
+        >
+          <></>
+        </PremiumGate>
+      </SettingsLayout>
+    );
+  }
 
   if (isLoading) {
     return (

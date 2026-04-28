@@ -5,10 +5,12 @@ import DeveloperApiDocsTrigger from "@/components/settings/DeveloperApiDocsTrigg
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldAlert } from "lucide-react";
+import { PremiumGate, useHasPremiumAccess } from "@/components/settings/PremiumGate";
 
 export default function SettingsDeveloper() {
   const { tenantRole, isSuperAdmin } = useAuth();
   const isOwner = tenantRole === "administrador" || isSuperAdmin;
+  const hasPremium = useHasPremiumAccess();
 
   return (
     <SettingsLayout
@@ -16,19 +18,25 @@ export default function SettingsDeveloper() {
       description="API Tokens y documentación para integraciones externas"
       icon={Code2}
     >
-      <div className="space-y-6 max-w-4xl">
-        {!isOwner && (
-          <Alert variant="destructive">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertDescription>
-              Solo los propietarios pueden gestionar los tokens de API. Contacta al administrador de tu cuenta.
-            </AlertDescription>
-          </Alert>
-        )}
+      <PremiumGate
+        hasAccess={hasPremium}
+        featureName="API & Webhooks"
+        description="Genera tokens de API, configura webhooks y conecta Brokia24 con tus sistemas externos. Disponible en planes Pro."
+      >
+        <div className="space-y-6 max-w-4xl">
+          {!isOwner && (
+            <Alert variant="destructive">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertDescription>
+                Solo los propietarios pueden gestionar los tokens de API. Contacta al administrador de tu cuenta.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <DeveloperTokensCard disabled={!isOwner} />
-        <DeveloperApiDocsTrigger />
-      </div>
+          <DeveloperTokensCard disabled={!isOwner} />
+          <DeveloperApiDocsTrigger />
+        </div>
+      </PremiumGate>
     </SettingsLayout>
   );
 }

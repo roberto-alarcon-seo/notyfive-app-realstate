@@ -30,12 +30,8 @@ import Events from "./pages/Events";
 import AutomationRuns from "./pages/AutomationRuns";
 import Pipeline from "./pages/Pipeline";
 import { toast } from "sonner";
-import SettingsCompany from "./pages/settings/SettingsCompany";
 import SettingsWhatsAppStatus from "./pages/settings/SettingsWhatsAppStatus";
-import SettingsUsersPage from "./pages/settings/SettingsUsersPage";
 import SettingsContactFieldsPage from "./pages/settings/SettingsContactFieldsPage";
-import SettingsApi from "./pages/settings/SettingsApi";
-import SettingsBilling from "./pages/settings/SettingsBilling";
 import SettingsNotifications from "./pages/settings/SettingsNotifications";
 import SettingsAIConfig from "./pages/settings/SettingsAIConfig";
 import SettingsKnowledgeBase from "./pages/settings/SettingsKnowledgeBase";
@@ -58,7 +54,6 @@ import PartnerSuperWallet from "./pages/admin/PartnerSuperWallet";
 import ApiDocs from "./pages/developers/ApiDocs";
 import Followups from "./pages/Followups";
 import Support from "./pages/Support";
-import SettingsSecurity from "./pages/settings/SettingsSecurity";
 import SettingsConversions from "./pages/settings/SettingsConversions";
 import NotFound from "./pages/NotFound";
 
@@ -162,21 +157,22 @@ const App = () => (
               <Route path="/automations/:id" element={<ProtectedRoute><MainLayout><AutomationEditor /></MainLayout></ProtectedRoute>} />
               <Route path="/automations/:id/runs" element={<ProtectedRoute><MainLayout><AutomationRuns /></MainLayout></ProtectedRoute>} />
               {/* Settings routes */}
-              <Route path="/settings" element={<ProtectedRoute><MainLayout><SettingsCompany /></MainLayout></ProtectedRoute>} />
+              <Route path="/settings" element={<Navigate to="/settings/whatsapp" replace />} />
               <Route path="/settings/whatsapp" element={<ProtectedRoute><MainLayout><SettingsWhatsAppStatus /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/consent" element={<ProtectedRoute><MainLayout><SettingsConsentPage /></MainLayout></ProtectedRoute>} />
-              <Route path="/settings/users" element={<ProtectedRoute><MainLayout><SettingsUsersPage /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/contact-fields" element={<ProtectedRoute><MainLayout><SettingsContactFieldsPage /></MainLayout></ProtectedRoute>} />
-              <Route path="/settings/api" element={<ProtectedRoute><MainLayout><SettingsApi /></MainLayout></ProtectedRoute>} />
-              <Route path="/settings/billing" element={<ProtectedRoute><MainLayout><SettingsBilling /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/notifications" element={<ProtectedRoute><MainLayout><SettingsNotifications /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/ai-config" element={<ProtectedRoute><MainLayout><SettingsAIConfig /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/knowledge-base" element={<ProtectedRoute><MainLayout><SettingsKnowledgeBase /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/knowledge-base/new" element={<ProtectedRoute><MainLayout><KnowledgeBaseEditor /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/knowledge-base/:id" element={<ProtectedRoute><MainLayout><KnowledgeBaseEditor /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/developer" element={<ProtectedRoute><MainLayout><SettingsDeveloper /></MainLayout></ProtectedRoute>} />
-              <Route path="/settings/security" element={<ProtectedRoute><MainLayout><SettingsSecurity /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/conversions" element={<ProtectedRoute><MainLayout><SettingsConversions /></MainLayout></ProtectedRoute>} />
+              {/* Redirects for removed sections */}
+              <Route path="/settings/users" element={<Navigate to="/settings/whatsapp" replace />} />
+              <Route path="/settings/billing" element={<Navigate to="/settings/whatsapp" replace />} />
+              <Route path="/settings/security" element={<Navigate to="/settings/whatsapp" replace />} />
+              <Route path="/settings/api" element={<Navigate to="/settings/developer" replace />} />
               {/* Properties routes */}
               <Route path="/properties" element={<PropertiesRedirect />} />
               <Route path="/properties/:id" element={<PropertiesRedirect />} />
