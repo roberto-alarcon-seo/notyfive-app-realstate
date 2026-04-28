@@ -109,13 +109,8 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, title, description, actions }: AdminLayoutProps) {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
+  const { user } = useAuth();
+  const handleSignOut = useSignOutRedirect();
 
   return (
     <SidebarProvider>
