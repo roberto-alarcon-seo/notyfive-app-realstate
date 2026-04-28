@@ -30,6 +30,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { getCreditStatus } from '@/hooks/useTenantCredits';
 import { toast } from 'sonner';
+import { TenantFeatureFlagsCard } from './TenantFeatureFlagsCard';
 
 interface Tenant {
   id: string;
@@ -43,6 +44,7 @@ interface Tenant {
   external_id?: string | null;
   managed_externally?: boolean;
   max_users?: number;
+  partner_id?: string | null;
 }
 
 interface TenantIntegration {
@@ -506,6 +508,13 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
           )}
         </div>
       </div>
+
+      {/* Feature Flags */}
+      <TenantFeatureFlagsCard
+        tenantId={tenant.id}
+        partnerId={(tenant as Tenant & { partner_id?: string | null }).partner_id ?? null}
+        onUpdate={onTenantUpdate}
+      />
 
       {/* Account Status */}
       <div className="bg-secondary/30 border border-border rounded-xl p-5">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Building2, Users, Search, MoreHorizontal, Loader2, MessageSquare, ExternalLink, Pause, Play, Trash2 } from 'lucide-react';
+import { Plus, Building2, Users, Search, MoreHorizontal, Loader2, MessageSquare, ExternalLink, Pause, Play, Trash2, Megaphone, Filter, Workflow } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { TwilioConfigDialog } from '@/components/admin/TwilioConfigDialog';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -53,6 +54,7 @@ interface Tenant {
   max_users?: number;
   partner_id?: string | null;
   partner?: { id: string; name: string } | null;
+  enabled_features?: string[] | null;
 }
 
 const PLAN_CONFIG = {
@@ -284,6 +286,32 @@ const AdminTenants = () => {
     );
   };
 
+  const renderFeatureIcons = (tenant: Tenant) => {
+    const features = Array.isArray(tenant.enabled_features) ? tenant.enabled_features : [];
+    if (features.length === 0) return null;
+    const items: { key: string; label: string; Icon: typeof Megaphone }[] = [];
+    if (features.includes('campaigns')) items.push({ key: 'campaigns', label: 'Campañas', Icon: Megaphone });
+    if (features.includes('segments')) items.push({ key: 'segments', label: 'Segmentos', Icon: Filter });
+    if (features.includes('automations_builder')) items.push({ key: 'automations_builder', label: 'Automatizaciones', Icon: Workflow });
+    if (items.length === 0) return null;
+    return (
+      <TooltipProvider>
+        <div className="flex items-center gap-1 mt-1">
+          {items.map(({ key, label, Icon }) => (
+            <Tooltip key={key}>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-primary/10 text-primary">
+                  <Icon className="h-3 w-3" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top">{label}</TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+      </TooltipProvider>
+    );
+  };
+
   const handleSuspendTenant = async (tenant: Tenant) => {
     setIsProcessing(true);
     try {
@@ -503,7 +531,10 @@ const AdminTenants = () => {
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                           <Building2 className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="font-medium text-foreground">{tenant.name}</span>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{tenant.name}</span>
+                          {renderFeatureIcons(tenant)}
+                        </div>
                       </div>
                     </td>
                     <td className="p-4">
