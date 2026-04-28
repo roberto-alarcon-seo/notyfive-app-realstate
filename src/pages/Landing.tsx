@@ -48,6 +48,17 @@ const Landing = () => {
     setParams(next, { replace: true });
   }, [ssoError, params, setParams]);
 
+  // White-label redirect: if the partner has configured a non-SSO entry
+  // URL, send unauthenticated users straight there instead of showing
+  // the internal landing. Skipped when an SSO error is being displayed.
+  useEffect(() => {
+    if (ssoError) return;
+    const target = partner.nonSsoRedirectUrl?.trim();
+    if (target) {
+      window.location.replace(target);
+    }
+  }, [ssoError, partner.nonSsoRedirectUrl]);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-12">
       <div className="w-full max-w-md text-center space-y-8 animate-fade-in">
