@@ -30,6 +30,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { getCreditStatus } from '@/hooks/useTenantCredits';
 import { toast } from 'sonner';
+import { TenantFeatureFlagsCard } from './TenantFeatureFlagsCard';
 
 interface Tenant {
   id: string;
@@ -43,6 +44,7 @@ interface Tenant {
   external_id?: string | null;
   managed_externally?: boolean;
   max_users?: number;
+  partner_id?: string | null;
 }
 
 interface TenantIntegration {
