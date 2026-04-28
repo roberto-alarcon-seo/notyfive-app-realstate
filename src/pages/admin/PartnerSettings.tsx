@@ -753,6 +753,96 @@ export default function PartnerSettings() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* API KEYS */}
+          <TabsContent value="api" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>API keys</CardTitle>
+                <CardDescription>
+                  Credenciales para integraciones externas (sincronización con
+                  el Core). {isSuperAdmin
+                    ? "Solo el super administrador puede modificar esta sección."
+                    : "Solo lectura. Contacta al super administrador para realizar cambios."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="api-partner-id">partner_id</Label>
+                  <Input
+                    id="api-partner-id"
+                    value={partner.id}
+                    readOnly
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Identificador del partner que debe enviarse en el body de
+                    cada solicitud al endpoint <code>sync-external-core</code>.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="api-token">API Token (x-api-key)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="api-token"
+                      type="password"
+                      value={partner.api_key ?? ""}
+                      readOnly
+                      placeholder="Sin token configurado"
+                      autoComplete="off"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyApiToken}
+                      disabled={!partner.api_key}
+                      aria-label="Copiar token"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Se envía como header <code>x-api-key</code> en cada
+                    solicitud. El valor permanece oculto: solo se permite
+                    copiarlo.
+                  </p>
+                </div>
+
+                <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="api-sync-toggle" className="cursor-pointer">
+                      Sincronización externa endpoint
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Habilita o deshabilita el uso del endpoint{" "}
+                      <code>sync-external-core</code> para este partner. Si se
+                      deshabilita, el endpoint rechazará las solicitudes con
+                      403.
+                    </p>
+                  </div>
+                  <Switch
+                    id="api-sync-toggle"
+                    checked={partner.external_sync_enabled}
+                    disabled={!isSuperAdmin}
+                    onCheckedChange={(checked) =>
+                      handleFieldChange("external_sync_enabled", checked)
+                    }
+                  />
+                </div>
+
+                {isSuperAdmin && (
+                  <div className="pt-2">
+                    <Button onClick={handleSaveApiSettings} disabled={saving}>
+                      {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                      Guardar cambios
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </AdminLayout>
