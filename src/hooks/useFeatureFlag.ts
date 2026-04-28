@@ -1,4 +1,4 @@
-import { useTenantContextWithFeatures } from "@/hooks/useTenantContextWithFeatures";
+import { useTenantContext } from "@/hooks/useTenantContext";
 
 export type FeatureName =
   | "campaigns"
@@ -15,7 +15,7 @@ export function useFeatureFlag(featureName: FeatureName): {
   enabled: boolean;
   isLoading: boolean;
 } {
-  const { data, isLoading } = useTenantContextWithFeatures();
+  const { data, isLoading } = useTenantContext();
   const enabled = !!data?.enabled_features?.includes(featureName);
   return { enabled, isLoading };
 }
