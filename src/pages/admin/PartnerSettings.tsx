@@ -725,6 +725,28 @@ export default function PartnerSettings() {
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="space-y-2">
+                  <Label htmlFor="primary-domain">Dominio app</Label>
+                  <Input
+                    id="primary-domain"
+                    type="url"
+                    value={partner.primary_domain ?? ""}
+                    onChange={(e) =>
+                      handleFieldChange("primary_domain", e.target.value)
+                    }
+                    placeholder="https://app.brokia24.com"
+                    disabled={!isGlobalAdmin}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    URL base del partner. Se usa como <code>redirectTo</code> al
+                    construir el magic link del SSO (ej.{" "}
+                    <code>https://app.brokia24.com/</code>). Solo el super
+                    administrador global puede modificar este valor.
+                  </p>
+                </div>
+
+                <div className="border-t border-border" />
+
+                <div className="space-y-2">
                   <Label htmlFor="non-sso-url">Non SSO</Label>
                   <Input
                     id="non-sso-url"
