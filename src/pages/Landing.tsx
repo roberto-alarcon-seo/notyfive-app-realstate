@@ -15,9 +15,13 @@ const Landing = () => {
   const [params, setParams] = useSearchParams();
   const { partner } = usePartnerBranding();
   // Dynamic redirect URL based on the partner resolved from the hostname.
-  // Falls back to the primary domain so the button always works.
+  // Priority: explicit non_sso_redirect_url (white-label) > dashboardUrl >
+  // primary domain. Ensures the landing button always sends the user to
+  // the partner's branded entry point.
   const coreUrl =
-    partner.dashboardUrl ?? `https://${partner.primaryDomain}`;
+    partner.nonSsoRedirectUrl?.trim() ||
+    partner.dashboardUrl ||
+    `https://${partner.primaryDomain}`;
   const ssoError = params.get('error') === 'sso_denied'
     ? params.get('reason') ?? 'unknown'
     : null;
