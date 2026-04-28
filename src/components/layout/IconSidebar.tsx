@@ -59,6 +59,7 @@ export function IconSidebar() {
     automations_builder: false,
     templates_library: false,
     quick_automations: false,
+    api_access: false,
   };
 
   const visibleItems = menuItems.filter(
