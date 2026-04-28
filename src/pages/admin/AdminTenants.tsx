@@ -489,7 +489,9 @@ const AdminTenants = () => {
               {filteredTenants.map((tenant) => {
                 const monthlyRemaining = tenant.monthly_credits_remaining ?? 0;
                 const accumulated = tenant.accumulated_credits ?? 0;
-                const totalCredits = monthlyRemaining + accumulated;
+                // Source of truth: tenants.message_credits (updated directly by wallet redeems).
+                // Fallback to the breakdown for legacy rows where message_credits is not yet populated.
+                const totalCredits = tenant.message_credits ?? (monthlyRemaining + accumulated);
                 return (
                   <tr
                     key={tenant.id}
