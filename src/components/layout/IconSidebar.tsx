@@ -4,9 +4,7 @@ import {
   MessageSquare,
   Users,
   Filter,
-  FileText,
   Send,
-  Zap,
   CalendarClock,
   CalendarDays,
   Settings,
@@ -17,18 +15,25 @@ import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
 import { useFollowupBadgeCount } from "@/hooks/useFollowupBadgeCount";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
+import { useFeatureFlag, type FeatureName } from "@/hooks/useFeatureFlag";
 
-const menuItems = [
+type MenuItem = {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  path: string;
+  badgeKey: 'inbox' | 'followups' | null;
+  feature?: FeatureName;
+};
+
+const menuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", badgeKey: null },
-  { icon: MessageSquare, label: "Inbox", path: "/inbox", badgeKey: 'inbox' as const },
+  { icon: MessageSquare, label: "Inbox", path: "/inbox", badgeKey: 'inbox' },
   { icon: Kanban, label: "Pipeline", path: "/pipeline", badgeKey: null },
-  { icon: CalendarClock, label: "Seguimientos", path: "/followups", badgeKey: 'followups' as const },
+  { icon: CalendarClock, label: "Seguimientos", path: "/followups", badgeKey: 'followups' },
   { icon: CalendarDays, label: "Citas", path: "/events", badgeKey: null },
   { icon: Users, label: "Contactos", path: "/contacts", badgeKey: null },
-  { icon: Filter, label: "Segmentos", path: "/segments", badgeKey: null },
-  { icon: FileText, label: "Plantillas", path: "/templates", badgeKey: null },
-  { icon: Send, label: "Campañas", path: "/campaigns", badgeKey: null },
-  { icon: Zap, label: "Automatización", path: "/automations", badgeKey: null },
+  { icon: Filter, label: "Segmentos", path: "/segments", badgeKey: null, feature: "segments" },
+  { icon: Send, label: "Campañas", path: "/campaigns", badgeKey: null, feature: "campaigns" },
 ];
 
 const bottomItems = [
@@ -40,11 +45,25 @@ export function IconSidebar() {
   const followupBadge = useFollowupBadgeCount();
   const { tenantRole, isSuperAdmin } = useAuth();
   const { partner } = usePartnerBranding();
+  const { enabled: campaignsEnabled } = useFeatureFlag("campaigns");
+  const { enabled: segmentsEnabled } = useFeatureFlag("segments");
   
   const badgeCounts: Record<string, number> = {
     inbox: totalUnread,
     followups: followupBadge,
   };
+
+  const featureEnabled: Record<FeatureName, boolean> = {
+    campaigns: campaignsEnabled,
+    segments: segmentsEnabled,
+    automations_builder: false,
+    templates_library: false,
+    quick_automations: false,
+  };
+
+  const visibleItems = menuItems.filter(
+    (item) => !item.feature || featureEnabled[item.feature],
+  );
   
   // Solo administrador ve la opción de Configuración
   const isAdmin = tenantRole === 'administrador' || isSuperAdmin;
@@ -62,7 +81,7 @@ export function IconSidebar() {
 
       {/* Main Navigation */}
       <nav className="flex-1 flex flex-col items-center py-4 gap-1">
-        {menuItems.map((item) => (
+        {visibleItems.map((item) => (
           <Tooltip key={item.path} delayDuration={0}>
             <TooltipTrigger asChild>
               <NavLink
