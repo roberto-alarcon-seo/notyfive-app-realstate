@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Bell, MessageSquare,
   Settings as SettingsIcon, ListPlus, Bot, BookOpen, Code2, ShieldCheck, BarChart3,
-  MessagesSquare, Brain, UserSquare2, Sparkles
+  MessagesSquare, Brain, UserSquare2, Sparkles, FileText, Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,6 +32,22 @@ const menuItems: MenuItem[] = [
     icon: Bell,
     title: "Notificaciones",
     description: "Preferencias de alertas",
+    group: "Canales",
+  },
+  {
+    id: "templates",
+    path: "/settings/templates",
+    icon: FileText,
+    title: "Librería de Plantillas",
+    description: "Mensajes predefinidos",
+    group: "Canales",
+  },
+  {
+    id: "quick-automations",
+    path: "/settings/quick-automations",
+    icon: Zap,
+    title: "Automatizaciones Rápidas",
+    description: "Respuestas y disparadores",
     group: "Canales",
   },
   {
