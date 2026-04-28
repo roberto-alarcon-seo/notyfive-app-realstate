@@ -1,8 +1,9 @@
 import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
-  Building2, Users, Key, CreditCard, Bell, MessageSquare, 
-  Settings as SettingsIcon, ListPlus, Bot, BookOpen, Code2, ShieldCheck, BarChart3
+  Bell, MessageSquare,
+  Settings as SettingsIcon, ListPlus, Bot, BookOpen, Code2, ShieldCheck, BarChart3,
+  MessagesSquare, Brain, UserSquare2, Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,92 +19,12 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   {
-    id: "company",
-    path: "/settings",
-    icon: Building2,
-    title: "Empresa",
-    description: "Información general",
-    group: "General",
-  },
-  {
     id: "whatsapp",
     path: "/settings/whatsapp",
     icon: MessageSquare,
     title: "WhatsApp",
     description: "Estado de conexión",
-    group: "General",
-  },
-  {
-    id: "consent",
-    path: "/settings/consent",
-    icon: ShieldCheck,
-    title: "Consentimiento",
-    description: "Opt-out, DND y bloqueos",
-    group: "General",
-  },
-  {
-    id: "conversions",
-    path: "/settings/conversions",
-    icon: BarChart3,
-    title: "Conversiones",
-    description: "Define tu conversión principal",
-    group: "General",
-  },
-  {
-    id: "ai-config",
-    path: "/settings/ai-config",
-    icon: Bot,
-    title: "Configuración IA",
-    description: "Comportamiento del asistente",
-    group: "Inteligencia Artificial",
-  },
-  {
-    id: "knowledge-base",
-    path: "/settings/knowledge-base",
-    icon: BookOpen,
-    title: "Base de Conocimiento",
-    description: "Respuestas automáticas",
-    group: "Inteligencia Artificial",
-  },
-  {
-    id: "users",
-    path: "/settings/users",
-    icon: Users,
-    title: "Usuarios",
-    description: "Gestión del equipo",
-    group: "Equipo",
-  },
-  {
-    id: "contact-fields",
-    path: "/settings/contact-fields",
-    icon: ListPlus,
-    title: "Campos personalizados",
-    description: "Campos de contactos",
-    group: "Equipo",
-  },
-  {
-    id: "api",
-    path: "/settings/api",
-    icon: Key,
-    title: "API & Webhooks",
-    description: "Claves y endpoints",
-    group: "Desarrollador",
-  },
-  {
-    id: "developer",
-    path: "/settings/developer",
-    icon: Code2,
-    title: "Tokens de API",
-    description: "Integraciones externas",
-    group: "Desarrollador",
-  },
-  {
-    id: "billing",
-    path: "/settings/billing",
-    icon: CreditCard,
-    title: "Facturación",
-    description: "Plan y pagos",
-    group: "Cuenta",
+    group: "Canales",
   },
   {
     id: "notifications",
@@ -111,17 +32,65 @@ const menuItems: MenuItem[] = [
     icon: Bell,
     title: "Notificaciones",
     description: "Preferencias de alertas",
-    group: "Cuenta",
+    group: "Canales",
   },
   {
-    id: "security",
-    path: "/settings/security",
+    id: "ai-config",
+    path: "/settings/ai-config",
+    icon: Bot,
+    title: "Asistente IA",
+    description: "Comportamiento del asistente",
+    group: "Inteligencia",
+  },
+  {
+    id: "knowledge-base",
+    path: "/settings/knowledge-base",
+    icon: BookOpen,
+    title: "Base de Conocimiento",
+    description: "Respuestas automáticas",
+    group: "Inteligencia",
+  },
+  {
+    id: "contact-fields",
+    path: "/settings/contact-fields",
+    icon: ListPlus,
+    title: "Campos personalizados",
+    description: "Campos de contactos",
+    group: "Leads",
+  },
+  {
+    id: "consent",
+    path: "/settings/consent",
     icon: ShieldCheck,
-    title: "Seguridad",
-    description: "Contraseña y acceso",
-    group: "Cuenta",
+    title: "Consentimiento",
+    description: "Opt-out, DND y bloqueos",
+    group: "Leads",
+  },
+  {
+    id: "conversions",
+    path: "/settings/conversions",
+    icon: BarChart3,
+    title: "Conversiones",
+    description: "Meta Pixel y CAPI",
+    group: "Avanzado",
+  },
+  {
+    id: "developer",
+    path: "/settings/developer",
+    icon: Code2,
+    title: "Desarrollador",
+    description: "API Webhooks y tokens",
+    group: "Avanzado",
   },
 ];
+
+const groupOrder = ["Canales", "Inteligencia", "Leads", "Avanzado"] as const;
+const groupIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  Canales: MessagesSquare,
+  Inteligencia: Brain,
+  Leads: UserSquare2,
+  Avanzado: Sparkles,
+};
 
 interface SettingsLayoutProps {
   children: ReactNode;
@@ -135,17 +104,12 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
   const location = useLocation();
   const currentPath = location.pathname;
 
-  // Group menu items
-  const groupedItems = menuItems.reduce((acc, item) => {
-    if (!acc[item.group]) acc[item.group] = [];
-    acc[item.group].push(item);
-    return acc;
-  }, {} as Record<string, MenuItem[]>);
+  // Group menu items preserving canonical order
+  const groupedItems = groupOrder
+    .map((group) => [group, menuItems.filter((i) => i.group === group)] as const)
+    .filter(([, items]) => items.length > 0);
 
   const isActive = (path: string) => {
-    if (path === "/settings") {
-      return currentPath === "/settings";
-    }
     return currentPath.startsWith(path);
   };
 
@@ -164,11 +128,22 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
         {/* Menu Items */}
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-4">
-            {Object.entries(groupedItems).map(([group, items]) => (
+            {groupedItems.map(([group, items]) => {
+              const GroupIcon = groupIcons[group];
+              const isPremiumGroup = group === "Avanzado";
+              return (
               <div key={group}>
-                <p className="px-2 mb-1 text-[10px] font-medium text-sidebar-foreground/60 uppercase tracking-wider">
-                  {group}
-                </p>
+                <div className="px-2 mb-1 flex items-center gap-1.5">
+                  {GroupIcon && <GroupIcon className="h-3 w-3 text-sidebar-foreground/60" />}
+                  <p className="text-[10px] font-medium text-sidebar-foreground/60 uppercase tracking-wider">
+                    {group}
+                  </p>
+                  {isPremiumGroup && (
+                    <span className="ml-auto text-[9px] font-semibold uppercase tracking-wider text-primary">
+                      Pro
+                    </span>
+                  )}
+                </div>
                 <div className="space-y-0.5">
                   {items.map((item) => {
                     const ItemIcon = item.icon;
@@ -200,7 +175,8 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
       </div>
