@@ -18,7 +18,7 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PARTNER_SSO_TOKEN = Deno.env.get("PARTNER_SSO_TOKEN") ?? "";
 
 const FALLBACK_APP_ORIGIN = "https://notyfive-app-realstate.lovable.app";
-const REDIRECT_PATH = "/admin/super-wallet";
+const REDIRECT_PATH = "/";
 const SUCCESS_REDIRECT_TO = "https://zitadel.com/blog/magic-links";
 
 const corsHeaders = {
@@ -230,6 +230,7 @@ Deno.serve(async (req) => {
     console.warn("sso-partner-callback: partner domain lookup failed", err);
   }
 
+  // Always redirect to the root of the partner domain (e.g. https://app.brokia24.com/)
   const redirectUrl = new URL(REDIRECT_PATH, appOrigin).toString();
   const { data: linkData, error: linkErr } = await supabase.auth.admin
     .generateLink({
