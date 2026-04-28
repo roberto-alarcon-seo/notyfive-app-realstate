@@ -51,6 +51,7 @@ interface PartnerRow {
   logout_redirect_url: string | null;
   api_key: string | null;
   external_sync_enabled: boolean;
+  primary_domain: string;
 }
 
 export default function PartnerSettings() {
@@ -79,7 +80,7 @@ export default function PartnerSettings() {
         let query = supabase
           .from("partners")
           .select(
-            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding, non_sso_redirect_url, logout_redirect_url, api_key, external_sync_enabled",
+            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding, non_sso_redirect_url, logout_redirect_url, api_key, external_sync_enabled, primary_domain",
           )
           .order("name");
 
@@ -230,14 +231,29 @@ export default function PartnerSettings() {
 
   const handleSaveRedirects = async () => {
     if (!partner) return;
+    const trimmedDomain = partner.primary_domain?.trim() ?? "";
+    if (isGlobalAdmin) {
+      if (!trimmedDomain) {
+        toast.error("Dominio app es obligatorio");
+        return;
+      }
+      if (!/^https?:\/\/.+/i.test(trimmedDomain)) {
+        toast.error("Dominio app debe iniciar con http:// o https://");
+        return;
+      }
+    }
     setSaving(true);
     try {
+      const updatePayload: Record<string, unknown> = {
+        non_sso_redirect_url: partner.non_sso_redirect_url?.trim() || null,
+        logout_redirect_url: partner.logout_redirect_url?.trim() || null,
+      };
+      if (isGlobalAdmin) {
+        updatePayload.primary_domain = trimmedDomain;
+      }
       const { error } = await supabase
         .from("partners")
-        .update({
-          non_sso_redirect_url: partner.non_sso_redirect_url?.trim() || null,
-          logout_redirect_url: partner.logout_redirect_url?.trim() || null,
-        })
+        .update(updatePayload)
         .eq("id", partner.id);
       if (error) throw error;
       toast.success("Redirecciones actualizadas");
@@ -708,6 +724,28 @@ export default function PartnerSettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="primary-domain">Dominio app</Label>
+                  <Input
+                    id="primary-domain"
+                    type="url"
+                    value={partner.primary_domain ?? ""}
+                    onChange={(e) =>
+                      handleFieldChange("primary_domain", e.target.value)
+                    }
+                    placeholder="https://app.brokia24.com"
+                    disabled={!isGlobalAdmin}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    URL base del partner. Se usa como <code>redirectTo</code> al
+                    construir el magic link del SSO (ej.{" "}
+                    <code>https://app.brokia24.com/</code>). Solo el super
+                    administrador global puede modificar este valor.
+                  </p>
+                </div>
+
+                <div className="border-t border-border" />
+
                 <div className="space-y-2">
                   <Label htmlFor="non-sso-url">Non SSO</Label>
                   <Input
