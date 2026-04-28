@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
     //     partners.api_key. No fallback, no env-based keys.
     const { data: keyOwner, error: keyOwnerErr } = await supabase
       .from('partners')
-      .select('id, is_active, api_key')
+      .select('id, is_active, api_key, external_sync_enabled')
       .eq('api_key', apiKey.trim())
       .maybeSingle();
 
@@ -215,6 +215,19 @@ Deno.serve(async (req) => {
         partner_id: keyOwner.id,
       });
       return jsonResponse({ error: 'Unauthorized' }, 401);
+    }
+    if (keyOwner.external_sync_enabled === false) {
+      console.warn('sync-external-core: external sync disabled for partner', {
+        partner_id: keyOwner.id,
+      });
+      return jsonResponse(
+        {
+          success: false,
+          error: 'external_sync_disabled',
+          message: 'External sync endpoint is disabled for this partner.',
+        },
+        403,
+      );
     }
     const resolvedPartnerId: string = keyOwner.id;
 

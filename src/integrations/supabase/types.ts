@@ -2177,6 +2177,7 @@ export type Database = {
           email_footer_text: string | null
           email_sender_address: string
           email_sender_name: string
+          external_sync_enabled: boolean
           id: string
           is_active: boolean
           logo_mark_url: string | null
@@ -2203,6 +2204,7 @@ export type Database = {
           email_footer_text?: string | null
           email_sender_address: string
           email_sender_name: string
+          external_sync_enabled?: boolean
           id: string
           is_active?: boolean
           logo_mark_url?: string | null
@@ -2229,6 +2231,7 @@ export type Database = {
           email_footer_text?: string | null
           email_sender_address?: string
           email_sender_name?: string
+          external_sync_enabled?: boolean
           id?: string
           is_active?: boolean
           logo_mark_url?: string | null

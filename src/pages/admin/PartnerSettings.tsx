@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2, ExternalLink } from "lucide-react";
+import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2, ExternalLink, Key, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -48,6 +49,8 @@ interface PartnerRow {
   branding: PartnerTheme;
   non_sso_redirect_url: string | null;
   logout_redirect_url: string | null;
+  api_key: string | null;
+  external_sync_enabled: boolean;
 }
 
 export default function PartnerSettings() {
@@ -76,7 +79,7 @@ export default function PartnerSettings() {
         let query = supabase
           .from("partners")
           .select(
-            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding, non_sso_redirect_url, logout_redirect_url",
+            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding, non_sso_redirect_url, logout_redirect_url, api_key, external_sync_enabled",
           )
           .order("name");
 
@@ -247,6 +250,40 @@ export default function PartnerSettings() {
     }
   };
 
+  const handleSaveApiSettings = async () => {
+    if (!partner || !isSuperAdmin) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("partners")
+        .update({
+          external_sync_enabled: partner.external_sync_enabled,
+        })
+        .eq("id", partner.id);
+      if (error) throw error;
+      toast.success("Configuración de API actualizada");
+      setPartners((list) => list.map((p) => (p.id === partner.id ? partner : p)));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error desconocido";
+      toast.error(`No se pudo guardar: ${msg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCopyApiToken = async () => {
+    if (!partner?.api_key) {
+      toast.error("No hay token configurado");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(partner.api_key);
+      toast.success("Token copiado al portapapeles");
+    } catch {
+      toast.error("No se pudo copiar el token");
+    }
+  };
+
   const handleLogoUpload = async (file: File) => {
     if (!partner) return;
     if (file.size > 2 * 1024 * 1024) {
@@ -360,6 +397,9 @@ export default function PartnerSettings() {
             </TabsTrigger>
             <TabsTrigger value="redirects" className="gap-2">
               <ExternalLink className="h-4 w-4" /> Redireccionamiento
+            </TabsTrigger>
+            <TabsTrigger value="api" className="gap-2">
+              <Key className="h-4 w-4" /> API keys
             </TabsTrigger>
           </TabsList>
 
@@ -710,6 +750,96 @@ export default function PartnerSettings() {
                     Guardar redirecciones
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* API KEYS */}
+          <TabsContent value="api" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>API keys</CardTitle>
+                <CardDescription>
+                  Credenciales para integraciones externas (sincronización con
+                  el Core). {isSuperAdmin
+                    ? "Solo el super administrador puede modificar esta sección."
+                    : "Solo lectura. Contacta al super administrador para realizar cambios."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="api-partner-id">partner_id</Label>
+                  <Input
+                    id="api-partner-id"
+                    value={partner.id}
+                    readOnly
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Identificador del partner que debe enviarse en el body de
+                    cada solicitud al endpoint <code>sync-external-core</code>.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="api-token">API Token (x-api-key)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="api-token"
+                      type="password"
+                      value={partner.api_key ?? ""}
+                      readOnly
+                      placeholder="Sin token configurado"
+                      autoComplete="off"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyApiToken}
+                      disabled={!partner.api_key}
+                      aria-label="Copiar token"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Se envía como header <code>x-api-key</code> en cada
+                    solicitud. El valor permanece oculto: solo se permite
+                    copiarlo.
+                  </p>
+                </div>
+
+                <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="api-sync-toggle" className="cursor-pointer">
+                      Sincronización externa endpoint
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Habilita o deshabilita el uso del endpoint{" "}
+                      <code>sync-external-core</code> para este partner. Si se
+                      deshabilita, el endpoint rechazará las solicitudes con
+                      403.
+                    </p>
+                  </div>
+                  <Switch
+                    id="api-sync-toggle"
+                    checked={partner.external_sync_enabled}
+                    disabled={!isSuperAdmin}
+                    onCheckedChange={(checked) =>
+                      handleFieldChange("external_sync_enabled", checked)
+                    }
+                  />
+                </div>
+
+                {isSuperAdmin && (
+                  <div className="pt-2">
+                    <Button onClick={handleSaveApiSettings} disabled={saving}>
+                      {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                      Guardar cambios
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
