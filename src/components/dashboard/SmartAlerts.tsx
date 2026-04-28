@@ -111,7 +111,7 @@ export function SmartAlerts() {
         navigate("/templates");
         break;
       case "credits":
-        navigate("/settings/billing");
+        navigate("/settings/whatsapp");
         break;
       case "inbox":
         navigate("/inbox");
