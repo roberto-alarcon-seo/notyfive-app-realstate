@@ -260,6 +260,7 @@ Deno.serve(async (req) => {
           name: claimName,
           provisioned_via: "sso",
           sso_user: true,
+          email_confirmed: true,
         },
       });
 
@@ -312,12 +313,13 @@ Deno.serve(async (req) => {
         resolvedProfile.id,
       );
       const meta = existing?.user?.user_metadata ?? {};
-      if (!meta.sso_user || !meta.provisioned_via) {
+      if (!meta.sso_user || !meta.provisioned_via || !meta.email_confirmed) {
         await supabase.auth.admin.updateUserById(resolvedProfile.id, {
           user_metadata: {
             ...meta,
             provisioned_via: meta.provisioned_via ?? "sso",
             sso_user: true,
+            email_confirmed: true,
           },
         });
       }
