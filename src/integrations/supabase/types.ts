@@ -3602,6 +3602,7 @@ export type Database = {
           country_code: string
           created_at: string
           current_period_end: string | null
+          enabled_features: string[]
           external_id: string | null
           extra_credits: number
           id: string
@@ -3639,6 +3640,7 @@ export type Database = {
           country_code?: string
           created_at?: string
           current_period_end?: string | null
+          enabled_features?: string[]
           external_id?: string | null
           extra_credits?: number
           id?: string
@@ -3676,6 +3678,7 @@ export type Database = {
           country_code?: string
           created_at?: string
           current_period_end?: string | null
+          enabled_features?: string[]
           external_id?: string | null
           extra_credits?: number
           id?: string
