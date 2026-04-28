@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SupportModeProvider } from "@/contexts/SupportModeContext";
 import { PartnerBrandingProvider } from "@/contexts/PartnerBrandingContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { FeatureFlagGuard } from "@/components/auth/FeatureFlagGuard";
 import { PartnerThemeSync } from "@/components/PartnerThemeSync";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MobileRouteGuard } from "@/components/layout/MobileRouteGuard";
@@ -135,13 +136,13 @@ const App = () => (
               <Route path="/contacts" element={<ProtectedRoute><MainLayout><Contacts /></MainLayout></ProtectedRoute>} />
               <Route path="/contacts/new" element={<ProtectedRoute><MainLayout><ContactEditor /></MainLayout></ProtectedRoute>} />
               <Route path="/contacts/:id" element={<ProtectedRoute><MainLayout><ContactEditor /></MainLayout></ProtectedRoute>} />
-              <Route path="/segments" element={<ProtectedRoute><MainLayout><Segments /></MainLayout></ProtectedRoute>} />
-              <Route path="/segments/new" element={<ProtectedRoute><MainLayout><SegmentEditor /></MainLayout></ProtectedRoute>} />
-              <Route path="/segments/:id" element={<ProtectedRoute><MainLayout><SegmentEditor /></MainLayout></ProtectedRoute>} />
+              <Route path="/segments" element={<ProtectedRoute><FeatureFlagGuard feature="segments"><MainLayout><Segments /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/segments/new" element={<ProtectedRoute><FeatureFlagGuard feature="segments"><MainLayout><SegmentEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/segments/:id" element={<ProtectedRoute><FeatureFlagGuard feature="segments"><MainLayout><SegmentEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/templates" element={<ProtectedRoute><MainLayout><Templates /></MainLayout></ProtectedRoute>} />
-              <Route path="/campaigns" element={<ProtectedRoute><MainLayout><Campaigns /></MainLayout></ProtectedRoute>} />
-              <Route path="/campaigns/new/assistant" element={<ProtectedRoute><CampaignAssistantBuilder /></ProtectedRoute>} />
-              <Route path="/campaigns/:id" element={<ProtectedRoute><MainLayout><CampaignDetail /></MainLayout></ProtectedRoute>} />
+              <Route path="/campaigns" element={<ProtectedRoute><FeatureFlagGuard feature="campaigns"><MainLayout><Campaigns /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/campaigns/new/assistant" element={<ProtectedRoute><FeatureFlagGuard feature="campaigns"><CampaignAssistantBuilder /></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/campaigns/:id" element={<ProtectedRoute><FeatureFlagGuard feature="campaigns"><MainLayout><CampaignDetail /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/assistant" element={<ProtectedRoute><MainLayout><Assistant /></MainLayout></ProtectedRoute>} />
               {/* Followups route */}
               <Route path="/followups" element={<ProtectedRoute><Followups /></ProtectedRoute>} />
@@ -152,10 +153,10 @@ const App = () => (
               {/* Pipeline Kanban route */}
               <Route path="/pipeline" element={<ProtectedRoute><MainLayout><Pipeline /></MainLayout></ProtectedRoute>} />
               {/* Automations routes */}
-              <Route path="/automations" element={<ProtectedRoute><MainLayout><Automations /></MainLayout></ProtectedRoute>} />
-              <Route path="/automations/new" element={<ProtectedRoute><MainLayout><AutomationEditor /></MainLayout></ProtectedRoute>} />
-              <Route path="/automations/:id" element={<ProtectedRoute><MainLayout><AutomationEditor /></MainLayout></ProtectedRoute>} />
-              <Route path="/automations/:id/runs" element={<ProtectedRoute><MainLayout><AutomationRuns /></MainLayout></ProtectedRoute>} />
+              <Route path="/automations" element={<ProtectedRoute><FeatureFlagGuard feature="automations_builder"><MainLayout><Automations /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/automations/new" element={<ProtectedRoute><FeatureFlagGuard feature="automations_builder"><MainLayout><AutomationEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/automations/:id" element={<ProtectedRoute><FeatureFlagGuard feature="automations_builder"><MainLayout><AutomationEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/automations/:id/runs" element={<ProtectedRoute><FeatureFlagGuard feature="automations_builder"><MainLayout><AutomationRuns /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               {/* Settings routes */}
               <Route path="/settings" element={<Navigate to="/settings/whatsapp" replace />} />
               <Route path="/settings/whatsapp" element={<ProtectedRoute><MainLayout><SettingsWhatsAppStatus /></MainLayout></ProtectedRoute>} />
