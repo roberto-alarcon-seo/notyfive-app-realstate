@@ -2,10 +2,13 @@ import { ReactNode } from "react";
 import { Lock, Sparkles, LifeBuoy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useFeatureFlag, type FeatureName } from "@/hooks/useFeatureFlag";
 
 interface PremiumGateProps {
-  /** Override the simulated premium flag. When true, children render. */
+  /** Override the computed access flag. When true, children render. */
   hasAccess?: boolean;
+  /** Feature flags that grant access. ANY enabled flag unlocks the section. */
+  requiredFlags?: FeatureName[];
   featureName: string;
   description?: string;
   children: ReactNode;
@@ -18,14 +21,17 @@ interface PremiumGateProps {
  * the premium flag is exposed by the tenant context.
  */
 export function PremiumGate({
-  hasAccess = false,
+  hasAccess,
+  requiredFlags,
   featureName,
   description,
   children,
 }: PremiumGateProps) {
   const navigate = useNavigate();
+  const flagAccess = useFlagsAccess(requiredFlags);
+  const granted = hasAccess ?? flagAccess;
 
-  if (hasAccess) return <>{children}</>;
+  if (granted) return <>{children}</>;
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -55,8 +61,18 @@ export function PremiumGate({
 }
 
 /**
- * Simulated premium flag. Replace with real billing_state once available.
+ * Returns true if ANY of the provided feature flags is enabled for the tenant.
  */
+export function useFlagsAccess(flags?: FeatureName[]): boolean {
+  // Hooks must be called unconditionally and in the same order.
+  const a = useFeatureFlag(flags?.[0] ?? "api_access");
+  const b = useFeatureFlag(flags?.[1] ?? "api_access");
+  if (!flags || flags.length === 0) return false;
+  if (flags.length === 1) return a.enabled;
+  return a.enabled || b.enabled;
+}
+
+/** @deprecated Use <PremiumGate requiredFlags={[...]}> instead. */
 export function useHasPremiumAccess(): boolean {
   return false;
 }
