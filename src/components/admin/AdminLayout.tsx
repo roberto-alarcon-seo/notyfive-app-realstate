@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSignOutRedirect } from "@/hooks/useSignOutRedirect";
 
 const navItems = [
   { title: "Tenants", url: "/admin/tenants", icon: Building2 },
