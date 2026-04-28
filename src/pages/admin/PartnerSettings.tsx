@@ -398,6 +398,9 @@ export default function PartnerSettings() {
             <TabsTrigger value="redirects" className="gap-2">
               <ExternalLink className="h-4 w-4" /> Redireccionamiento
             </TabsTrigger>
+            <TabsTrigger value="api" className="gap-2">
+              <Key className="h-4 w-4" /> API keys
+            </TabsTrigger>
           </TabsList>
 
           {/* APARIENCIA */}
