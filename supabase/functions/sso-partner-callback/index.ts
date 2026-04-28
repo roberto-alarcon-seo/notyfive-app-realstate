@@ -253,6 +253,18 @@ Deno.serve(async (req) => {
     return json(500, { success: false, error: "link_generation_failed" });
   }
 
+  // Force the redirect_to parameter to the partner domain. Supabase Auth
+  // silently falls back to the default Site URL when the requested
+  // redirectTo is not in the allow-list, so we rewrite it on the action_link.
+  let finalActionLink = linkData.properties.action_link;
+  try {
+    const parsed = new URL(finalActionLink);
+    parsed.searchParams.set("redirect_to", redirectUrl);
+    finalActionLink = parsed.toString();
+  } catch (err) {
+    console.warn("sso-partner-callback: could not rewrite redirect_to", err);
+  }
+
   // 6. Audit success
   await logAttempt(supabase, {
     email,
@@ -284,6 +296,6 @@ Deno.serve(async (req) => {
   // 5. Success response
   return json(200, {
     success: true,
-    magic_link: linkData.properties.action_link,
+    magic_link: finalActionLink,
   });
 });
