@@ -5,12 +5,11 @@ import DeveloperApiDocsTrigger from "@/components/settings/DeveloperApiDocsTrigg
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldAlert } from "lucide-react";
-import { PremiumGate, useHasPremiumAccess } from "@/components/settings/PremiumGate";
+import { PremiumGate } from "@/components/settings/PremiumGate";
 
 export default function SettingsDeveloper() {
   const { tenantRole, isSuperAdmin } = useAuth();
   const isOwner = tenantRole === "administrador" || isSuperAdmin;
-  const hasPremium = useHasPremiumAccess();
 
   return (
     <SettingsLayout
@@ -19,7 +18,7 @@ export default function SettingsDeveloper() {
       icon={Code2}
     >
       <PremiumGate
-        hasAccess={hasPremium}
+        requiredFlags={["automations_builder", "api_access"]}
         featureName="API & Webhooks"
         description="Genera tokens de API, configura webhooks y conecta Brokia24 con tus sistemas externos. Disponible en planes Pro."
       >
