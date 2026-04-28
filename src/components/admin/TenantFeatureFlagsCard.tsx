@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Megaphone, Filter, Workflow, Save, Loader2, Info, ToggleLeft } from 'lucide-react';
+import { Megaphone, Filter, Workflow, Save, Loader2, Info, ToggleLeft, KeyRound } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +12,7 @@ interface TenantFeatureFlagsCardProps {
   onUpdate?: () => void;
 }
 
-type FeatureKey = 'campaigns' | 'segments' | 'automations_builder';
+type FeatureKey = 'campaigns' | 'segments' | 'automations_builder' | 'api_access';
 
 interface FeatureOption {
   key: FeatureKey;
@@ -42,6 +42,13 @@ const FEATURE_OPTIONS: FeatureOption[] = [
     label: 'Automatizaciones Avanzadas',
     description: 'Constructor visual de flujos automatizados.',
     icon: Workflow,
+    outreach: false,
+  },
+  {
+    key: 'api_access',
+    label: 'Acceso a API & Webhooks',
+    description: 'Tokens, endpoints REST y webhooks salientes.',
+    icon: KeyRound,
     outreach: false,
   },
 ];
