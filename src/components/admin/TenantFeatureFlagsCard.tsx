@@ -62,8 +62,27 @@ export function TenantFeatureFlagsCard({
   const [original, setOriginal] = useState<Set<FeatureKey>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resolvedPartnerName, setResolvedPartnerName] = useState<string | null>(
+    partnerName ?? null,
+  );
 
-  const isMls = isMlsLatamPartner(partnerId, partnerName);
+  const isMls = isMlsLatamPartner(partnerId, resolvedPartnerName);
+
+  useEffect(() => {
+    if (partnerName || !partnerId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('partners')
+        .select('name')
+        .eq('id', partnerId)
+        .maybeSingle();
+      if (!cancelled && data?.name) setResolvedPartnerName(data.name);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [partnerId, partnerName]);
 
   useEffect(() => {
     let cancelled = false;
