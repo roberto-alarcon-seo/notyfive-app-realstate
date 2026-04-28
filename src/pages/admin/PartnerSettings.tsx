@@ -358,6 +358,9 @@ export default function PartnerSettings() {
             <TabsTrigger value="email" className="gap-2">
               <Mail className="h-4 w-4" /> Email
             </TabsTrigger>
+            <TabsTrigger value="redirects" className="gap-2">
+              <ExternalLink className="h-4 w-4" /> Redireccionamiento
+            </TabsTrigger>
           </TabsList>
 
           {/* APARIENCIA */}
