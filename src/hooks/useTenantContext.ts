@@ -8,6 +8,7 @@ export interface TenantContext {
   managed_externally: boolean;
   country_code: string;
   external_id: string | null;
+  enabled_features: string[];
 }
 
 /**
@@ -26,7 +27,7 @@ export function useTenantContext() {
       if (!tenantId) return null;
       const { data, error } = await supabase
         .from("tenants")
-        .select("id, name, managed_externally, country_code, external_id")
+        .select("id, name, managed_externally, country_code, external_id, enabled_features")
         .eq("id", tenantId)
         .maybeSingle();
       if (error) throw error;
@@ -37,6 +38,9 @@ export function useTenantContext() {
         managed_externally: !!data.managed_externally,
         country_code: (data.country_code ?? "MX").toUpperCase(),
         external_id: data.external_id ?? null,
+        enabled_features: Array.isArray((data as any).enabled_features)
+          ? ((data as any).enabled_features as string[])
+          : [],
       };
     },
   });
