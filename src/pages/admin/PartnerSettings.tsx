@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2 } from "lucide-react";
+import { Loader2, Upload, Mail, Palette, Eye, EyeOff, Wand2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -46,6 +46,8 @@ interface PartnerRow {
   email_sender_name: string;
   email_sender_address: string;
   branding: PartnerTheme;
+  non_sso_redirect_url: string | null;
+  logout_redirect_url: string | null;
 }
 
 export default function PartnerSettings() {
@@ -74,7 +76,7 @@ export default function PartnerSettings() {
         let query = supabase
           .from("partners")
           .select(
-            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding",
+            "id, name, primary_color_hex, primary_color_hsl, logo_url, resend_api_key, resend_from_email, email_sender_name, email_sender_address, branding, non_sso_redirect_url, logout_redirect_url",
           )
           .order("name");
 
