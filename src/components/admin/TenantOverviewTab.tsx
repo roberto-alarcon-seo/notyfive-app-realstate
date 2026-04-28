@@ -509,6 +509,13 @@ export function TenantOverviewTab({ tenant, onTenantUpdate }: TenantOverviewTabP
         </div>
       </div>
 
+      {/* Feature Flags */}
+      <TenantFeatureFlagsCard
+        tenantId={tenant.id}
+        partnerId={(tenant as Tenant & { partner_id?: string | null }).partner_id ?? null}
+        onUpdate={onTenantUpdate}
+      />
+
       {/* Account Status */}
       <div className="bg-secondary/30 border border-border rounded-xl p-5">
         <div className="flex items-center gap-3">
