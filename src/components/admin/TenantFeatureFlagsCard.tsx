@@ -4,6 +4,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TenantFeatureFlagsCardProps {
   tenantId: string;
@@ -63,6 +64,7 @@ export function TenantFeatureFlagsCard({
   const [original, setOriginal] = useState<Set<FeatureKey>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     let cancelled = false;
@@ -126,6 +128,10 @@ export function TenantFeatureFlagsCard({
       }
       setOriginal(new Set(enabled));
       toast.success('Feature flags actualizados');
+      // Invalidación instantánea: refresca tenant context y feature flags
+      // para que la UI (sidebar, gates, etc.) reaccione sin recargar la página.
+      queryClient.invalidateQueries({ queryKey: ['tenant-context'] });
+      queryClient.invalidateQueries({ queryKey: ['feature-flags'] });
       onUpdate?.();
     } catch (err) {
       console.error(err);

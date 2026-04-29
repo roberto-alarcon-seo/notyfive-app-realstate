@@ -59,6 +59,9 @@ export function useConversionSettings() {
   const tenantId = profile?.tenant_id;
   const { enabled: hasAccess } = useFeatureFlag("campaigns");
 
+  // Guard temprano: si el flag está desactivado, los queries quedan deshabilitados
+  // (enabled: false) y devolvemos defaults sin tocar Supabase.
+
   // Fetch settings
   const { data: settings, isLoading: isLoadingSettings } = useQuery({
     queryKey: ['tenant-settings', tenantId],
@@ -192,7 +195,9 @@ export function useConversionSettings() {
   return {
     settings: settings || DEFAULT_SETTINGS,
     mappings: mappings || [],
-    isLoading: isLoadingSettings || isLoadingMappings,
+    // Si no hay acceso, nunca reportamos loading (evita spinners infinitos
+    // y mensajes de error rojos por permisos faltantes).
+    isLoading: hasAccess ? (isLoadingSettings || isLoadingMappings) : false,
     saveSettings: saveSettingsMutation.mutateAsync,
     saveMappings: saveMappingsMutation.mutateAsync,
     resetMappingsToDefault,
