@@ -47,6 +47,7 @@ export function IconSidebar() {
   const { partner } = usePartnerBranding();
   const { enabled: campaignsEnabled } = useFeatureFlag("campaigns");
   const { enabled: segmentsEnabled } = useFeatureFlag("segments");
+  const { enabled: automationsEnabled } = useFeatureFlag("automations_builder");
   
   const badgeCounts: Record<string, number> = {
     inbox: totalUnread,
@@ -56,15 +57,18 @@ export function IconSidebar() {
   const featureEnabled: Record<FeatureName, boolean> = {
     campaigns: campaignsEnabled,
     segments: segmentsEnabled,
-    automations_builder: false,
+    automations_builder: automationsEnabled,
     templates_library: false,
     quick_automations: false,
     api_access: false,
   };
 
-  const visibleItems = menuItems.filter(
-    (item) => !item.feature || featureEnabled[item.feature],
-  );
+  // Filtrado estricto: si el flag no está presente en enabled_features,
+  // el item NO se renderiza (no solo oculto, removido del array).
+  const visibleItems = menuItems.filter((item) => {
+    if (!item.feature) return true;
+    return featureEnabled[item.feature] === true;
+  });
   
   // Solo administrador ve la opción de Configuración
   const isAdmin = tenantRole === 'administrador' || isSuperAdmin;

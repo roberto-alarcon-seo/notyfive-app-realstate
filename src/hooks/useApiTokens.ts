@@ -22,9 +22,13 @@ export const ALL_SCOPES = [
 export function useApiTokens(options: { enabled?: boolean } = {}) {
   const { enabled = true } = options;
   const [tokens, setTokens] = useState<ApiToken[]>([]);
-  const [loading, setLoading] = useState(enabled);
+  // Si el flag está desactivado, no cargamos nada y reportamos isLoading=false.
+  const [loading, setLoading] = useState<boolean>(enabled);
   const [oneTimeToken, setOneTimeToken] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Guard temprano: si el feature flag no está activo, NO conectamos con Supabase.
+  // Mantiene el hook callable pero inerte para evitar errores de permisos.
 
   const fetchTokens = useCallback(async () => {
     if (!enabled) {
@@ -55,7 +59,13 @@ export function useApiTokens(options: { enabled?: boolean } = {}) {
   }, [toast, enabled]);
 
   useEffect(() => {
-    if (enabled) fetchTokens();
+    if (enabled) {
+      fetchTokens();
+    } else {
+      // Reset a estado vacío inmediato si el flag se apaga en caliente.
+      setTokens([]);
+      setLoading(false);
+    }
   }, [fetchTokens, enabled]);
 
   const createToken = async (params: {
