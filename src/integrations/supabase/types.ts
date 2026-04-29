@@ -3302,6 +3302,7 @@ export type Database = {
           twilio_template_sid: string | null
           updated_at: string
           used_count: number
+          variable_index_map: Json
           variables: string[] | null
         }
         Insert: {
@@ -3334,6 +3335,7 @@ export type Database = {
           twilio_template_sid?: string | null
           updated_at?: string
           used_count?: number
+          variable_index_map?: Json
           variables?: string[] | null
         }
         Update: {
@@ -3366,6 +3368,7 @@ export type Database = {
           twilio_template_sid?: string | null
           updated_at?: string
           used_count?: number
+          variable_index_map?: Json
           variables?: string[] | null
         }
         Relationships: [
