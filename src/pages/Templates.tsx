@@ -28,6 +28,8 @@ import { useTemplates, useDeleteTemplate, useDuplicateTemplate, useSubmitTemplat
 import { useForceApproveTemplate } from "@/hooks/useForceApproveTemplate";
 import { TemplateFormDialog } from "@/components/templates/TemplateFormDialog";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
+import { PremiumGate } from "@/components/settings/PremiumGate";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -59,6 +61,8 @@ const statusConfig = {
 };
 
 export default function Templates() {
+  const { tenantRole, isSuperAdmin } = useAuth();
+  const canManage = isSuperAdmin || tenantRole === 'administrador' || tenantRole === 'manager';
   const { data: templates = [], isLoading } = useTemplates();
   const { data: twilioStatus } = useTwilioStatus();
   const deleteTemplate = useDeleteTemplate();
