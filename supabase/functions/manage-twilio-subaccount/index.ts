@@ -17,6 +17,15 @@ const corsHeaders = {
  *           with the new subaccount SID + auth token (base64 stored), the
  *           default inbound webhook URL, status='pending_setup',
  *           is_subaccount=true, parent_account_sid=master SID.
+ *
+ * Action: "link_phone"
+ *   Input:  { action: "link_phone", tenant_id: string, phone_number: string }
+ *   Auth:   caller must be super_admin.
+ *   Effect: Validates E.164 phone number, finds the matching IncomingPhoneNumber
+ *           inside the tenant's Twilio subaccount, and configures its SmsUrl
+ *           (inbound webhook) to point to twilio-inbound-webhook automatically.
+ *           Then updates tenant_integrations.phone_number, which fires the
+ *           SQL trigger that flips status to 'connected' and seeds templates.
  */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -58,7 +67,7 @@ serve(async (req) => {
     const tenantId: string | undefined = body?.tenant_id;
     const friendlyNameOverride: string | undefined = body?.friendly_name;
 
-    if (action !== 'create') {
+    if (action !== 'create' && action !== 'link_phone') {
       return json({ code: 'INVALID_INPUT', message: 'Unsupported action' }, 400);
     }
     if (!tenantId || typeof tenantId !== 'string') {
@@ -66,6 +75,95 @@ serve(async (req) => {
     }
     if (!MASTER_SID || !MASTER_TOKEN) {
       return json({ code: 'CONFIG_MISSING', message: 'Master Twilio credentials are not configured' }, 500);
+    }
+
+    const webhookUrl = `${SUPABASE_URL}/functions/v1/twilio-inbound-webhook`;
+
+    // ============================================================
+    // ACTION: link_phone
+    // ============================================================
+    if (action === 'link_phone') {
+      const phoneNumber: string | undefined = body?.phone_number;
+      if (!phoneNumber || !/^\+[1-9]\d{6,14}$/.test(phoneNumber)) {
+        return json({ code: 'INVALID_INPUT', message: 'phone_number must be in E.164 format (e.g. +5215512345678)' }, 400);
+      }
+
+      const { data: integ, error: integErr } = await admin
+        .from('tenant_integrations')
+        .select('id, account_sid, auth_token_encrypted, is_subaccount')
+        .eq('tenant_id', tenantId)
+        .eq('provider', 'twilio')
+        .maybeSingle();
+      if (integErr || !integ?.account_sid || !integ?.auth_token_encrypted) {
+        return json({ code: 'NOT_PROVISIONED', message: 'Twilio subaccount not provisioned for this tenant' }, 404);
+      }
+
+      const subSid = integ.account_sid;
+      const subToken = atob(integ.auth_token_encrypted);
+      const subAuth = btoa(`${subSid}:${subToken}`);
+
+      // Look up IncomingPhoneNumber inside the subaccount
+      const lookupRes = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${subSid}/IncomingPhoneNumbers.json?PhoneNumber=${encodeURIComponent(phoneNumber)}`,
+        { headers: { 'Authorization': `Basic ${subAuth}` } },
+      );
+      const lookupBody = await lookupRes.json().catch(() => ({}));
+      if (!lookupRes.ok) {
+        return json({
+          code: 'TWILIO_ERROR',
+          message: lookupBody?.message || 'Failed to query IncomingPhoneNumbers',
+          twilio_status: lookupRes.status,
+        }, 502);
+      }
+
+      const numbers = (lookupBody?.incoming_phone_numbers || []) as Array<{ sid: string; phone_number: string }>;
+      let phoneSid: string | null = numbers[0]?.sid ?? null;
+
+      // If we found the number, auto-configure SmsUrl (incoming webhook)
+      if (phoneSid) {
+        const updRes = await fetch(
+          `https://api.twilio.com/2010-04-01/Accounts/${subSid}/IncomingPhoneNumbers/${phoneSid}.json`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${subAuth}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              SmsUrl: webhookUrl,
+              SmsMethod: 'POST',
+            }),
+          },
+        );
+        if (!updRes.ok) {
+          const errBody = await updRes.json().catch(() => ({}));
+          return json({
+            code: 'TWILIO_ERROR',
+            message: errBody?.message || 'Failed to configure phone webhook',
+            twilio_status: updRes.status,
+          }, 502);
+        }
+      }
+      // If number isn't in the subaccount yet, we still persist it so the
+      // operator can finish the assignment in Twilio console; trigger will activate.
+
+      const { error: updErr } = await admin
+        .from('tenant_integrations')
+        .update({
+          phone_number: phoneNumber,
+          webhook_url: webhookUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', integ.id);
+      if (updErr) throw updErr;
+
+      return json({
+        ok: true,
+        phone_number: phoneNumber,
+        phone_sid: phoneSid,
+        webhook_configured: !!phoneSid,
+        webhook_url: webhookUrl,
+      });
     }
 
     // ---- Load tenant for friendly name ----
@@ -128,7 +226,7 @@ serve(async (req) => {
 
     // base64 (matches existing pattern across the codebase; encryption is tracked tech debt)
     const tokenStored = btoa(subAuthToken);
-    const webhookUrl = `${SUPABASE_URL}/functions/v1/twilio-inbound-webhook`;
+    // webhookUrl already declared above
 
     // ---- Upsert tenant_integrations ----
     const upsertPayload: Record<string, unknown> = {
