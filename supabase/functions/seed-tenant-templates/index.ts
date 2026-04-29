@@ -74,6 +74,7 @@ serve(async (req) => {
       name: m.name, // keep canonical system name (unique scoping is per-tenant)
       display_name: m.display_name ?? m.name,
       category: m.category ?? 'utility',
+      label: m.label ?? null,
       header_type: m.header_type ?? 'none',
       header_text: m.header_text,
       body: m.body,

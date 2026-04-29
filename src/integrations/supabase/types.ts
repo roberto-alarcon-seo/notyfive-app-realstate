@@ -1861,6 +1861,7 @@ export type Database = {
           header_type: string | null
           id: string
           is_active: boolean
+          label: string | null
           name: string
           partner_id: string | null
           sort_order: number
@@ -1879,6 +1880,7 @@ export type Database = {
           header_type?: string | null
           id?: string
           is_active?: boolean
+          label?: string | null
           name: string
           partner_id?: string | null
           sort_order?: number
@@ -1897,6 +1899,7 @@ export type Database = {
           header_type?: string | null
           id?: string
           is_active?: boolean
+          label?: string | null
           name?: string
           partner_id?: string | null
           sort_order?: number

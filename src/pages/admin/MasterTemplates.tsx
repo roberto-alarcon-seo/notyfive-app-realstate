@@ -31,6 +31,7 @@ type MasterTemplate = {
   name: string;
   display_name: string | null;
   category: string;
+  label: string | null;
   header_type: string | null;
   header_text: string | null;
   body: string;
@@ -44,12 +45,14 @@ type MasterTemplate = {
 
 const CATEGORIES = ["UTILITY", "MARKETING", "AUTHENTICATION"];
 const HEADER_TYPES = ["none", "text", "image", "video", "document"];
+const LABELS = ["Bienvenida", "Seguimiento", "Citas", "Documentación", "Post-venta"];
 const PARTNER_OPTIONS = Object.values(PARTNERS);
 
 const emptyForm: Partial<MasterTemplate> = {
   name: "",
   display_name: "",
   category: "UTILITY",
+  label: null,
   header_type: "none",
   header_text: "",
   body: "",
@@ -66,6 +69,7 @@ export default function MasterTemplates() {
   const [search, setSearch] = useState("");
   const [partnerFilter, setPartnerFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [labelFilter, setLabelFilter] = useState<string>("all");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<MasterTemplate | null>(null);
   const [form, setForm] = useState<Partial<MasterTemplate>>(emptyForm);
@@ -90,6 +94,9 @@ export default function MasterTemplates() {
       if (partnerFilter === "global" && t.partner_id) return false;
       if (partnerFilter !== "all" && partnerFilter !== "global" && t.partner_id !== partnerFilter) return false;
       if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
+      if (labelFilter !== "all") {
+        if (labelFilter === "__none__" ? !!t.label : t.label !== labelFilter) return false;
+      }
       if (search) {
         const q = search.toLowerCase();
         if (
@@ -100,7 +107,7 @@ export default function MasterTemplates() {
       }
       return true;
     });
-  }, [data, partnerFilter, categoryFilter, search]);
+  }, [data, partnerFilter, categoryFilter, labelFilter, search]);
 
   const openCreate = () => {
     setEditing(null);
@@ -137,6 +144,7 @@ export default function MasterTemplates() {
         name: payload.name!,
         display_name: payload.display_name || null,
         category: payload.category || "UTILITY",
+        label: payload.label || null,
         header_type: payload.header_type || "none",
         header_text: payload.header_text || null,
         body: payload.body!,
@@ -219,6 +227,14 @@ export default function MasterTemplates() {
               {CATEGORIES.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
             </SelectContent>
           </Select>
+          <Select value={labelFilter} onValueChange={setLabelFilter}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filtrar por Grupo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los grupos</SelectItem>
+              <SelectItem value="__none__">Sin grupo</SelectItem>
+              {LABELS.map((l) => (<SelectItem key={l} value={l}>{l}</SelectItem>))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="rounded-lg border border-border bg-card">
@@ -228,6 +244,7 @@ export default function MasterTemplates() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Partner</TableHead>
                 <TableHead>Categoría</TableHead>
+                <TableHead>Grupo</TableHead>
                 <TableHead>Variables</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -235,9 +252,9 @@ export default function MasterTemplates() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
               ) : filtered.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell>
@@ -248,6 +265,13 @@ export default function MasterTemplates() {
                     <Badge variant={t.partner_id ? "secondary" : "outline"}>{partnerLabel(t.partner_id)}</Badge>
                   </TableCell>
                   <TableCell><Badge variant="outline">{t.category}</Badge></TableCell>
+                  <TableCell>
+                    {t.label ? (
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground border-transparent">{t.label}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{(t.variables ?? []).length}</TableCell>
                   <TableCell>
                     <Badge variant={t.is_active ? "default" : "secondary"}>
@@ -336,6 +360,22 @@ export default function MasterTemplates() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div>
+              <Label>Grupo funcional (label)</Label>
+              <Select
+                value={form.label ?? "__none__"}
+                onValueChange={(v) => setForm({ ...form, label: v === "__none__" ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Sin grupo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sin grupo</SelectItem>
+                  {LABELS.map((l) => (<SelectItem key={l} value={l}>{l}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Agrupa la plantilla por intención: Bienvenida, Seguimiento, Citas, Documentación o Post-venta.
+              </p>
             </div>
             {form.header_type === "text" && (
               <div>

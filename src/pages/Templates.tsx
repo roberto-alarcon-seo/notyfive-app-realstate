@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,6 +81,7 @@ export default function Templates() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [labelFilter, setLabelFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -137,9 +139,31 @@ export default function Templates() {
     const matchesSource = sourceFilter === 'all' || 
       (sourceFilter === 'ai' && t.created_source === 'ai') ||
       (sourceFilter === 'manual' && t.created_source === 'manual');
-    
-    return matchesSearch && matchesSource;
+
+    const matchesLabel = labelFilter === 'all'
+      || (labelFilter === '__none__' ? !t.label : t.label === labelFilter);
+
+    return matchesSearch && matchesSource && matchesLabel;
   });
+
+  // Functional groups, in display order. Templates without label are bucketed under "Sin grupo".
+  const LABEL_GROUPS: { key: string; title: string }[] = [
+    { key: 'Bienvenida', title: '🏠 Bienvenida' },
+    { key: 'Seguimiento', title: '🔁 Seguimiento' },
+    { key: 'Citas', title: '📅 Citas' },
+    { key: 'Documentación', title: '📄 Documentación' },
+    { key: 'Post-venta', title: '⭐ Post-venta' },
+    { key: '__none__', title: '📦 Sin grupo' },
+  ];
+
+  const groupedTemplates = LABEL_GROUPS
+    .map((g) => ({
+      ...g,
+      items: filteredTemplates.filter((t) =>
+        g.key === '__none__' ? !t.label : t.label === g.key,
+      ),
+    }))
+    .filter((g) => g.items.length > 0);
 
   const aiCount = templates.filter(t => t.created_source === 'ai').length;
   const manualCount = templates.filter(t => t.created_source === 'manual').length;
@@ -230,6 +254,22 @@ export default function Templates() {
                 Manual ({manualCount})
               </ToggleGroupItem>
             </ToggleGroup>
+
+            {/* Functional group filter */}
+            <Select value={labelFilter} onValueChange={setLabelFilter}>
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue placeholder="Filtrar por Grupo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los grupos</SelectItem>
+                <SelectItem value="Bienvenida">🏠 Bienvenida</SelectItem>
+                <SelectItem value="Seguimiento">🔁 Seguimiento</SelectItem>
+                <SelectItem value="Citas">📅 Citas</SelectItem>
+                <SelectItem value="Documentación">📄 Documentación</SelectItem>
+                <SelectItem value="Post-venta">⭐ Post-venta</SelectItem>
+                <SelectItem value="__none__">Sin grupo</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex items-center gap-4 text-sm">
@@ -295,8 +335,17 @@ export default function Templates() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTemplates.map((template) => {
+          <div className="flex flex-col gap-8">
+            {groupedTemplates.map((group) => (
+              <section key={group.key} className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {group.title}
+                  </h2>
+                  <span className="text-xs text-muted-foreground">({group.items.length})</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.items.map((template) => {
               const status = statusConfig[template.approval_status];
               const StatusIcon = status.icon;
               
@@ -462,7 +511,10 @@ export default function Templates() {
                   </div>
                 </div>
               );
-            })}
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </div>
