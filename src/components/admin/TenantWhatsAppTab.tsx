@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, Phone, Link2, CheckCircle2, AlertCircle, XCircle, Clock, AlertTriangle, Settings, Copy, RefreshCw, Building2, Key, Hash, Loader2 } from 'lucide-react';
+import { MessageSquare, Phone, Link2, CheckCircle2, AlertCircle, XCircle, Clock, AlertTriangle, Settings, Copy, RefreshCw, Building2, Key, Hash, Loader2, Sparkles, ExternalLink, Wand2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TwilioConfigDialog } from './TwilioConfigDialog';
@@ -44,6 +44,7 @@ export function TenantWhatsAppTab({ tenantId, tenantName }: TenantWhatsAppTabPro
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [integration, setIntegration] = useState<TenantIntegration | null>(null);
   const [loading, setLoading] = useState(true);
+  const [provisioning, setProvisioning] = useState(false);
 
   const fetchIntegration = async () => {
     setLoading(true);
@@ -65,6 +66,30 @@ export function TenantWhatsAppTab({ tenantId, tenantName }: TenantWhatsAppTabPro
   }, [tenantId]);
 
   const isConfigured = integration?.status === 'connected';
+  const isPendingSubaccount =
+    !!integration &&
+    (integration as any).is_subaccount === true &&
+    integration.status !== 'connected';
+
+  const handleAutoProvision = async () => {
+    setProvisioning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-twilio-subaccount', {
+        body: { action: 'create', tenant_id: tenantId },
+      });
+      if (error) throw error;
+      if (data?.already_provisioned) {
+        toast.info('Esta cuenta ya tiene una subcuenta aprovisionada');
+      } else {
+        toast.success('Subcuenta Twilio creada correctamente');
+      }
+      await fetchIntegration();
+    } catch (err: any) {
+      toast.error(err?.message || 'No se pudo crear la subcuenta');
+    } finally {
+      setProvisioning(false);
+    }
+  };
 
   const handleCopyWebhook = () => {
     if (integration?.webhook_url) {
@@ -283,17 +308,96 @@ export function TenantWhatsAppTab({ tenantId, tenantName }: TenantWhatsAppTabPro
       )}
 
       {!isConfigured && (
-        <div className="bg-muted/30 border border-border rounded-xl p-8 text-center">
-          <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">Twilio no configurado</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Configura las credenciales de Twilio para habilitar el envío de mensajes de WhatsApp para este tenant.
-          </p>
-          <Button onClick={() => setConfigDialogOpen(true)} className="gradient-primary">
-            <Settings className="h-4 w-4 mr-2" />
-            Configurar Twilio
-          </Button>
-        </div>
+        <>
+          {/* Auto-provision banner (Super Admin) */}
+          <div className="border border-primary/30 bg-primary/5 rounded-xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                <Sparkles className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-semibold text-foreground">
+                    Auto-aprovisionar subcuenta Twilio
+                  </h3>
+                  <Badge variant="outline" className="text-xs">Recomendado</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Crea automáticamente una subcuenta Twilio aislada para este tenant usando las credenciales maestras.
+                  El número de WhatsApp se asignará después en la consola de Twilio.
+                </p>
+                <Button
+                  onClick={handleAutoProvision}
+                  disabled={provisioning}
+                  className="gradient-primary"
+                >
+                  {provisioning ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creando subcuenta…
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Generar subcuenta automática
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Pending sub-account state */}
+          {isPendingSubaccount && integration?.account_sid && (
+            <div className="border border-warning/30 bg-warning/10 rounded-xl p-5">
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    Esperando validación de línea
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    La subcuenta <code className="font-mono text-xs bg-background px-1.5 py-0.5 rounded">{integration.account_sid}</code> fue creada.
+                    Asigna un número de WhatsApp en la consola de Twilio y luego regístralo aquí. El status pasará a "Conectado" automáticamente y se sembrarán las plantillas.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <a
+                        href={`https://console.twilio.com/?accountSid=${integration.account_sid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                        Abrir consola Twilio
+                      </a>
+                    </Button>
+                    <Button
+                      onClick={() => setConfigDialogOpen(true)}
+                      size="sm"
+                      className="gradient-primary"
+                    >
+                      <Phone className="h-3.5 w-3.5 mr-2" />
+                      Registrar número
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Manual config fallback */}
+          <div className="bg-muted/30 border border-border rounded-xl p-6 text-center">
+            <Building2 className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <h3 className="text-base font-medium text-foreground mb-1">Configuración manual</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              ¿Ya tienes una cuenta Twilio existente? Configúrala manualmente.
+            </p>
+            <Button onClick={() => setConfigDialogOpen(true)} variant="outline">
+              <Settings className="h-4 w-4 mr-2" />
+              Configurar manualmente
+            </Button>
+          </div>
+        </>
       )}
 
       {/* Twilio Config Dialog */}
