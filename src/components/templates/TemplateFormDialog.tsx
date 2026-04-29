@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +79,8 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [invalidateConfirmOpen, setInvalidateConfirmOpen] = useState(false);
+  const [pendingSubmitApproval, setPendingSubmitApproval] = useState(false);
   
   useEffect(() => {
     if (template) {
@@ -210,14 +222,38 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
     return Object.keys(newErrors).length === 0;
   };
   
+  const performUpdate = async (
+    submitApproval: boolean,
+    confirmInvalidateApproval: boolean
+  ) => {
+    if (!template) return;
+    try {
+      await updateTemplate.mutateAsync({
+        id: template.id,
+        ...formData,
+        confirmInvalidateApproval,
+      });
+      if (submitApproval && (template.approval_status === 'draft' || confirmInvalidateApproval)) {
+        await submitForApproval.mutateAsync(template.id);
+      }
+      onOpenChange(false);
+    } catch (e) {
+      const err = e as Error & { code?: string };
+      if (err?.code === 'APPROVED_EDIT_REQUIRES_CONFIRMATION') {
+        setPendingSubmitApproval(submitApproval);
+        setInvalidateConfirmOpen(true);
+        return;
+      }
+      // Other errors are toasted by the hook.
+    }
+  };
+
   const handleSave = async (submitApproval: boolean = false) => {
     if (!validate()) return;
     
     if (template) {
-      await updateTemplate.mutateAsync({ id: template.id, ...formData });
-      if (submitApproval && template.approval_status === 'draft') {
-        await submitForApproval.mutateAsync(template.id);
-      }
+      await performUpdate(submitApproval, false);
+      return;
     } else {
       const created = await createTemplate.mutateAsync(formData);
       if (submitApproval && created) {
