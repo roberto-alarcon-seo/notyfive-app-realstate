@@ -254,6 +254,22 @@ export default function Templates() {
                 Manual ({manualCount})
               </ToggleGroupItem>
             </ToggleGroup>
+
+            {/* Functional group filter */}
+            <Select value={labelFilter} onValueChange={setLabelFilter}>
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue placeholder="Filtrar por Grupo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los grupos</SelectItem>
+                <SelectItem value="Bienvenida">🏠 Bienvenida</SelectItem>
+                <SelectItem value="Seguimiento">🔁 Seguimiento</SelectItem>
+                <SelectItem value="Citas">📅 Citas</SelectItem>
+                <SelectItem value="Documentación">📄 Documentación</SelectItem>
+                <SelectItem value="Post-venta">⭐ Post-venta</SelectItem>
+                <SelectItem value="__none__">Sin grupo</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex items-center gap-4 text-sm">
