@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface TenantFeatureFlagsCardProps {
   tenantId: string;
@@ -78,6 +88,7 @@ export function TenantFeatureFlagsCard({
   const [original, setOriginal] = useState<Set<FeatureKey>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -128,7 +139,13 @@ export function TenantFeatureFlagsCard({
     return false;
   })();
 
-  const handleSave = async () => {
+  // Features that were ON before and the admin is turning OFF.
+  const disabledFeatures: FeatureKey[] = Array.from(original).filter(
+    (k) => !enabled.has(k),
+  );
+  const hasDisabledFeatures = disabledFeatures.length > 0;
+
+  const persistChanges = async () => {
     setSaving(true);
     try {
       const payload = Array.from(enabled);
@@ -139,6 +156,26 @@ export function TenantFeatureFlagsCard({
       if (error) {
         toast.error(error.message || 'Error al guardar feature flags');
         return;
+      }
+      // Audit log: record who toggled what for this tenant.
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const adminId = userData?.user?.id ?? null;
+        await supabase.from('security_events').insert({
+          tenant_id: tenantId,
+          user_id: adminId,
+          event_type: 'tenant_modules_updated',
+          metadata: {
+            message: `Módulos actualizados: [${payload.join(', ') || 'ninguno'}]`,
+            enabled_features: payload,
+            previously_enabled: Array.from(original),
+            disabled_now: disabledFeatures,
+            actor_id: adminId,
+          },
+        });
+      } catch (auditErr) {
+        // Don't block UI if audit fails — just log it.
+        console.warn('Audit log failed:', auditErr);
       }
       setOriginal(new Set(enabled));
       toast.success('Feature flags actualizados');
@@ -152,7 +189,16 @@ export function TenantFeatureFlagsCard({
       toast.error('Error inesperado al guardar');
     } finally {
       setSaving(false);
+      setConfirmOpen(false);
     }
+  };
+
+  const handleSave = () => {
+    if (hasDisabledFeatures) {
+      setConfirmOpen(true);
+      return;
+    }
+    void persistChanges();
   };
 
   return (
@@ -227,6 +273,43 @@ export function TenantFeatureFlagsCard({
           </div>
         </div>
       )}
+
+      <AlertDialog open={confirmOpen} onOpenChange={(o) => !saving && setConfirmOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">
+              Vas a desactivar módulos para este tenant
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás a punto de desactivar:{' '}
+              <strong>
+                {disabledFeatures
+                  .map(
+                    (k) => FEATURE_OPTIONS.find((o) => o.key === k)?.label ?? k,
+                  )
+                  .join(', ')}
+              </strong>
+              . Los usuarios del tenant perderán acceso inmediato a estas
+              funcionalidades y los servicios asociados se interrumpirán. ¿Deseas
+              continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void persistChanges();
+              }}
+              disabled={saving}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {saving && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Sí, desactivar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
