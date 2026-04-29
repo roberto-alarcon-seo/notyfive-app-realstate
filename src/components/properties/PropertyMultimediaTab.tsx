@@ -290,6 +290,8 @@ export default function PropertyMultimediaTab({ propertyId, youtubeUrl: external
                   <img
                     src={img.file_url}
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                   {img.is_cover && (

@@ -357,6 +357,8 @@ export function MessageMediaRenderer({ media, className }: MessageMediaRendererP
       <img
         src={safeUrl}
         alt="Sticker"
+        loading="lazy"
+        decoding="async"
         className={cn("max-w-24 max-h-24", className)}
       />
     );
@@ -541,6 +543,8 @@ function ImagePreview({
       <img
         src={displayUrl}
         alt="Imagen"
+        loading="lazy"
+        decoding="async"
         className={cn(
           "max-w-full max-h-64 rounded-lg transition-opacity",
           (isLoading || proxyLoading) ? "opacity-0" : "opacity-100"
@@ -591,6 +595,8 @@ function MultiImagePreview({
       <img
         src={displayUrl}
         alt="Imagen"
+        loading="lazy"
+        decoding="async"
         className={cn(
           "max-w-full max-h-64 rounded-lg transition-opacity",
           (isLoading || proxyLoading) ? "opacity-0" : "opacity-100"

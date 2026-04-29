@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import AutomationWizard from "@/pages/AutomationWizard";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -18,17 +18,18 @@ import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import Contacts from "./pages/Contacts";
 import ContactEditor from "./pages/ContactEditor";
-import Segments from "./pages/Segments";
-import SegmentEditor from "./pages/SegmentEditor";
+// Lazy-loaded heavy modules (code splitting) — reduces initial bundle size
+const Segments = lazy(() => import("./pages/Segments"));
+const SegmentEditor = lazy(() => import("./pages/SegmentEditor"));
 import Templates from "./pages/Templates";
-import Campaigns from "./pages/Campaigns";
-import CampaignDetail from "./pages/CampaignDetail";
-import CampaignAssistantBuilder from "./pages/CampaignAssistantBuilder";
+const Campaigns = lazy(() => import("./pages/Campaigns"));
+const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
+const CampaignAssistantBuilder = lazy(() => import("./pages/CampaignAssistantBuilder"));
 import Assistant from "./pages/Assistant";
-import Automations from "./pages/Automations";
-import AutomationEditor from "./pages/AutomationEditor";
+const Automations = lazy(() => import("./pages/Automations"));
+const AutomationEditor = lazy(() => import("./pages/AutomationEditor"));
 import Events from "./pages/Events";
-import AutomationRuns from "./pages/AutomationRuns";
+const AutomationRuns = lazy(() => import("./pages/AutomationRuns"));
 import Pipeline from "./pages/Pipeline";
 import { toast } from "sonner";
 import SettingsWhatsAppStatus from "./pages/settings/SettingsWhatsAppStatus";
@@ -59,7 +60,23 @@ import Support from "./pages/Support";
 import SettingsConversions from "./pages/settings/SettingsConversions";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Keep tenant/config-style data fresh for 5 min and avoid aggressive refetching
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+const RouteFallback = () => (
+  <div className="flex items-center justify-center h-[60vh] text-muted-foreground text-sm">
+    Cargando...
+  </div>
+);
 
 const RecoveryHashRedirector = () => {
   const location = useLocation();
@@ -114,6 +131,7 @@ const App = () => (
             <PartnerThemeSync />
             <SupportModeProvider>
             <MobileRouteGuard>
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
               {/* Public landing for unauthenticated tenant users */}
               <Route path="/welcome" element={<Landing />} />
@@ -187,6 +205,7 @@ const App = () => (
               <Route path="/settings/whatsapp-twilio" element={<Navigate to="/settings/whatsapp" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
             </MobileRouteGuard>
             </SupportModeProvider>
           </AuthProvider>
