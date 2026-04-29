@@ -361,6 +361,22 @@ export default function MasterTemplates() {
                 </Select>
               </div>
             </div>
+            <div>
+              <Label>Grupo funcional (label)</Label>
+              <Select
+                value={form.label ?? "__none__"}
+                onValueChange={(v) => setForm({ ...form, label: v === "__none__" ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Sin grupo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sin grupo</SelectItem>
+                  {LABELS.map((l) => (<SelectItem key={l} value={l}>{l}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Agrupa la plantilla por intención: Bienvenida, Seguimiento, Citas, Documentación o Post-venta.
+              </p>
+            </div>
             {form.header_type === "text" && (
               <div>
                 <Label>Header text</Label>
