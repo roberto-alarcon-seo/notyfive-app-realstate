@@ -148,6 +148,8 @@ export function MediaPreviewOverlay({
           <img
             src={activeMedia.url}
             alt={activeMedia.filename}
+            loading="lazy"
+            decoding="async"
             className="max-w-full max-h-full object-contain rounded-lg"
           />
         );
