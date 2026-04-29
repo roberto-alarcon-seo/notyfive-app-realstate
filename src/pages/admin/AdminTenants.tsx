@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Building2, Users, Search, MoreHorizontal, Loader2, MessageSquare, ExternalLink, Pause, Play, Trash2, Megaphone, Filter, Workflow } from 'lucide-react';
+import { Plus, Building2, Users, Search, MoreHorizontal, Loader2, MessageSquare, ExternalLink, Pause, Play, Trash2, Megaphone, Filter, Workflow, KeyRound, Target } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { TwilioConfigDialog } from '@/components/admin/TwilioConfigDialog';
@@ -77,7 +77,13 @@ const AdminTenants = () => {
   const { partnerScope } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Preserve search across navigation (e.g. when returning from tenant detail).
+  const [searchQuery, setSearchQuery] = useState<string>(
+    () => sessionStorage.getItem('admin_tenants_search') ?? '',
+  );
+  useEffect(() => {
+    sessionStorage.setItem('admin_tenants_search', searchQuery);
+  }, [searchQuery]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -293,6 +299,8 @@ const AdminTenants = () => {
     if (features.includes('campaigns')) items.push({ key: 'campaigns', label: 'Campañas', Icon: Megaphone });
     if (features.includes('segments')) items.push({ key: 'segments', label: 'Segmentos', Icon: Filter });
     if (features.includes('automations_builder')) items.push({ key: 'automations_builder', label: 'Automatizaciones', Icon: Workflow });
+    if (features.includes('api_access')) items.push({ key: 'api_access', label: 'API & Webhooks', Icon: KeyRound });
+    if (features.includes('conversions_capi')) items.push({ key: 'conversions_capi', label: 'Conversiones (CAPI)', Icon: Target });
     if (items.length === 0) return null;
     return (
       <TooltipProvider>
@@ -304,7 +312,12 @@ const AdminTenants = () => {
                   <Icon className="h-3 w-3" />
                 </span>
               </TooltipTrigger>
-              <TooltipContent side="top">{label}</TooltipContent>
+              <TooltipContent side="top">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-medium">{label}</span>
+                  <span className="text-[10px] text-success">● Activo</span>
+                </div>
+              </TooltipContent>
             </Tooltip>
           ))}
         </div>
