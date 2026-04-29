@@ -19,13 +19,18 @@ export const ALL_SCOPES = [
   { value: "fields:read", label: "Leer campos", description: "Ver campos personalizados" },
 ] as const;
 
-export function useApiTokens() {
+export function useApiTokens(options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
   const [tokens, setTokens] = useState<ApiToken[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [oneTimeToken, setOneTimeToken] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchTokens = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -47,11 +52,11 @@ export function useApiTokens() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, enabled]);
 
   useEffect(() => {
-    fetchTokens();
-  }, [fetchTokens]);
+    if (enabled) fetchTokens();
+  }, [fetchTokens, enabled]);
 
   const createToken = async (params: {
     name: string;

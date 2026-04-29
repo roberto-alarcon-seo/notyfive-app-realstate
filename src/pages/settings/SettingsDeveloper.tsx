@@ -18,7 +18,7 @@ export default function SettingsDeveloper() {
       icon={Code2}
     >
       <PremiumGate
-        requiredFlags={["automations_builder", "api_access"]}
+        requiredFlags={["api_access"]}
         featureName="API & Webhooks"
         description="Genera tokens de API, configura webhooks y conecta Brokia24 con tus sistemas externos. Disponible en planes Pro."
       >

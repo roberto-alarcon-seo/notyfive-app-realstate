@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 
 export interface TenantSettings {
   tenant_id?: string;
@@ -56,6 +57,7 @@ export function useConversionSettings() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const tenantId = profile?.tenant_id;
+  const { enabled: hasAccess } = useFeatureFlag("campaigns");
 
   // Fetch settings
   const { data: settings, isLoading: isLoadingSettings } = useQuery({
@@ -82,7 +84,7 @@ export function useConversionSettings() {
         meta_capi_access_token: data.meta_capi_access_token ? '••••••••••••••••' : null,
       } as TenantSettings;
     },
-    enabled: !!tenantId,
+    enabled: !!tenantId && hasAccess,
   });
 
   // Fetch mappings
@@ -100,7 +102,7 @@ export function useConversionSettings() {
       if (error) throw error;
       return (data || []) as MetaEventMapping[];
     },
-    enabled: !!tenantId,
+    enabled: !!tenantId && hasAccess,
   });
 
   // Save settings mutation
