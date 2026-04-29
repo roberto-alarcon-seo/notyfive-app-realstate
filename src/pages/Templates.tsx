@@ -80,6 +80,7 @@ export default function Templates() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [labelFilter, setLabelFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
