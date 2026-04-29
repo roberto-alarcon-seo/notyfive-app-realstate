@@ -1862,6 +1862,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          partner_id: string | null
           sort_order: number
           updated_at: string
           variables: string[] | null
@@ -1879,6 +1880,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          partner_id?: string | null
           sort_order?: number
           updated_at?: string
           variables?: string[] | null
@@ -1896,11 +1898,20 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          partner_id?: string | null
           sort_order?: number
           updated_at?: string
           variables?: string[] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "master_templates_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
