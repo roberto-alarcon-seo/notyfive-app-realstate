@@ -526,6 +526,7 @@ export default function Templates() {
         </DialogContent>
       </Dialog>
     </div>
+    </SettingsLayout>
     </PremiumGate>
   );
 }
