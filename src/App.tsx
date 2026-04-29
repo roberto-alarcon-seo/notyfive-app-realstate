@@ -158,7 +158,8 @@ const App = () => (
               <Route path="/segments" element={<ProtectedRoute><FeatureFlagGuard feature="segments"><MainLayout><Segments /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/segments/new" element={<ProtectedRoute><FeatureFlagGuard feature="segments"><MainLayout><SegmentEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/segments/:id" element={<ProtectedRoute><FeatureFlagGuard feature="segments"><MainLayout><SegmentEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
-              <Route path="/templates" element={<ProtectedRoute><MainLayout><Templates /></MainLayout></ProtectedRoute>} />
+              {/* Legacy /templates route — canonical location is /settings/templates */}
+              <Route path="/templates" element={<Navigate to="/settings/templates" replace />} />
               <Route path="/campaigns" element={<ProtectedRoute><FeatureFlagGuard feature="campaigns"><MainLayout><Campaigns /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/campaigns/new/assistant" element={<ProtectedRoute><FeatureFlagGuard feature="campaigns"><CampaignAssistantBuilder /></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/campaigns/:id" element={<ProtectedRoute><FeatureFlagGuard feature="campaigns"><MainLayout><CampaignDetail /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
