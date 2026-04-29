@@ -28,6 +28,8 @@ import { useTemplates, useDeleteTemplate, useDuplicateTemplate, useSubmitTemplat
 import { useForceApproveTemplate } from "@/hooks/useForceApproveTemplate";
 import { TemplateFormDialog } from "@/components/templates/TemplateFormDialog";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
+import { PremiumGate } from "@/components/settings/PremiumGate";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -59,6 +61,8 @@ const statusConfig = {
 };
 
 export default function Templates() {
+  const { tenantRole, isSuperAdmin } = useAuth();
+  const canManage = isSuperAdmin || tenantRole === 'administrador' || tenantRole === 'manager';
   const { data: templates = [], isLoading } = useTemplates();
   const { data: twilioStatus } = useTwilioStatus();
   const deleteTemplate = useDeleteTemplate();
@@ -138,6 +142,11 @@ export default function Templates() {
   const rejectedCount = templates.filter(t => t.approval_status === 'rejected').length;
 
   return (
+    <PremiumGate
+      requiredFlags={["templates_library"]}
+      featureName="Librería de Plantillas"
+      description="Activa este módulo para crear, gestionar y aprobar plantillas de WhatsApp HSM. Contacta a ventas o actualiza tu plan para habilitarlo."
+    >
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-6 border-b border-border">
@@ -157,10 +166,12 @@ export default function Templates() {
               <RefreshCw className={`w-4 h-4 mr-2 ${syncTemplates.isPending ? 'animate-spin' : ''}`} />
               Sincronizar
             </Button>
-            <Button onClick={handleNewTemplate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva plantilla
-            </Button>
+            {canManage && (
+              <Button onClick={handleNewTemplate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Nueva plantilla
+              </Button>
+            )}
           </div>
         </div>
 
@@ -254,7 +265,7 @@ export default function Templates() {
                 ? 'Prueba con otros términos de búsqueda' 
                 : 'Crea tu primera plantilla para empezar a enviar mensajes'}
             </p>
-            {!searchQuery && (
+            {!searchQuery && canManage && (
               <Button onClick={handleNewTemplate}>
                 <Plus className="w-4 h-4 mr-2" />
                 Crear plantilla
@@ -291,15 +302,19 @@ export default function Templates() {
                           <Eye className="w-4 h-4 mr-2" />
                           Vista previa
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(template)}>
-                          <Pencil className="w-4 h-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicate(template)}>
-                          <Copy className="w-4 h-4 mr-2" />
-                          Duplicar
-                        </DropdownMenuItem>
-                        {(template.approval_status === 'draft' || template.approval_status === 'rejected') && canSubmitToTwilio && (
+                        {canManage && (
+                          <DropdownMenuItem onClick={() => handleEdit(template)}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                        )}
+                        {canManage && (
+                          <DropdownMenuItem onClick={() => handleDuplicate(template)}>
+                            <Copy className="w-4 h-4 mr-2" />
+                            Duplicar
+                          </DropdownMenuItem>
+                        )}
+                        {canManage && (template.approval_status === 'draft' || template.approval_status === 'rejected') && canSubmitToTwilio && (
                           <DropdownMenuItem 
                             onClick={() => handleSubmitForApproval(template)}
                             disabled={submittingId === template.id}
@@ -312,7 +327,7 @@ export default function Templates() {
                             Enviar a aprobación
                           </DropdownMenuItem>
                         )}
-                        {template.approval_status === 'pending' && (
+                        {isSuperAdmin && template.approval_status === 'pending' && (
                           <DropdownMenuItem 
                             onClick={() => forceApprove.mutate(template.id)}
                             disabled={forceApprove.isPending}
@@ -321,14 +336,18 @@ export default function Templates() {
                             Marcar como aprobada
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => handleDeleteClick(template)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Eliminar
-                        </DropdownMenuItem>
+                        {canManage && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDeleteClick(template)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -485,5 +504,6 @@ export default function Templates() {
         </DialogContent>
       </Dialog>
     </div>
+    </PremiumGate>
   );
 }

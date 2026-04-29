@@ -183,10 +183,31 @@ serve(async (req) => {
     const twilioAuth = btoa(`${integration.account_sid}:${authToken}`);
 
     // 8) Create Twilio content ONLY if we don't have a SID yet
+    // We always (re)compute the canonical variable_index_map from the current
+    // template body/header/footer, so the send pipeline can map named variables
+    // to the {{1}}, {{2}}, ... slots Twilio approved — regardless of order.
+    const variableMap = new Map<string, number>();
+    const computeMap = (text: string) => {
+      text.replace(/\{\{([^}]+)\}\}/g, (_m, varName) => {
+        const trimmed = varName.trim();
+        if (!variableMap.has(trimmed)) {
+          variableMap.set(trimmed, variableMap.size + 1);
+        }
+        return '';
+      });
+    };
+    // Order matters: header first, then body, then footer — matches the
+    // payload Twilio sees.
+    if (template.header_type === 'text' && template.header_text) computeMap(template.header_text);
+    if (template.body) computeMap(template.body);
+    if (template.footer) computeMap(template.footer);
+
+    const variableIndexMap: Record<string, number> = {};
+    variableMap.forEach((idx, name) => { variableIndexMap[name] = idx; });
+
     if (!contentSid) {
       console.log('📤 No existing Twilio SID, creating new content...');
-      
-      const variableMap = new Map<string, number>();
+
       const twilioBody = convertVariablesToTwilioFormat(template.body, variableMap);
       
       let twilioHeaderText = '';
@@ -344,6 +365,7 @@ serve(async (req) => {
             approval_status: 'pending',
             last_synced_at: new Date().toISOString(),
             last_submit_idempotency_key: idempotency_key || null,
+            variable_index_map: variableIndexMap,
           })
           .eq('id', template_id);
         
@@ -391,6 +413,7 @@ serve(async (req) => {
         last_synced_at: new Date().toISOString(),
         last_submit_idempotency_key: idempotency_key || null,
         rejection_reason: null,
+        variable_index_map: variableIndexMap,
       })
       .eq('id', template_id);
 

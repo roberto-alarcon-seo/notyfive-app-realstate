@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +79,8 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [invalidateConfirmOpen, setInvalidateConfirmOpen] = useState(false);
+  const [pendingSubmitApproval, setPendingSubmitApproval] = useState(false);
   
   useEffect(() => {
     if (template) {
@@ -210,14 +222,38 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
     return Object.keys(newErrors).length === 0;
   };
   
+  const performUpdate = async (
+    submitApproval: boolean,
+    confirmInvalidateApproval: boolean
+  ) => {
+    if (!template) return;
+    try {
+      await updateTemplate.mutateAsync({
+        id: template.id,
+        ...formData,
+        confirmInvalidateApproval,
+      });
+      if (submitApproval && (template.approval_status === 'draft' || confirmInvalidateApproval)) {
+        await submitForApproval.mutateAsync(template.id);
+      }
+      onOpenChange(false);
+    } catch (e) {
+      const err = e as Error & { code?: string };
+      if (err?.code === 'APPROVED_EDIT_REQUIRES_CONFIRMATION') {
+        setPendingSubmitApproval(submitApproval);
+        setInvalidateConfirmOpen(true);
+        return;
+      }
+      // Other errors are toasted by the hook.
+    }
+  };
+
   const handleSave = async (submitApproval: boolean = false) => {
     if (!validate()) return;
     
     if (template) {
-      await updateTemplate.mutateAsync({ id: template.id, ...formData });
-      if (submitApproval && template.approval_status === 'draft') {
-        await submitForApproval.mutateAsync(template.id);
-      }
+      await performUpdate(submitApproval, false);
+      return;
     } else {
       const created = await createTemplate.mutateAsync(formData);
       if (submitApproval && created) {
@@ -239,6 +275,7 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
   const bodyCharCount = [...formData.body].length;
   
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b border-border shrink-0">
@@ -583,5 +620,30 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={invalidateConfirmOpen} onOpenChange={setInvalidateConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Invalidar la aprobación de WhatsApp?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Editar una plantilla aprobada invalidará su estado y requerirá nueva aprobación
+            por parte de WhatsApp. La plantilla pasará a borrador y deberá volver a enviarse
+            a revisión antes de poder usarla.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              setInvalidateConfirmOpen(false);
+              await performUpdate(pendingSubmitApproval, true);
+            }}
+          >
+            Sí, editar e invalidar aprobación
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
