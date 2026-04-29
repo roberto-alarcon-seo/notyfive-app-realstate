@@ -227,6 +227,14 @@ export default function MasterTemplates() {
               {CATEGORIES.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
             </SelectContent>
           </Select>
+          <Select value={labelFilter} onValueChange={setLabelFilter}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filtrar por Grupo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los grupos</SelectItem>
+              <SelectItem value="__none__">Sin grupo</SelectItem>
+              {LABELS.map((l) => (<SelectItem key={l} value={l}>{l}</SelectItem>))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="rounded-lg border border-border bg-card">
@@ -236,6 +244,7 @@ export default function MasterTemplates() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Partner</TableHead>
                 <TableHead>Categoría</TableHead>
+                <TableHead>Grupo</TableHead>
                 <TableHead>Variables</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -243,9 +252,9 @@ export default function MasterTemplates() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
               ) : filtered.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell>
@@ -256,6 +265,13 @@ export default function MasterTemplates() {
                     <Badge variant={t.partner_id ? "secondary" : "outline"}>{partnerLabel(t.partner_id)}</Badge>
                   </TableCell>
                   <TableCell><Badge variant="outline">{t.category}</Badge></TableCell>
+                  <TableCell>
+                    {t.label ? (
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground border-transparent">{t.label}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{(t.variables ?? []).length}</TableCell>
                   <TableCell>
                     <Badge variant={t.is_active ? "default" : "secondary"}>
