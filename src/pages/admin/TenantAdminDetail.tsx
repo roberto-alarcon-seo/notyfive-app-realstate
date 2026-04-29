@@ -13,6 +13,7 @@ import { TenantWhatsAppTab } from '@/components/admin/TenantWhatsAppTab';
 import { TenantInventoryTab } from '@/components/admin/TenantInventoryTab';
 import { TenantUsersTab } from '@/components/admin/TenantUsersTab';
 import { TenantLogsTab } from '@/components/admin/TenantLogsTab';
+import { TenantFeatureFlagsCard } from '@/components/admin/TenantFeatureFlagsCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { extractEdgeFunctionError } from '@/lib/edgeFunctionError';
@@ -204,6 +205,7 @@ export default function TenantAdminDetail() {
             { value: 'inventory', label: 'Inventario' },
             { value: 'users', label: 'Usuarios' },
             { value: 'whatsapp', label: 'WhatsApp' },
+            { value: 'modules', label: 'Módulos' },
             { value: 'logs', label: 'Logs' },
           ].map((t) => (
             <TabsTrigger
@@ -230,6 +232,9 @@ export default function TenantAdminDetail() {
         </TabsContent>
         <TabsContent value="whatsapp" className="mt-0">
           <TenantWhatsAppTab tenantId={tenant.id} tenantName={tenant.name} />
+        </TabsContent>
+        <TabsContent value="modules" className="mt-0">
+          <TenantFeatureFlagsCard tenantId={tenant.id} onUpdate={fetchTenant} />
         </TabsContent>
         <TabsContent value="logs" className="mt-0">
           <TenantLogsTab tenantId={tenant.id} />
