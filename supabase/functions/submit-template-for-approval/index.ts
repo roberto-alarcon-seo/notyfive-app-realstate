@@ -365,6 +365,7 @@ serve(async (req) => {
             approval_status: 'pending',
             last_synced_at: new Date().toISOString(),
             last_submit_idempotency_key: idempotency_key || null,
+            variable_index_map: variableIndexMap,
           })
           .eq('id', template_id);
         
