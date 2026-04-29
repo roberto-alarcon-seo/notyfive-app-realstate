@@ -496,5 +496,6 @@ export default function Templates() {
         </DialogContent>
       </Dialog>
     </div>
+    </PremiumGate>
   );
 }
