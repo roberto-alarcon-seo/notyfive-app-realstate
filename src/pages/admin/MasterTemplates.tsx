@@ -31,6 +31,7 @@ type MasterTemplate = {
   name: string;
   display_name: string | null;
   category: string;
+  label: string | null;
   header_type: string | null;
   header_text: string | null;
   body: string;
@@ -44,12 +45,14 @@ type MasterTemplate = {
 
 const CATEGORIES = ["UTILITY", "MARKETING", "AUTHENTICATION"];
 const HEADER_TYPES = ["none", "text", "image", "video", "document"];
+const LABELS = ["Bienvenida", "Seguimiento", "Citas", "Documentación", "Post-venta"];
 const PARTNER_OPTIONS = Object.values(PARTNERS);
 
 const emptyForm: Partial<MasterTemplate> = {
   name: "",
   display_name: "",
   category: "UTILITY",
+  label: null,
   header_type: "none",
   header_text: "",
   body: "",
@@ -66,6 +69,7 @@ export default function MasterTemplates() {
   const [search, setSearch] = useState("");
   const [partnerFilter, setPartnerFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [labelFilter, setLabelFilter] = useState<string>("all");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<MasterTemplate | null>(null);
   const [form, setForm] = useState<Partial<MasterTemplate>>(emptyForm);
@@ -90,6 +94,9 @@ export default function MasterTemplates() {
       if (partnerFilter === "global" && t.partner_id) return false;
       if (partnerFilter !== "all" && partnerFilter !== "global" && t.partner_id !== partnerFilter) return false;
       if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
+      if (labelFilter !== "all") {
+        if (labelFilter === "__none__" ? !!t.label : t.label !== labelFilter) return false;
+      }
       if (search) {
         const q = search.toLowerCase();
         if (
@@ -100,7 +107,7 @@ export default function MasterTemplates() {
       }
       return true;
     });
-  }, [data, partnerFilter, categoryFilter, search]);
+  }, [data, partnerFilter, categoryFilter, labelFilter, search]);
 
   const openCreate = () => {
     setEditing(null);
@@ -137,6 +144,7 @@ export default function MasterTemplates() {
         name: payload.name!,
         display_name: payload.display_name || null,
         category: payload.category || "UTILITY",
+        label: payload.label || null,
         header_type: payload.header_type || "none",
         header_text: payload.header_text || null,
         body: payload.body!,
