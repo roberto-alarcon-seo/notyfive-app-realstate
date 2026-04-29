@@ -57,7 +57,7 @@ export function useConversionSettings() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const tenantId = profile?.tenant_id;
-  const { enabled: hasAccess } = useFeatureFlag("campaigns");
+  const { enabled: hasAccess } = useFeatureFlag("conversions_capi");
 
   // Guard temprano: si el flag está desactivado, los queries quedan deshabilitados
   // (enabled: false) y devolvemos defaults sin tocar Supabase.

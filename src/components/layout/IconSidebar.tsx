@@ -61,6 +61,7 @@ export function IconSidebar() {
     templates_library: false,
     quick_automations: false,
     api_access: false,
+    conversions_capi: false,
   };
 
   // Filtrado estricto: si el flag no está presente en enabled_features,

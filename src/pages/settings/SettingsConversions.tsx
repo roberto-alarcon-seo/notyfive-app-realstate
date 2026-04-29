@@ -9,7 +9,7 @@ import { PremiumGate, useFlagsAccess } from "@/components/settings/PremiumGate";
 
 export default function SettingsConversions() {
   const { settings, mappings, isLoading, saveSettings, saveMappings, resetMappingsToDefault } = useConversionSettings();
-  const hasPremium = useFlagsAccess(["campaigns"]);
+  const hasPremium = useFlagsAccess(["conversions_capi"]);
 
   if (!hasPremium) {
     return (
@@ -20,7 +20,7 @@ export default function SettingsConversions() {
       >
         <PremiumGate
           hasAccess={false}
-          requiredFlags={["campaigns"]}
+          requiredFlags={["conversions_capi"]}
           featureName="Conversiones & Meta CAPI"
           description="Configura tu conversión principal, conecta Meta Pixel y envía eventos server-side. Disponible en planes Pro."
         >
