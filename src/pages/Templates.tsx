@@ -335,8 +335,17 @@ export default function Templates() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTemplates.map((template) => {
+          <div className="flex flex-col gap-8">
+            {groupedTemplates.map((group) => (
+              <section key={group.key} className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {group.title}
+                  </h2>
+                  <span className="text-xs text-muted-foreground">({group.items.length})</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.items.map((template) => {
               const status = statusConfig[template.approval_status];
               const StatusIcon = status.icon;
               
