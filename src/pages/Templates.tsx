@@ -29,6 +29,8 @@ import { useForceApproveTemplate } from "@/hooks/useForceApproveTemplate";
 import { TemplateFormDialog } from "@/components/templates/TemplateFormDialog";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
 import { PremiumGate } from "@/components/settings/PremiumGate";
+import { SettingsLayout } from "@/components/settings/SettingsLayout";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -62,7 +64,12 @@ const statusConfig = {
 
 export default function Templates() {
   const { tenantRole, isSuperAdmin } = useAuth();
-  const canManage = isSuperAdmin || tenantRole === 'administrador' || tenantRole === 'manager';
+  const { enabled: customTemplatesEnabled } = useFeatureFlag('custom_templates_management');
+  // Role-based gating (RBAC) AND feature-flag gating ('custom_templates_management').
+  // Both must be true for tenant users to CRUD templates. Super admin always can.
+  const hasManageRole =
+    isSuperAdmin || tenantRole === 'administrador' || tenantRole === 'manager';
+  const canManage = isSuperAdmin || (hasManageRole && customTemplatesEnabled);
   const { data: templates = [], isLoading } = useTemplates();
   const { data: twilioStatus } = useTwilioStatus();
   const deleteTemplate = useDeleteTemplate();
@@ -147,17 +154,16 @@ export default function Templates() {
       featureName="Librería de Plantillas"
       description="Activa este módulo para crear, gestionar y aprobar plantillas de WhatsApp HSM. Contacta a ventas o actualiza tu plan para habilitarlo."
     >
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Plantillas WhatsApp</h1>
-            <p className="text-muted-foreground mt-1">
-              Gestiona tus plantillas de mensajes aprobadas por WhatsApp
-            </p>
-          </div>
-          <div className="flex gap-2">
+    <SettingsLayout
+      title="Plantillas WhatsApp"
+      description="Gestiona tus plantillas de mensajes aprobadas por WhatsApp"
+      icon={FileText}
+    >
+    <div className="flex flex-col gap-6">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div />
+        <div className="flex gap-2">
             <Button 
               variant="outline" 
               onClick={handleSync}
@@ -166,17 +172,34 @@ export default function Templates() {
               <RefreshCw className={`w-4 h-4 mr-2 ${syncTemplates.isPending ? 'animate-spin' : ''}`} />
               Sincronizar
             </Button>
-            {canManage && (
+            {hasManageRole && customTemplatesEnabled && (
               <Button onClick={handleNewTemplate}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nueva plantilla
               </Button>
             )}
+            {hasManageRole && !customTemplatesEnabled && !isSuperAdmin && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button disabled variant="outline">
+                        <Sparkles className="w-4 h-4 mr-2 text-primary" />
+                        Nueva plantilla · Pro
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Función Pro: contacta a soporte para habilitar la gestión de plantillas personalizadas.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
-        </div>
 
         {/* Stats, Filters and Search */}
-        <div className="flex items-center justify-between gap-4">
+      </div>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -224,10 +247,9 @@ export default function Templates() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Info Banner */}
-      <div className="mx-6 mt-6 p-4 bg-primary/5 border border-primary/20 rounded-xl">
+      <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
         <div className="flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-primary mt-0.5" />
           <div>
@@ -241,7 +263,7 @@ export default function Templates() {
       </div>
 
       {/* Templates Grid */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1">
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
