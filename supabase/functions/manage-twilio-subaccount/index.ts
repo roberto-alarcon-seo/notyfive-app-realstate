@@ -26,6 +26,13 @@ const corsHeaders = {
  *           (inbound webhook) to point to twilio-inbound-webhook automatically.
  *           Then updates tenant_integrations.phone_number, which fires the
  *           SQL trigger that flips status to 'connected' and seeds templates.
+ *
+ *           Additionally, attempts to register the phone number as a WhatsApp
+ *           Sender via Twilio's Messaging v2 Senders API (BYON / self-signup).
+ *           If the sender already exists, only the inbound webhook is updated.
+ *           If Twilio requires further verification (OTP, Meta Business
+ *           Manager approval), a clear, user-facing message is returned in
+ *           `whatsapp_sender.message` so the operator knows what to do next.
  */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -102,6 +109,96 @@ serve(async (req) => {
       const subToken = atob(integ.auth_token_encrypted);
       const subAuth = btoa(`${subSid}:${subToken}`);
 
+      // ----------------------------------------------------------------
+      // 1) Try to register the phone as a WhatsApp Sender (BYON flow).
+      //    Twilio Messaging v2 endpoint: POST /v2/Channels/Senders
+      //    Docs: https://www.twilio.com/docs/messaging/api/sender-resource
+      //    We treat "already exists" as a success and continue to the
+      //    webhook configuration step. Anything that requires human
+      //    intervention is surfaced verbatim to the UI.
+      // ----------------------------------------------------------------
+      let waSender: {
+        registered: boolean;
+        already_exists: boolean;
+        requires_verification: boolean;
+        sender_sid: string | null;
+        status: string | null;
+        message: string;
+      } = {
+        registered: false,
+        already_exists: false,
+        requires_verification: false,
+        sender_sid: null,
+        status: null,
+        message: '',
+      };
+
+      try {
+        const senderPayload = {
+          sender_id: `whatsapp:${phoneNumber}`,
+          configuration: {
+            webhook: {
+              callback_url: webhookUrl,
+              callback_method: 'POST',
+            },
+          },
+        };
+
+        const senderRes = await fetch('https://messaging.twilio.com/v2/Channels/Senders', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${subAuth}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(senderPayload),
+        });
+        const senderBody = await senderRes.json().catch(() => ({} as any));
+
+        if (senderRes.ok) {
+          waSender.registered = true;
+          waSender.sender_sid = senderBody?.sid ?? null;
+          waSender.status = senderBody?.status ?? null;
+          const status = String(senderBody?.status || '').toUpperCase();
+          if (
+            status === 'CREATING' ||
+            status === 'VERIFYING' ||
+            status === 'OFFLINE' ||
+            status === 'PENDING'
+          ) {
+            waSender.requires_verification = true;
+            waSender.message =
+              'Registro iniciado. Por favor, verifica el código enviado a tu teléfono o aprueba la solicitud en tu Facebook Business Manager.';
+          } else {
+            waSender.message = 'Línea vinculada correctamente. Iniciando proceso de aprobación con Meta.';
+          }
+        } else {
+          // Twilio returns 409 / specific error codes when the sender already exists.
+          const code = Number(senderBody?.code ?? 0);
+          const msg = String(senderBody?.message || '').toLowerCase();
+          const alreadyExists =
+            senderRes.status === 409 ||
+            code === 63044 || // sender already registered
+            code === 20409 || // generic conflict
+            msg.includes('already') ||
+            msg.includes('exists');
+
+          if (alreadyExists) {
+            waSender.already_exists = true;
+            waSender.message = 'El número ya estaba registrado como WhatsApp Sender. Actualizando webhook.';
+          } else {
+            // Surface a clear, actionable error but do NOT abort: the operator
+            // may have registered the number via Twilio Console already and
+            // we still want to set the webhook + persist the phone.
+            waSender.message =
+              senderBody?.message ||
+              'No se pudo registrar como WhatsApp Sender automáticamente. Revisa Business Manager o Twilio Console.';
+          }
+        }
+      } catch (e) {
+        waSender.message =
+          'No se pudo contactar la API de WhatsApp Senders de Twilio. Se continuará con la configuración del webhook.';
+      }
+
       // Look up IncomingPhoneNumber inside the subaccount
       const lookupRes = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${subSid}/IncomingPhoneNumbers.json?PhoneNumber=${encodeURIComponent(phoneNumber)}`,
@@ -113,6 +210,7 @@ serve(async (req) => {
           code: 'TWILIO_ERROR',
           message: lookupBody?.message || 'Failed to query IncomingPhoneNumbers',
           twilio_status: lookupRes.status,
+          whatsapp_sender: waSender,
         }, 502);
       }
 
@@ -141,6 +239,7 @@ serve(async (req) => {
             code: 'TWILIO_ERROR',
             message: errBody?.message || 'Failed to configure phone webhook',
             twilio_status: updRes.status,
+            whatsapp_sender: waSender,
           }, 502);
         }
       }
@@ -163,6 +262,7 @@ serve(async (req) => {
         phone_sid: phoneSid,
         webhook_configured: !!phoneSid,
         webhook_url: webhookUrl,
+        whatsapp_sender: waSender,
       });
     }
 
