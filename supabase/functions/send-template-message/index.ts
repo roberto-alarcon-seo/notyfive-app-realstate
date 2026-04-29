@@ -249,11 +249,28 @@ serve(async (req) => {
       twilioBody.append('ContentSid', template.twilio_template_sid);
       
       // Add content variables if any
-      if (templateVariables.length > 0) {
-        const contentVariables: Record<string, string> = {};
+      // CRITICAL: Twilio approved the template with a specific {{1}}, {{2}}, ...
+      // ordering. We persist that exact mapping in `variable_index_map` at
+      // submit-time. Re-deriving the order from `variables[]` here would risk
+      // sending values into the wrong slots after an edit/duplicate.
+      const indexMap: Record<string, number> =
+        (template.variable_index_map as Record<string, number> | null) || {};
+
+      const hasIndexMap = Object.keys(indexMap).length > 0;
+      const contentVariables: Record<string, string> = {};
+
+      if (hasIndexMap) {
+        for (const [name, idx] of Object.entries(indexMap)) {
+          contentVariables[String(idx)] = variables[name] ?? '';
+        }
+      } else if (templateVariables.length > 0) {
+        // Fallback for legacy templates submitted before variable_index_map existed.
         templateVariables.forEach((variable: string, index: number) => {
           contentVariables[String(index + 1)] = variables[variable] || '';
         });
+      }
+
+      if (Object.keys(contentVariables).length > 0) {
         twilioBody.append('ContentVariables', JSON.stringify(contentVariables));
       }
 
