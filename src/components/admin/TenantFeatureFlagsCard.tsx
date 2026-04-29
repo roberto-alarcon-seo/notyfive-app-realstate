@@ -15,7 +15,12 @@ interface TenantFeatureFlagsCardProps {
   onUpdate?: () => void;
 }
 
-type FeatureKey = 'campaigns' | 'segments' | 'automations_builder' | 'api_access';
+type FeatureKey =
+  | 'campaigns'
+  | 'segments'
+  | 'automations_builder'
+  | 'api_access'
+  | 'conversions_capi';
 
 interface FeatureOption {
   key: FeatureKey;
@@ -55,7 +60,7 @@ const FEATURE_OPTIONS: FeatureOption[] = [
     icon: KeyRound,
   },
   {
-    key: 'campaigns',
+    key: 'conversions_capi',
     label: 'Conversiones (CAPI)',
     description:
       'Configuración avanzada de Meta Conversions API y Pixel para rastrear eventos de ventas.',
