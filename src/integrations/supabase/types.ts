@@ -3537,8 +3537,10 @@ export type Database = {
           daily_messages_date: string | null
           daily_messages_sent: number | null
           id: string
+          is_subaccount: boolean
           max_messages_per_day: number | null
           messaging_service_sid: string | null
+          parent_account_sid: string | null
           phone_number: string | null
           phone_number_id: string | null
           phone_number_name: string | null
@@ -3562,8 +3564,10 @@ export type Database = {
           daily_messages_date?: string | null
           daily_messages_sent?: number | null
           id?: string
+          is_subaccount?: boolean
           max_messages_per_day?: number | null
           messaging_service_sid?: string | null
+          parent_account_sid?: string | null
           phone_number?: string | null
           phone_number_id?: string | null
           phone_number_name?: string | null
@@ -3587,8 +3591,10 @@ export type Database = {
           daily_messages_date?: string | null
           daily_messages_sent?: number | null
           id?: string
+          is_subaccount?: boolean
           max_messages_per_day?: number | null
           messaging_service_sid?: string | null
+          parent_account_sid?: string | null
           phone_number?: string | null
           phone_number_id?: string | null
           phone_number_name?: string | null
