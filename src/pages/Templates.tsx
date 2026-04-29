@@ -511,7 +511,10 @@ export default function Templates() {
                   </div>
                 </div>
               );
-            })}
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </div>
