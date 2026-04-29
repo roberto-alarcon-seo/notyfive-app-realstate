@@ -166,26 +166,59 @@ export function useUpdateTemplate() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, ...formData }: TemplateFormData & { id: string }) => {
+    mutationFn: async ({ id, confirmInvalidateApproval, ...formData }: TemplateFormData & { id: string; confirmInvalidateApproval?: boolean }) => {
       const variables = getAllVariables(formData);
-      
+
+      // Fetch current row to detect content changes on already-approved templates.
+      const { data: current, error: fetchErr } = await supabase
+        .from('templates')
+        .select('approval_status, body, header_text, footer')
+        .eq('id', id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const contentChanged =
+        (current?.body || '') !== (formData.body || '') ||
+        (current?.header_text || '') !== (formData.header_text || '') ||
+        (current?.footer || '') !== (formData.footer || '');
+
+      const isApproved = current?.approval_status === 'approved';
+
+      // SECURITY/INTEGRITY: editing an approved template would diverge it from
+      // the version Twilio/WhatsApp validated. Require explicit confirmation
+      // and reset the approval state + Twilio SID so it must be re-submitted.
+      if (isApproved && contentChanged && !confirmInvalidateApproval) {
+        const err = new Error('APPROVED_EDIT_REQUIRES_CONFIRMATION') as Error & { code?: string };
+        err.code = 'APPROVED_EDIT_REQUIRES_CONFIRMATION';
+        throw err;
+      }
+
+      const update: Record<string, unknown> = {
+        name: formData.name,
+        category: formData.category,
+        label: formData.label || null,
+        header_type: formData.header_type,
+        header_text: formData.header_text || null,
+        body: formData.body,
+        footer: formData.footer || null,
+        buttons: JSON.parse(JSON.stringify(formData.buttons || [])),
+        variables,
+        media_url: formData.media?.url || null,
+        media_filename: formData.media?.filename || null,
+        media_mime_type: formData.media?.mimeType || null,
+        media_size_bytes: formData.media?.sizeBytes || null,
+      };
+
+      if (isApproved && contentChanged && confirmInvalidateApproval) {
+        update.approval_status = 'draft';
+        update.twilio_template_sid = null;
+        update.rejection_reason = null;
+        update.variable_index_map = {};
+      }
+
       const { data, error } = await supabase
         .from('templates')
-        .update({
-          name: formData.name,
-          category: formData.category,
-          label: formData.label || null,
-          header_type: formData.header_type,
-          header_text: formData.header_text || null,
-          body: formData.body,
-          footer: formData.footer || null,
-          buttons: JSON.parse(JSON.stringify(formData.buttons || [])),
-          variables,
-          media_url: formData.media?.url || null,
-          media_filename: formData.media?.filename || null,
-          media_mime_type: formData.media?.mimeType || null,
-          media_size_bytes: formData.media?.sizeBytes || null,
-        })
+        .update(update)
         .eq('id', id)
         .select()
         .single();
@@ -197,7 +230,11 @@ export function useUpdateTemplate() {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
       toast.success('Plantilla actualizada');
     },
-    onError: (error: Error) => {
+    onError: (error: Error & { code?: string }) => {
+      if (error.code === 'APPROVED_EDIT_REQUIRES_CONFIRMATION') {
+        // The form layer is expected to catch this code and show its own dialog.
+        return;
+      }
       toast.error('Error al actualizar plantilla: ' + error.message);
     }
   });
