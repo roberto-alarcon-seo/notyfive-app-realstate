@@ -138,9 +138,31 @@ export default function Templates() {
     const matchesSource = sourceFilter === 'all' || 
       (sourceFilter === 'ai' && t.created_source === 'ai') ||
       (sourceFilter === 'manual' && t.created_source === 'manual');
-    
-    return matchesSearch && matchesSource;
+
+    const matchesLabel = labelFilter === 'all'
+      || (labelFilter === '__none__' ? !t.label : t.label === labelFilter);
+
+    return matchesSearch && matchesSource && matchesLabel;
   });
+
+  // Functional groups, in display order. Templates without label are bucketed under "Sin grupo".
+  const LABEL_GROUPS: { key: string; title: string }[] = [
+    { key: 'Bienvenida', title: '🏠 Bienvenida' },
+    { key: 'Seguimiento', title: '🔁 Seguimiento' },
+    { key: 'Citas', title: '📅 Citas' },
+    { key: 'Documentación', title: '📄 Documentación' },
+    { key: 'Post-venta', title: '⭐ Post-venta' },
+    { key: '__none__', title: '📦 Sin grupo' },
+  ];
+
+  const groupedTemplates = LABEL_GROUPS
+    .map((g) => ({
+      ...g,
+      items: filteredTemplates.filter((t) =>
+        g.key === '__none__' ? !t.label : t.label === g.key,
+      ),
+    }))
+    .filter((g) => g.items.length > 0);
 
   const aiCount = templates.filter(t => t.created_source === 'ai').length;
   const manualCount = templates.filter(t => t.created_source === 'manual').length;
