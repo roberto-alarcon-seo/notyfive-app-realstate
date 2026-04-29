@@ -619,5 +619,30 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={invalidateConfirmOpen} onOpenChange={setInvalidateConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Invalidar la aprobación de WhatsApp?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Editar una plantilla aprobada invalidará su estado y requerirá nueva aprobación
+            por parte de WhatsApp. La plantilla pasará a borrador y deberá volver a enviarse
+            a revisión antes de poder usarla.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              setInvalidateConfirmOpen(false);
+              await performUpdate(pendingSubmitApproval, true);
+            }}
+          >
+            Sí, editar e invalidar aprobación
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
