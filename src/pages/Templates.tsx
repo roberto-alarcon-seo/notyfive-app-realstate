@@ -149,16 +149,16 @@ export default function Templates() {
   const rejectedCount = templates.filter(t => t.approval_status === 'rejected').length;
 
   return (
-    <PremiumGate
-      requiredFlags={["templates_library"]}
-      featureName="Librería de Plantillas"
-      description="Activa este módulo para crear, gestionar y aprobar plantillas de WhatsApp HSM. Contacta a ventas o actualiza tu plan para habilitarlo."
-    >
     <SettingsLayout
-      title="Plantillas WhatsApp"
+      title="Librería de Plantillas"
       description="Gestiona tus plantillas de mensajes aprobadas por WhatsApp"
       icon={FileText}
     >
+      <PremiumGate
+        requiredFlags={["templates_library"]}
+        featureName="Librería de Plantillas"
+        description="Activa este módulo para crear, gestionar y aprobar plantillas de WhatsApp HSM. Contacta a ventas o actualiza tu plan para habilitarlo."
+      >
     <div className="flex flex-col gap-6">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
