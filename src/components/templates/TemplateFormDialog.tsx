@@ -275,6 +275,7 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
   const bodyCharCount = [...formData.body].length;
   
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b border-border shrink-0">
