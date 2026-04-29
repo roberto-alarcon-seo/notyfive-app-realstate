@@ -54,6 +54,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminLogs from "./pages/admin/AdminLogs";
 import PartnerSettings from "./pages/admin/PartnerSettings";
 import PartnerSuperWallet from "./pages/admin/PartnerSuperWallet";
+import MasterTemplates from "./pages/admin/MasterTemplates";
 import ApiDocs from "./pages/developers/ApiDocs";
 import Followups from "./pages/Followups";
 import Support from "./pages/Support";
@@ -150,6 +151,7 @@ const App = () => (
               <Route path="/admin/logs" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminLogs /></PartnerScopedAdminGuard></ProtectedRoute>} />
               <Route path="/admin/partner-settings" element={<ProtectedRoute requireSuperAdmin><PartnerSettings /></ProtectedRoute>} />
               <Route path="/admin/super-wallet" element={<ProtectedRoute requireSuperAdmin><PartnerSuperWallet /></ProtectedRoute>} />
+              <Route path="/admin/master-templates" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><MasterTemplates /></PartnerScopedAdminGuard></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
               <Route path="/inbox" element={<ProtectedRoute><MainLayout><Inbox /></MainLayout></ProtectedRoute>} />
               <Route path="/contacts" element={<ProtectedRoute><MainLayout><Contacts /></MainLayout></ProtectedRoute>} />
