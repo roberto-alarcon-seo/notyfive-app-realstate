@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Megaphone, Filter, Workflow, Save, Loader2, ToggleLeft, KeyRound } from 'lucide-react';
+import { Megaphone, Filter, Workflow, Save, Loader2, ToggleLeft, KeyRound, Target } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,6 +53,15 @@ const FEATURE_OPTIONS: FeatureOption[] = [
     description: 'Tokens, endpoints REST y webhooks salientes para integraciones.',
     value: 'Conecta el CRM con sistemas externos y portales propios.',
     icon: KeyRound,
+  },
+  {
+    key: 'campaigns',
+    label: 'Conversiones (CAPI)',
+    description:
+      'Configuración avanzada de Meta Conversions API y Pixel para rastrear eventos de ventas.',
+    value:
+      'Ideal para clientes que invierten en Meta Ads y necesitan medir su retorno de inversión.',
+    icon: Target,
   },
 ];
 
