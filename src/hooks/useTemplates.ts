@@ -32,6 +32,7 @@ export interface Template {
   created_by_module: string | null;
   created_by_user_id: string | null;
   ai_conversation_id: string | null;
+  is_system: boolean;
   created_at: string;
   updated_at: string;
 }

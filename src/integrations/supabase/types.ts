@@ -1848,6 +1848,60 @@ export type Database = {
         }
         Relationships: []
       }
+      master_templates: {
+        Row: {
+          body: string
+          buttons: Json | null
+          category: string
+          created_at: string
+          description: string | null
+          display_name: string | null
+          footer: string | null
+          header_text: string | null
+          header_type: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+          variables: string[] | null
+        }
+        Insert: {
+          body: string
+          buttons?: Json | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_name?: string | null
+          footer?: string | null
+          header_text?: string | null
+          header_type?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+          variables?: string[] | null
+        }
+        Update: {
+          body?: string
+          buttons?: Json | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_name?: string | null
+          footer?: string | null
+          header_text?: string | null
+          header_type?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          variables?: string[] | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           ai_generated: boolean
@@ -3288,6 +3342,7 @@ export type Database = {
           header_text: string | null
           header_type: string | null
           id: string
+          is_system: boolean
           label: string | null
           last_submit_idempotency_key: string | null
           last_synced_at: string | null
@@ -3321,6 +3376,7 @@ export type Database = {
           header_text?: string | null
           header_type?: string | null
           id?: string
+          is_system?: boolean
           label?: string | null
           last_submit_idempotency_key?: string | null
           last_synced_at?: string | null
@@ -3354,6 +3410,7 @@ export type Database = {
           header_text?: string | null
           header_type?: string | null
           id?: string
+          is_system?: boolean
           label?: string | null
           last_submit_idempotency_key?: string | null
           last_synced_at?: string | null

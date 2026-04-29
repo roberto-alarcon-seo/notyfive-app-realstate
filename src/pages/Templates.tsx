@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Plus, FileText, MoreHorizontal, Copy, Eye, RefreshCw, CheckCircle2, Clock, XCircle, Trash2, Pencil, Send, AlertTriangle, Loader2, Sparkles, User, ShieldCheck } from "lucide-react";
+import { Search, Plus, FileText, MoreHorizontal, Copy, Eye, RefreshCw, CheckCircle2, Clock, XCircle, Trash2, Pencil, Send, AlertTriangle, Loader2, Sparkles, User, ShieldCheck, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -361,13 +361,23 @@ export default function Templates() {
                         {canManage && (
                           <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleDeleteClick(template)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Eliminar
-                            </DropdownMenuItem>
+                            {/* System templates can only be deleted when the tenant has the
+                                premium 'custom_templates_management' flag (or super admin).
+                                Otherwise, keep the predefined library intact. */}
+                            {template.is_system && !customTemplatesEnabled && !isSuperAdmin ? (
+                              <DropdownMenuItem disabled className="text-muted-foreground">
+                                <Lock className="w-4 h-4 mr-2" />
+                                Plantilla del sistema
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleDeleteClick(template)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            )}
                           </>
                         )}
                       </DropdownMenuContent>
@@ -389,6 +399,13 @@ export default function Templates() {
                         <Badge variant="outline" className="text-xs bg-muted text-muted-foreground shrink-0">
                           <User className="w-3 h-3 mr-1" />
                           Manual
+                        </Badge>
+                      )}
+                      {/* System Badge: predefined templates seeded automatically per tenant */}
+                      {template.is_system && (
+                        <Badge variant="outline" className="text-xs bg-accent/15 text-accent border-accent/30 shrink-0">
+                          <ShieldCheck className="w-3 h-3 mr-1" />
+                          Sistema
                         </Badge>
                       )}
                     </div>
