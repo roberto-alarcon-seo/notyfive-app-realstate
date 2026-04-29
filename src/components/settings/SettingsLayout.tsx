@@ -137,6 +137,7 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
     quick_automations: false,
     api_access: apiAccess.enabled,
     conversions_capi: false,
+    custom_templates_management: false,
   };
   const isItemUnlocked = (item: MenuItem) =>
     !item.unlockFlags || item.unlockFlags.some((f) => flagState[f]);

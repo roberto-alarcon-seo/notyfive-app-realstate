@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Megaphone, Filter, Workflow, Save, Loader2, ToggleLeft, KeyRound, Target } from 'lucide-react';
+import { Megaphone, Filter, Workflow, Save, Loader2, ToggleLeft, KeyRound, Target, FileText } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,7 +30,8 @@ type FeatureKey =
   | 'segments'
   | 'automations_builder'
   | 'api_access'
-  | 'conversions_capi';
+  | 'conversions_capi'
+  | 'custom_templates_management';
 
 interface FeatureOption {
   key: FeatureKey;
@@ -77,6 +78,15 @@ const FEATURE_OPTIONS: FeatureOption[] = [
     value:
       'Ideal para clientes que invierten en Meta Ads y necesitan medir su retorno de inversión.',
     icon: Target,
+  },
+  {
+    key: 'custom_templates_management',
+    label: 'Gestión de Plantillas Pro',
+    description:
+      'Habilita la creación y edición de plantillas personalizadas por parte del cliente.',
+    value:
+      'Permite al tenant diseñar plantillas HSM propias y enviarlas a aprobación de WhatsApp.',
+    icon: FileText,
   },
 ];
 
