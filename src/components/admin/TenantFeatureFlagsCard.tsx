@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Megaphone, Filter, Workflow, Save, Loader2, Info, ToggleLeft, KeyRound } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Megaphone, Filter, Workflow, Save, Loader2, ToggleLeft, KeyRound } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface TenantFeatureFlagsCardProps {
   tenantId: string;
+  /** @deprecated Partner-based restrictions removed. Kept for backwards compatibility. */
   partnerId?: string | null;
+  /** @deprecated Partner-based restrictions removed. Kept for backwards compatibility. */
   partnerName?: string | null;
   onUpdate?: () => void;
 }
@@ -18,78 +20,49 @@ interface FeatureOption {
   key: FeatureKey;
   label: string;
   description: string;
+  value: string;
   icon: typeof Megaphone;
-  outreach: boolean;
 }
 
 const FEATURE_OPTIONS: FeatureOption[] = [
   {
     key: 'campaigns',
-    label: 'Campañas Outreach',
-    description: 'Envíos masivos vía plantillas de WhatsApp.',
+    label: 'Campañas',
+    description: 'Envíos masivos vía plantillas de WhatsApp con seguimiento por contacto.',
+    value: 'Acelera la generación de leads y reactivaciones a escala.',
     icon: Megaphone,
-    outreach: true,
   },
   {
     key: 'segments',
-    label: 'Segmentos Dinámicos',
-    description: 'Audiencias filtradas por reglas avanzadas.',
+    label: 'Segmentos',
+    description: 'Audiencias dinámicas filtradas por reglas avanzadas.',
+    value: 'Permite hipersegmentar y personalizar la comunicación.',
     icon: Filter,
-    outreach: true,
   },
   {
     key: 'automations_builder',
-    label: 'Automatizaciones Avanzadas',
-    description: 'Constructor visual de flujos automatizados.',
+    label: 'Automatizaciones',
+    description: 'Constructor visual de flujos automatizados multipaso.',
+    value: 'Reduce tareas repetitivas y mejora tiempos de respuesta.',
     icon: Workflow,
-    outreach: false,
   },
   {
     key: 'api_access',
-    label: 'Acceso a API & Webhooks',
-    description: 'Tokens, endpoints REST y webhooks salientes.',
+    label: 'API & Webhooks',
+    description: 'Tokens, endpoints REST y webhooks salientes para integraciones.',
+    value: 'Conecta el CRM con sistemas externos y portales propios.',
     icon: KeyRound,
-    outreach: false,
   },
 ];
 
-function isMlsLatamPartner(partnerId?: string | null, partnerName?: string | null): boolean {
-  const id = (partnerId ?? '').toLowerCase();
-  const name = (partnerName ?? '').toLowerCase();
-  return id === 'mls_latam' || name.includes('mls latam');
-}
-
 export function TenantFeatureFlagsCard({
   tenantId,
-  partnerId,
-  partnerName,
   onUpdate,
 }: TenantFeatureFlagsCardProps) {
   const [enabled, setEnabled] = useState<Set<FeatureKey>>(new Set());
   const [original, setOriginal] = useState<Set<FeatureKey>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [resolvedPartnerName, setResolvedPartnerName] = useState<string | null>(
-    partnerName ?? null,
-  );
-
-  const isMls = isMlsLatamPartner(partnerId, resolvedPartnerName);
-
-  useEffect(() => {
-    if (partnerName || !partnerId) return;
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from('partners')
-        .select('name')
-        .eq('id', partnerId)
-        .maybeSingle();
-      if (!cancelled && data?.name) setResolvedPartnerName(data.name);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [partnerId, partnerName]);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,8 +97,7 @@ export function TenantFeatureFlagsCard({
     };
   }, [tenantId]);
 
-  const toggleFeature = (key: FeatureKey, disabled: boolean) => {
-    if (disabled) return;
+  const toggleFeature = (key: FeatureKey) => {
     setEnabled((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -165,29 +137,20 @@ export function TenantFeatureFlagsCard({
 
   return (
     <div className="bg-secondary/30 border border-border rounded-xl p-5">
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-5">
         <div className="p-2 rounded-lg bg-primary/10">
           <ToggleLeft className="h-5 w-5 text-primary" />
         </div>
         <div>
           <p className="text-sm font-medium text-foreground">
-            Configuración de Módulos (Feature Flags)
+            Módulos del Tenant
           </p>
           <p className="text-xs text-muted-foreground">
-            Habilita o deshabilita módulos avanzados para este tenant.
+            Activa o desactiva funcionalidades avanzadas para este tenant.
+            Solo visible para Super Admin.
           </p>
         </div>
       </div>
-
-      {isMls && (
-        <div className="flex items-start gap-2 p-3 mb-4 rounded-lg bg-warning/10 border border-warning/30">
-          <Info className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-          <p className="text-xs text-warning-foreground">
-            Las funciones de Outreach (Campañas y Segmentos) no están disponibles
-            para este partner.
-          </p>
-        </div>
-      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-6">
@@ -197,35 +160,34 @@ export function TenantFeatureFlagsCard({
         <div className="space-y-3">
           {FEATURE_OPTIONS.map((opt) => {
             const Icon = opt.icon;
-            const blocked = isMls && opt.outreach;
             const checked = enabled.has(opt.key);
             return (
-              <label
+              <div
                 key={opt.key}
-                className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-                  blocked
-                    ? 'bg-muted/20 border-border opacity-60 cursor-not-allowed'
-                    : 'bg-background/50 border-border hover:border-primary/40 cursor-pointer'
-                }`}
+                className="flex items-start gap-4 p-4 rounded-lg border border-border bg-background/50 hover:border-primary/40 transition-colors"
               >
-                <Checkbox
-                  checked={checked}
-                  disabled={blocked || saving}
-                  onCheckedChange={() => toggleFeature(opt.key, blocked)}
-                  className="mt-0.5"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium text-foreground">
+                <div className="p-2 rounded-md bg-muted/50 shrink-0">
+                  <Icon className="h-4 w-4 text-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-foreground">
                       {opt.label}
                     </span>
+                    <Switch
+                      checked={checked}
+                      disabled={saving}
+                      onCheckedChange={() => toggleFeature(opt.key)}
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {opt.description}
                   </p>
+                  <p className="text-[11px] text-muted-foreground/80 mt-1 italic">
+                    {opt.value}
+                  </p>
                 </div>
-              </label>
+              </div>
             );
           })}
 
