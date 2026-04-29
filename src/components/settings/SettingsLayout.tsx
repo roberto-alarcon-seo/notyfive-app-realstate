@@ -101,7 +101,7 @@ const menuItems: MenuItem[] = [
     title: "Desarrollador",
     description: "API Webhooks y tokens",
     group: "Avanzado",
-    unlockFlags: ["automations_builder", "api_access"],
+    unlockFlags: ["api_access"],
   },
 ];
 
