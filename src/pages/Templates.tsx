@@ -361,13 +361,23 @@ export default function Templates() {
                         {canManage && (
                           <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleDeleteClick(template)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Eliminar
-                            </DropdownMenuItem>
+                            {/* System templates can only be deleted when the tenant has the
+                                premium 'custom_templates_management' flag (or super admin).
+                                Otherwise, keep the predefined library intact. */}
+                            {template.is_system && !customTemplatesEnabled && !isSuperAdmin ? (
+                              <DropdownMenuItem disabled className="text-muted-foreground">
+                                <Lock className="w-4 h-4 mr-2" />
+                                Plantilla del sistema
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleDeleteClick(template)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            )}
                           </>
                         )}
                       </DropdownMenuContent>
