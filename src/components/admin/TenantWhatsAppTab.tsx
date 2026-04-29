@@ -94,11 +94,37 @@ export function TenantWhatsAppTab({ tenantId, tenantName }: TenantWhatsAppTabPro
         body: { action: 'link_phone', tenant_id: tenantId, phone_number: phoneInput.trim() },
       });
       if (error) throw error;
-      if (data?.webhook_configured) {
+
+      const wa = data?.whatsapp_sender as
+        | {
+            registered?: boolean;
+            already_exists?: boolean;
+            requires_verification?: boolean;
+            message?: string;
+          }
+        | undefined;
+
+      if (wa?.requires_verification) {
+        toast.info(
+          wa.message ||
+            'Registro iniciado. Verifica el código enviado o aprueba la solicitud en Facebook Business Manager.',
+          { duration: 8000 },
+        );
+      } else if (wa?.registered) {
+        toast.success('Línea vinculada correctamente. Iniciando proceso de aprobación con Meta');
+      } else if (wa?.already_exists) {
+        toast.success('El número ya estaba registrado. Webhook actualizado correctamente');
+      } else if (data?.webhook_configured) {
         toast.success('Teléfono vinculado y webhook configurado automáticamente');
       } else {
         toast.success('Teléfono guardado. Asigna el número en Twilio para activar el webhook');
       }
+
+      // Surface secondary advisories from Twilio when present
+      if (wa?.message && !wa.requires_verification && !wa.registered && !wa.already_exists) {
+        toast.warning(wa.message, { duration: 8000 });
+      }
+
       setPhoneInput('');
       await fetchIntegration();
     } catch (e: any) {
