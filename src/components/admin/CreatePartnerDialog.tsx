@@ -148,7 +148,7 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
         primary_color_hsl: hsl,
         email_sender_name: emailSenderName.trim(),
         email_sender_address: emailSenderAddress.trim().toLowerCase(),
-        branding: branding as unknown as Record<string, unknown>,
+        branding: branding as never,
         api_key: apiKey,
         external_sync_enabled: externalSync,
         non_sso_redirect_url: nonSsoRedirectUrl.trim() || null,
