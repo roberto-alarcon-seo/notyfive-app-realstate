@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Copy, KeyRound, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Copy, KeyRound, AlertTriangle, CheckCircle2, Upload, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { buildDefaultTheme, hexToHslString } from "@/lib/partnerTheme";
@@ -25,7 +25,6 @@ interface Props {
 
 const SLUG_REGEX = /^[a-z][a-z0-9_]{2,30}$/;
 const DOMAIN_REGEX = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
 
 function generateApiKey(): string {
@@ -55,10 +54,10 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
   // Step 2
   const [logoUrl, setLogoUrl] = useState("");
   const [primaryHex, setPrimaryHex] = useState("#7C3AED");
-  const [emailSenderName, setEmailSenderName] = useState("");
-  const [emailSenderAddress, setEmailSenderAddress] = useState("");
   const [nonSsoRedirectUrl, setNonSsoRedirectUrl] = useState("");
   const [logoutRedirectUrl, setLogoutRedirectUrl] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3
   const [generateKey, setGenerateKey] = useState(true);
@@ -71,7 +70,6 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
     setStep(1);
     setId(""); setName(""); setPrimaryDomain(""); setCountry("MX");
     setLogoUrl(""); setPrimaryHex("#7C3AED");
-    setEmailSenderName(""); setEmailSenderAddress("");
     setNonSsoRedirectUrl(""); setLogoutRedirectUrl("");
     setGenerateKey(true); setExternalSync(true);
     setInitialBalance("0"); setLowThreshold("1000");
@@ -95,11 +93,9 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
   const step2Errors = useMemo(() => {
     const e: Record<string, string> = {};
     if (!HEX_REGEX.test(primaryHex)) e.primaryHex = "Color hex inválido";
-    if (!emailSenderName.trim()) e.emailSenderName = "Requerido";
-    if (!EMAIL_REGEX.test(emailSenderAddress)) e.emailSenderAddress = "Email inválido";
     if (!logoUrl.trim()) e.logoUrl = "URL de logo requerida";
     return e;
-  }, [primaryHex, emailSenderName, emailSenderAddress, logoUrl]);
+  }, [primaryHex, logoUrl]);
 
   const balNum = Number(initialBalance);
   const thrNum = Number(lowThreshold);
@@ -121,12 +117,37 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
         toast.error("Ya existe un partner con ese ID o dominio");
         return;
       }
-      // Defaults for step 2
-      if (!emailSenderName) setEmailSenderName(name);
       setStep(2);
     } else if (step === 2) {
       if (Object.keys(step2Errors).length) return;
       setStep(3);
+    }
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("El logo no puede superar 2 MB");
+      return;
+    }
+    if (!id) {
+      toast.error("Define el ID del partner primero (paso 1)");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${id}/logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("partner-logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("partner-logos").getPublicUrl(path);
+      setLogoUrl(data.publicUrl);
+      toast.success("Logo subido");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al subir logo");
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -146,8 +167,7 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
         logo_url: logoUrl.trim(),
         primary_color_hex: primaryHex,
         primary_color_hsl: hsl,
-        email_sender_name: emailSenderName.trim(),
-        email_sender_address: emailSenderAddress.trim().toLowerCase(),
+        email_sender_name: name.trim(),
         branding: branding as never,
         api_key: apiKey,
         external_sync_enabled: externalSync,
