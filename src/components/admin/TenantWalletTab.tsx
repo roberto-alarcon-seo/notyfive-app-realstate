@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquare, Plus, AlertTriangle, CheckCircle2, XCircle, TrendingUp, TrendingDown, History, Loader2, Info, Calendar, Lock } from 'lucide-react';
+import { MessageSquare, Plus, AlertTriangle, CheckCircle2, XCircle, TrendingUp, TrendingDown, History, Loader2, Info, Calendar, Lock, Wallet, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTenantWallet, useAddMessages } from '@/hooks/useWallet';
 import { useAdminTenantCredits, getPlanMonthlyCredits } from '@/hooks/useTenantCredits';
+import { usePartnerWallet, useRedeemPartnerWalletToTenant } from '@/hooks/usePartnerWallet';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -73,15 +76,21 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tenants')
-        .select('managed_externally, billing_state')
+        .select('managed_externally, billing_state, partner_id, name')
         .eq('id', tenantId)
         .single();
       if (error) throw error;
-      return data as { managed_externally: boolean | null; billing_state: string };
+      return data as {
+        managed_externally: boolean | null;
+        billing_state: string;
+        partner_id: string | null;
+        name: string;
+      };
     },
     enabled: !!tenantId,
   });
   const isManagedExternally = tenantInfo?.managed_externally === true;
+  const partnerId = tenantInfo?.partner_id ?? null;
   
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [messagesToAdd, setMessagesToAdd] = useState('');
@@ -171,6 +180,9 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Super Wallet assignment (super_admin only, when tenant has partner) */}
+      <SuperWalletAssignCard tenantId={tenantId} partnerId={partnerId} />
+
       {/* Balance Card */}
       <div className="bg-secondary/30 border border-border rounded-xl p-6">
         <div className="flex items-start justify-between mb-6">
@@ -404,6 +416,140 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+interface SuperWalletAssignCardProps {
+  tenantId: string;
+  partnerId: string | null;
+}
+
+function SuperWalletAssignCard({ tenantId, partnerId }: SuperWalletAssignCardProps) {
+  const { isSuperAdmin } = useAuth();
+  const { data: wallet, isLoading } = usePartnerWallet(partnerId);
+  const redeem = useRedeemPartnerWalletToTenant();
+  const [amount, setAmount] = useState<string>('');
+  const [note, setNote] = useState<string>('');
+
+  if (!isSuperAdmin || !partnerId) return null;
+
+  const balance = wallet?.balance_credits ?? 0;
+  const threshold = wallet?.low_balance_threshold ?? 1000;
+  const isCritical = balance > 0 && balance < threshold;
+  const isEmpty = balance <= 0;
+
+  const parsed = parseInt(amount, 10);
+  const validAmount = Number.isFinite(parsed) && parsed > 0;
+  const exceeds = validAmount && parsed > balance;
+  const canSubmit = validAmount && !exceeds && !redeem.isPending;
+
+  const handleSubmit = async () => {
+    if (!canSubmit || !partnerId) return;
+    try {
+      await redeem.mutateAsync({
+        partnerId,
+        tenantId,
+        amount: parsed,
+        description:
+          note.trim() ||
+          `Asignación manual de ${parsed.toLocaleString('es-MX')} créditos al tenant`,
+      });
+      toast.success(
+        `${parsed.toLocaleString('es-MX')} créditos asignados al tenant`,
+      );
+      setAmount('');
+      setNote('');
+    } catch (e) {
+      toast.error('Error al asignar créditos', {
+        description: (e as Error).message,
+      });
+    }
+  };
+
+  return (
+    <div
+      className={`border rounded-xl p-5 space-y-4 ${
+        isEmpty
+          ? 'border-destructive/40 bg-destructive/5'
+          : isCritical
+          ? 'border-warning/40 bg-warning/5'
+          : 'border-border bg-secondary/30'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-lg bg-primary/10">
+            <Wallet className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Super Wallet del partner
+            </p>
+            <p className="text-2xl font-semibold text-foreground">
+              {isLoading ? '…' : balance.toLocaleString('es-MX')}
+              <span className="text-sm text-muted-foreground ml-2">
+                créditos disponibles
+              </span>
+            </p>
+          </div>
+        </div>
+        {isEmpty ? (
+          <Badge variant="destructive" className="gap-1">
+            <AlertTriangle className="h-3 w-3" /> Sin saldo
+          </Badge>
+        ) : isCritical ? (
+          <Badge variant="secondary" className="gap-1 text-warning">
+            <AlertTriangle className="h-3 w-3" /> Saldo bajo
+          </Badge>
+        ) : null}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="md:col-span-1">
+          <label className="text-xs font-medium text-foreground mb-1.5 block">
+            Cantidad
+          </label>
+          <Input
+            type="number"
+            min={1}
+            placeholder="Ej: 500"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={isEmpty}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="text-xs font-medium text-foreground mb-1.5 block">
+            Nota (opcional)
+          </label>
+          <Input
+            placeholder="Concepto del cargo"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            disabled={isEmpty}
+            maxLength={200}
+          />
+        </div>
+      </div>
+
+      {exceeds && (
+        <p className="text-xs text-destructive">
+          La cantidad excede el saldo disponible en la Super Wallet (
+          {balance.toLocaleString('es-MX')}).
+        </p>
+      )}
+
+      <div className="flex justify-end">
+        <Button onClick={handleSubmit} disabled={!canSubmit} className="gap-2">
+          {redeem.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+          Asignar créditos
+        </Button>
+      </div>
     </div>
   );
 }
