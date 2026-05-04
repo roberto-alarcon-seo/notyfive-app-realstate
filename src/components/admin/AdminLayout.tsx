@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Building2, Users, FileText, LogOut, User, Shield, Settings, Wallet, LibraryBig } from "lucide-react";
+import { Building2, Users, FileText, LogOut, User, Shield, Settings, Wallet, LibraryBig, Handshake } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,7 @@ import { useSignOutRedirect } from "@/hooks/useSignOutRedirect";
 
 const navItems = [
   { title: "Tenants", url: "/admin/tenants", icon: Building2 },
+  { title: "Partners", url: "/admin/partners", icon: Handshake },
   { title: "Super Wallet", url: "/admin/super-wallet", icon: Wallet },
   { title: "Usuarios", url: "/admin/users", icon: Users },
   { title: "Plantillas Globales", url: "/admin/master-templates", icon: LibraryBig },
