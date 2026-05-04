@@ -128,12 +128,14 @@ export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDet
             >
               Wallet
             </TabsTrigger>
-            <TabsTrigger
-              value="super-wallet"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
-            >
-              Super Wallet
-            </TabsTrigger>
+            {isSuperAdmin && (
+              <TabsTrigger
+                value="super-wallet"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
+              >
+                Super Wallet
+              </TabsTrigger>
+            )}
             <TabsTrigger 
               value="whatsapp"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
@@ -167,9 +169,11 @@ export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDet
             <TabsContent value="wallet" className="mt-0 p-6">
               <TenantWalletTab tenantId={tenant.id} />
             </TabsContent>
-            <TabsContent value="super-wallet" className="mt-0 p-6">
-              <TenantSuperWalletTab tenantId={tenant.id} partnerId={tenant.partner_id ?? null} />
-            </TabsContent>
+            {isSuperAdmin && (
+              <TabsContent value="super-wallet" className="mt-0 p-6">
+                <TenantSuperWalletTab tenantId={tenant.id} partnerId={tenant.partner_id ?? null} />
+              </TabsContent>
+            )}
             <TabsContent value="whatsapp" className="mt-0 p-6">
               <TenantWhatsAppTab tenantId={tenant.id} tenantName={tenant.name} />
             </TabsContent>
