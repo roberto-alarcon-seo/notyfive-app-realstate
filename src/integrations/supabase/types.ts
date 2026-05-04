@@ -4179,6 +4179,51 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      partner_delete_cascade: {
+        Args: { _confirm_id: string; _partner_id: string }
+        Returns: boolean
+      }
+      partner_metrics: { Args: { _partner_id: string }; Returns: Json }
+      partner_regenerate_api_key: {
+        Args: { _partner_id: string }
+        Returns: string
+      }
+      partner_update_settings: {
+        Args: { _partner_id: string; _patch: Json }
+        Returns: {
+          accent_color_hex: string | null
+          alt_domains: string[]
+          api_key: string | null
+          branding: Json
+          country_code: string
+          created_at: string
+          dashboard_url: string | null
+          email_branding_logo: string | null
+          email_footer_text: string | null
+          email_sender_address: string
+          email_sender_name: string
+          external_sync_enabled: boolean
+          id: string
+          is_active: boolean
+          logo_mark_url: string | null
+          logo_url: string
+          logout_redirect_url: string | null
+          name: string
+          non_sso_redirect_url: string | null
+          primary_color_hex: string
+          primary_color_hsl: string
+          primary_domain: string
+          resend_api_key: string | null
+          resend_from_email: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "partners"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       partner_wallet_adjust: {
         Args: { _amount: number; _description: string; _partner_id: string }
         Returns: {

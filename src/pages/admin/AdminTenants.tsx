@@ -287,10 +287,26 @@ const AdminTenants = () => {
     const label = style?.label ?? tenant.partner?.name ?? tenant.partner_id;
     const className =
       style?.className ?? 'border-muted-foreground/40 text-muted-foreground bg-muted/20';
+    if (partnerScope) {
+      return (
+        <Badge variant="outline" className={`text-[10px] uppercase tracking-wider ${className}`}>
+          {label}
+        </Badge>
+      );
+    }
     return (
-      <Badge variant="outline" className={`text-[10px] uppercase tracking-wider ${className}`}>
-        {label}
-      </Badge>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(`/admin/partners/${tenant.partner_id}`);
+        }}
+        title="Gestionar partner"
+      >
+        <Badge variant="outline" className={`text-[10px] uppercase tracking-wider cursor-pointer hover:opacity-80 ${className}`}>
+          {label}
+        </Badge>
+      </button>
     );
   };
 
@@ -463,7 +479,11 @@ const AdminTenants = () => {
       description="Gestiona todos los tenants de la plataforma"
       actions={headerActions}
     >
-      <CreatePartnerDialog open={isCreatePartnerOpen} onOpenChange={setIsCreatePartnerOpen} />
+      <CreatePartnerDialog
+        open={isCreatePartnerOpen}
+        onOpenChange={setIsCreatePartnerOpen}
+        onCreated={(pid) => navigate(`/admin/partners/${pid}`)}
+      />
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-card border border-border rounded-xl p-5">
