@@ -168,6 +168,7 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
         primary_color_hex: primaryHex,
         primary_color_hsl: hsl,
         email_sender_name: name.trim(),
+        email_sender_address: `no-reply@${primaryDomain.toLowerCase().trim()}`,
         branding: branding as never,
         api_key: apiKey,
         external_sync_enabled: externalSync,
@@ -314,16 +315,58 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>URL del logo</Label>
-              <Input
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="/lovable-uploads/logo.png o https://..."
-              />
+              <Label>Logotipo</Label>
+              <div className="flex items-center gap-3">
+                <div className="h-16 w-16 shrink-0 rounded-md border border-border bg-muted flex items-center justify-center overflow-hidden">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="logo" className="max-h-full max-w-full object-contain" />
+                  ) : (
+                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleLogoUpload(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingLogo}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploadingLogo ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Subiendo...</>
+                    ) : (
+                      <><Upload className="h-4 w-4 mr-2" /> Subir logo</>
+                    )}
+                  </Button>
+                  <Input
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="o pega una URL"
+                    className="text-xs"
+                  />
+                </div>
+              </div>
               {step2Errors.logoUrl && <p className="text-xs text-destructive">{step2Errors.logoUrl}</p>}
-              <p className="text-xs text-muted-foreground">
-                Puedes subir una imagen mejor desde Apariencia tras crear el partner.
-              </p>
+              <div className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground space-y-1">
+                <p><strong>Recomendaciones:</strong></p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Formato: PNG o SVG con fondo transparente</li>
+                  <li>Tamaño: 512×512 px (cuadrado) o 800×200 px (horizontal)</li>
+                  <li>Peso máximo: 2 MB</li>
+                  <li>Relación de aspecto recomendada: 1:1 o 4:1</li>
+                </ul>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Color primario</Label>
@@ -337,22 +380,6 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
                 <Input value={primaryHex} onChange={(e) => setPrimaryHex(e.target.value)} className="font-mono" />
               </div>
               {step2Errors.primaryHex && <p className="text-xs text-destructive">{step2Errors.primaryHex}</p>}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Email sender (nombre)</Label>
-                <Input value={emailSenderName} onChange={(e) => setEmailSenderName(e.target.value)} placeholder="Acme" />
-                {step2Errors.emailSenderName && <p className="text-xs text-destructive">{step2Errors.emailSenderName}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Email sender (dirección)</Label>
-                <Input
-                  value={emailSenderAddress}
-                  onChange={(e) => setEmailSenderAddress(e.target.value)}
-                  placeholder="no-reply@notifications.acme.com"
-                />
-                {step2Errors.emailSenderAddress && <p className="text-xs text-destructive">{step2Errors.emailSenderAddress}</p>}
-              </div>
             </div>
             <div className="space-y-2">
               <Label>URL de redirección Non-SSO (opcional)</Label>
