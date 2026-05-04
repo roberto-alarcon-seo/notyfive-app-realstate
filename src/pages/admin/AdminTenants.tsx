@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { supabase } from '@/integrations/supabase/client';
 import { TwilioConfigDialog } from '@/components/admin/TwilioConfigDialog';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { CreatePartnerDialog } from '@/components/admin/CreatePartnerDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +87,7 @@ const AdminTenants = () => {
   }, [searchQuery]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatePartnerOpen, setIsCreatePartnerOpen] = useState(false);
 
   const [twilioConfigOpen, setTwilioConfigOpen] = useState(false);
   const [selectedTenantForTwilio, setSelectedTenantForTwilio] = useState<Tenant | null>(null);
@@ -376,7 +378,14 @@ const AdminTenants = () => {
   const canCreateTenant = true;
 
   const headerActions = canCreateTenant ? (
-    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+    <div className="flex gap-2">
+      {!partnerScope && (
+        <Button variant="outline" onClick={() => setIsCreatePartnerOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nuevo Partner
+        </Button>
+      )}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
       <DialogTrigger asChild>
         <Button className="gradient-primary">
           <Plus className="h-4 w-4 mr-2" />
@@ -445,6 +454,7 @@ const AdminTenants = () => {
         </form>
       </DialogContent>
     </Dialog>
+    </div>
   ) : null;
 
   return (
@@ -453,6 +463,7 @@ const AdminTenants = () => {
       description="Gestiona todos los tenants de la plataforma"
       actions={headerActions}
     >
+      <CreatePartnerDialog open={isCreatePartnerOpen} onOpenChange={setIsCreatePartnerOpen} />
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-card border border-border rounded-xl p-5">

@@ -1,57 +1,87 @@
-## Objetivo
+# Plan: Crear Partners desde Admin Global
 
-Agregar un campo editable **"Dominio app"** al inicio del tab **Redireccionamiento** en `/admin/partner-settings`. Este campo controla la URL base usada por el endpoint `sso-partner-callback` para construir el `redirectTo` del magic link, eliminando cualquier dependencia hardcodeada por partner.
+## ¿Es buen momento?
 
-## Contexto
+Sí. La infraestructura ya está lista y no hay que romper contratos existentes:
 
-La columna `partners.primary_domain` ya existe en la base de datos y ya es leída por el edge function `sso-partner-callback` (línea ~210) para construir el `redirectTo` del magic link. Hoy el valor se setea manualmente en la BD; el plan lo expone como campo editable en la UI.
+- Tabla `partners` existe con todas las columnas necesarias (`id`, `name`, `primary_domain`, `primary_color_hex/hsl`, `logo_url`, `email_sender_*`, `branding`, `api_key`, `non_sso_redirect_url`, `logout_redirect_url`, etc.).
+- RLS ya permite `INSERT` solo a global super admins (sin `partner_scope`) — exactamente el rol pedido.
+- `partner_super_wallets` se relaciona vía FK con `ON DELETE CASCADE`; la RPC `partner_wallet_topup` ya sirve para asignar saldo inicial.
+- `PartnerSettings.tsx` ya edita un partner existente (apariencia, redirects, API key visible). Reutilizamos sus pedazos.
 
-No se requieren migraciones ni cambios en edge functions.
+No tocamos endpoints, RPC, ni el flujo actual del partner ya operativo (Brokia, MLS, Responde). Solo añadimos creación.
 
-## Cambios
+## Qué se construye
 
-### 1. `src/pages/admin/PartnerSettings.tsx`
+### 1. Botón "Nuevo Partner" en `/admin/tenants` (o donde aparezca la lista de partners)
 
-**a) Interfaz `PartnerRow`**: agregar `primary_domain: string`.
+Visible **solo** si `isSuperAdmin && !partnerScope`. Abre un Dialog wizard de 3 pasos.
 
-**b) Query de carga (línea ~82)**: incluir `primary_domain` en el `select`.
+### 2. Componente `src/components/admin/CreatePartnerDialog.tsx` — wizard de 3 pasos
 
-**c) Handler `handleSave` (línea ~238)**: incluir `primary_domain: partner.primary_domain?.trim() || null` en el update. Validar que no esté vacío (es `not null` en DB) y que sea una URL válida (http/https) antes de guardar.
+**Paso 1 — Identidad**
+- `id` (slug, lowercase, sin espacios, ej. `acme`) — validado único contra DB on blur.
+- `name` (display).
+- `primary_domain` (ej. `app.acme.com`) — único.
+- `country_code` (select MX/CO/AR/CL/PE/US, default MX).
 
-**d) Tab "Redireccionamiento" (línea ~703)**: agregar como **primera sección** dentro de la Card un nuevo bloque:
+**Paso 2 — Apariencia y Email**
+- `primary_color_hex` (color picker) → calcula `primary_color_hsl` con `hexToHslString` ya existente en `@/lib/partnerTheme`.
+- `logo_url` (upload a bucket `partner-assets` ya usado por `PartnerSettings`).
+- `email_sender_name` (default = `name`).
+- `email_sender_address` (ej. `no-reply@notifications.acme.com`).
+- `non_sso_redirect_url` y `logout_redirect_url` (opcionales).
 
+**Paso 3 — API & Wallet inicial**
+- Toggle "Generar API Key (x-api-key)" → genera token seguro client-side (`crypto.getRandomValues` → base64url, 32 bytes) con prefijo `pk_live_`. Se muestra UNA SOLA VEZ con botón "Copiar" y aviso de que no se podrá volver a ver completo.
+- Toggle "external_sync_enabled" (default ON) — habilita ingestión de tenants vía API.
+- Input numérico "Saldo inicial Super Wallet (créditos)" (default 0, opcional).
+- Input "low_balance_threshold" (default 1000).
+
+**Acción "Crear":**
+1. `INSERT` en `partners` con todos los campos + `branding: buildDefaultTheme(hsl)`.
+2. `INSERT` en `partner_super_wallets` (`partner_id`, `low_balance_threshold`, `balance_credits: 0`).
+3. Si saldo inicial > 0 → `supabase.rpc('partner_wallet_topup', { p_partner_id, p_amount, p_reason: 'initial_provision' })` para que quede registrado en `partner_wallet_ledger`.
+4. Toast de éxito + invalidate de la query de partners + cerrar dialog y mostrar pantalla final con el API key copiable (si se generó).
+
+### 3. Validaciones cliente
+
+- `id`: regex `^[a-z][a-z0-9_]{2,30}$`.
+- `primary_domain`: regex de dominio válido.
+- Email sender: regex email.
+- Color hex: regex `^#[0-9a-fA-F]{6}$`.
+- Saldo inicial ≥ 0.
+- Antes de crear, query `select id from partners where id=? or primary_domain=?` para detectar duplicados con mensaje claro.
+
+### 4. Manejo de errores
+
+- Errores RLS (no debería darse pero por si acaso) → toast "Solo super admins globales pueden crear partners".
+- Conflicto de unique → toast específico.
+- Si paso 1 OK pero falla wallet → mostrar warning y dejar el partner creado (no rollback automático; ofrecer "Reintentar wallet" desde detalle del partner).
+
+### 5. UX / Seguridad
+
+- Confirmación final en paso 3: typing "CREAR" antes de habilitar el botón (consistente con la UX de fricción ya implementada en `TenantWalletTab` modal de asignación).
+- API key solo visible al final, nunca se vuelve a mostrar completo (en `PartnerSettings` ya se muestra enmascarada).
+- El botón "Nuevo Partner" se oculta para `partnerScope` (admin scoped) — solo super admins globales.
+
+## Archivos a crear/modificar
+
+```text
+src/components/admin/CreatePartnerDialog.tsx   [NUEVO] - Wizard 3 pasos
+src/pages/admin/AdminTenants.tsx               [EDIT]  - Botón "Nuevo Partner" en header (solo global admin) — o agregarlo en PartnerSettings header como "+ Crear Partner"
+src/hooks/useCreatePartner.ts                  [NUEVO] - Mutation con react-query: insert partner + wallet + topup opcional
 ```
-Label: "Dominio app"
-Input type="url" placeholder="https://app.brokia24.com"
-Helper text: "URL base del partner. Se usa para construir el redirectTo 
-              del magic link SSO (ej. https://app.brokia24.com/)."
-```
 
-Este campo aparece **arriba** de los campos existentes `non_sso_redirect_url` y `logout_redirect_url`, separado por un divider.
+## Lo que NO se toca
 
-**e) Permisos**: editable solo para Super Admin global (`isGlobalAdmin`); read-only para Partner Admin (`disabled` en el input), siguiendo el mismo patrón usado en el tab API keys.
+- RPC existentes (`partner_wallet_topup`, `partner_wallet_redeem_to_tenant`, etc.).
+- Esquema de tablas (no se requiere migración — todo ya existe).
+- Flujo actual de `PartnerSettings.tsx` (sigue editando partner existente).
+- Endpoints de API de provisioning de tenants (ya consumen `api_key` de la columna existente).
 
-### 2. Edge Function `sso-partner-callback`
+## Riesgos / mitigaciones
 
-**Sin cambios de lógica** — ya consume `partners.primary_domain`. Solo se valida que el comportamiento siga siendo:
-
-```ts
-const domain = (partnerRow?.primary_domain ?? "").trim();
-if (domain) {
-  appOrigin = domain.startsWith("http") ? domain : `https://${domain}`;
-}
-const redirectUrl = new URL("/", appOrigin).toString();
-```
-
-Confirmado: al editar "Dominio app" en la UI, el siguiente magic link generado usará automáticamente el nuevo valor sin redeploy.
-
-### 3. `src/integrations/supabase/types.ts`
-
-Se regenera automáticamente; `primary_domain` ya está presente en el schema.
-
-## Validación posterior
-
-1. Editar "Dominio app" del partner `brokia` a `https://app.brokia24.com` y guardar.
-2. Llamar `POST /sso-partner-callback` con `partner_id: "brokia"`.
-3. Verificar que el `magic_link` retornado contenga `redirect_to=https://app.brokia24.com/`.
-4. Repetir con `mls_latam` y `responde` para confirmar aislamiento por partner.
+- **`partner_super_wallets` no se crea automáticamente** al insertar partner → lo creamos explícito en el flujo.
+- **Trigger de `set_user_partner_scope`** no se invoca aquí porque no asignamos usuario admin del partner en este wizard (queda fuera de alcance — el super admin global puede invitar al admin del partner desde `AdminUsers` después).
+- **Bucket de logos**: usamos el bucket que ya existe en `PartnerSettings` (verificado en código).
