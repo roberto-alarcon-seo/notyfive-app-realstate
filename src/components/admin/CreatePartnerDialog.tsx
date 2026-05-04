@@ -138,7 +138,7 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
       const apiKey = generateKey ? generateApiKey() : null;
       const branding = buildDefaultTheme(hsl);
 
-      const { error: insErr } = await supabase.from("partners").insert({
+      const { error: insErr } = await supabase.from("partners").insert([{
         id,
         name: name.trim(),
         primary_domain: primaryDomain.toLowerCase().trim(),
@@ -154,7 +154,7 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
         non_sso_redirect_url: nonSsoRedirectUrl.trim() || null,
         logout_redirect_url: logoutRedirectUrl.trim() || null,
         is_active: true,
-      });
+      }]);
       if (insErr) {
         if (insErr.code === "23505") toast.error("ID o dominio duplicado");
         else if (insErr.code === "42501") toast.error("Solo super admins globales pueden crear partners");
