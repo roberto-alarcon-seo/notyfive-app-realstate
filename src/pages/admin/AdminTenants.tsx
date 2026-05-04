@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { supabase } from '@/integrations/supabase/client';
 import { TwilioConfigDialog } from '@/components/admin/TwilioConfigDialog';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { CreatePartnerDialog } from '@/components/admin/CreatePartnerDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
