@@ -429,8 +429,10 @@ function SuperWalletAssignCard({ tenantId, partnerId }: SuperWalletAssignCardPro
   const { isSuperAdmin } = useAuth();
   const { data: wallet, isLoading } = usePartnerWallet(partnerId);
   const redeem = useRedeemPartnerWalletToTenant();
+  const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState<string>('');
   const [note, setNote] = useState<string>('');
+  const [confirmText, setConfirmText] = useState<string>('');
 
   if (!isSuperAdmin || !partnerId) return null;
 
@@ -442,7 +444,20 @@ function SuperWalletAssignCard({ tenantId, partnerId }: SuperWalletAssignCardPro
   const parsed = parseInt(amount, 10);
   const validAmount = Number.isFinite(parsed) && parsed > 0;
   const exceeds = validAmount && parsed > balance;
-  const canSubmit = validAmount && !exceeds && !redeem.isPending;
+  const confirmOk = confirmText.trim().toUpperCase() === 'ASIGNAR';
+  const canSubmit = validAmount && !exceeds && confirmOk && !redeem.isPending;
+
+  const resetForm = () => {
+    setAmount('');
+    setNote('');
+    setConfirmText('');
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (redeem.isPending) return;
+    setOpen(next);
+    if (!next) resetForm();
+  };
 
   const handleSubmit = async () => {
     if (!canSubmit || !partnerId) return;
@@ -458,8 +473,8 @@ function SuperWalletAssignCard({ tenantId, partnerId }: SuperWalletAssignCardPro
       toast.success(
         `${parsed.toLocaleString('es-MX')} créditos asignados al tenant`,
       );
-      setAmount('');
-      setNote('');
+      resetForm();
+      setOpen(false);
     } catch (e) {
       toast.error('Error al asignar créditos', {
         description: (e as Error).message,
@@ -468,24 +483,22 @@ function SuperWalletAssignCard({ tenantId, partnerId }: SuperWalletAssignCardPro
   };
 
   return (
-    <div
-      className={`border rounded-xl p-5 space-y-4 ${
-        isEmpty
-          ? 'border-destructive/40 bg-destructive/5'
-          : isCritical
-          ? 'border-warning/40 bg-warning/5'
-          : 'border-border bg-secondary/30'
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <>
+      <div
+        className={`border rounded-xl p-5 flex items-center justify-between gap-4 flex-wrap ${
+          isEmpty
+            ? 'border-destructive/40 bg-destructive/5'
+            : isCritical
+            ? 'border-warning/40 bg-warning/5'
+            : 'border-border bg-secondary/30'
+        }`}
+      >
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-lg bg-primary/10">
             <Wallet className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">
-              Super Wallet del partner
-            </p>
+            <p className="text-sm text-muted-foreground">Super Wallet del partner</p>
             <p className="text-2xl font-semibold text-foreground">
               {isLoading ? '…' : balance.toLocaleString('es-MX')}
               <span className="text-sm text-muted-foreground ml-2">
@@ -494,62 +507,113 @@ function SuperWalletAssignCard({ tenantId, partnerId }: SuperWalletAssignCardPro
             </p>
           </div>
         </div>
-        {isEmpty ? (
-          <Badge variant="destructive" className="gap-1">
-            <AlertTriangle className="h-3 w-3" /> Sin saldo
-          </Badge>
-        ) : isCritical ? (
-          <Badge variant="secondary" className="gap-1 text-warning">
-            <AlertTriangle className="h-3 w-3" /> Saldo bajo
-          </Badge>
-        ) : null}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="md:col-span-1">
-          <label className="text-xs font-medium text-foreground mb-1.5 block">
-            Cantidad
-          </label>
-          <Input
-            type="number"
-            min={1}
-            placeholder="Ej: 500"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+        <div className="flex items-center gap-3">
+          {isEmpty ? (
+            <Badge variant="destructive" className="gap-1">
+              <AlertTriangle className="h-3 w-3" /> Sin saldo
+            </Badge>
+          ) : isCritical ? (
+            <Badge variant="secondary" className="gap-1 text-warning">
+              <AlertTriangle className="h-3 w-3" /> Saldo bajo
+            </Badge>
+          ) : null}
+          <Button
+            onClick={() => setOpen(true)}
             disabled={isEmpty}
-          />
-        </div>
-        <div className="md:col-span-2">
-          <label className="text-xs font-medium text-foreground mb-1.5 block">
-            Nota (opcional)
-          </label>
-          <Input
-            placeholder="Concepto del cargo"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            disabled={isEmpty}
-            maxLength={200}
-          />
-        </div>
-      </div>
-
-      {exceeds && (
-        <p className="text-xs text-destructive">
-          La cantidad excede el saldo disponible en la Super Wallet (
-          {balance.toLocaleString('es-MX')}).
-        </p>
-      )}
-
-      <div className="flex justify-end">
-        <Button onClick={handleSubmit} disabled={!canSubmit} className="gap-2">
-          {redeem.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
+            className="gap-2"
+          >
             <Send className="h-4 w-4" />
-          )}
-          Asignar créditos
-        </Button>
+            Asignar créditos
+          </Button>
+        </div>
       </div>
-    </div>
+
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Asignar créditos desde Super Wallet</DialogTitle>
+            <DialogDescription>
+              Esta acción descontará de la Super Wallet del partner y sumará al
+              saldo del tenant. Quedará registrada en el historial de movimientos.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="flex items-center justify-between rounded-md border border-border bg-background/50 p-3 text-sm">
+              <span className="text-muted-foreground">Saldo Super Wallet</span>
+              <span className="font-semibold text-foreground">
+                {balance.toLocaleString('es-MX')} créditos
+              </span>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">
+                Cantidad a asignar
+              </label>
+              <Input
+                type="number"
+                min={1}
+                placeholder="Ej: 500"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                autoFocus
+              />
+              {exceeds && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  Excede el saldo disponible ({balance.toLocaleString('es-MX')}).
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">
+                Nota (opcional)
+              </label>
+              <Input
+                placeholder="Concepto del cargo"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={200}
+              />
+            </div>
+
+            <div className="rounded-md border border-warning/30 bg-warning/5 p-3">
+              <div className="flex items-start gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                <p className="text-xs text-foreground">
+                  Para confirmar, escribe{' '}
+                  <span className="font-semibold">ASIGNAR</span> en el campo de
+                  abajo.
+                </p>
+              </div>
+              <Input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="Escribe ASIGNAR"
+                className="uppercase"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={redeem.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} disabled={!canSubmit} className="gap-2">
+              {redeem.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Confirmar asignación
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
