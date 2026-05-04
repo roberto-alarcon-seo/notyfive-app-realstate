@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { MessageSquare, Plus, AlertTriangle, CheckCircle2, XCircle, TrendingUp, TrendingDown, History, Loader2, Info, Calendar, Lock } from 'lucide-react';
+import { MessageSquare, Plus, AlertTriangle, CheckCircle2, XCircle, TrendingUp, TrendingDown, History, Loader2, Info, Calendar, Lock, Wallet, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTenantWallet, useAddMessages } from '@/hooks/useWallet';
 import { useAdminTenantCredits, getPlanMonthlyCredits } from '@/hooks/useTenantCredits';
+import { usePartnerWallet, useRedeemPartnerWalletToTenant } from '@/hooks/usePartnerWallet';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -73,15 +77,21 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tenants')
-        .select('managed_externally, billing_state')
+        .select('managed_externally, billing_state, partner_id, name')
         .eq('id', tenantId)
         .single();
       if (error) throw error;
-      return data as { managed_externally: boolean | null; billing_state: string };
+      return data as {
+        managed_externally: boolean | null;
+        billing_state: string;
+        partner_id: string | null;
+        name: string;
+      };
     },
     enabled: !!tenantId,
   });
   const isManagedExternally = tenantInfo?.managed_externally === true;
+  const partnerId = tenantInfo?.partner_id ?? null;
   
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [messagesToAdd, setMessagesToAdd] = useState('');
@@ -171,6 +181,9 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Super Wallet assignment (super_admin only, when tenant has partner) */}
+      <SuperWalletAssignCard tenantId={tenantId} partnerId={partnerId} />
+
       {/* Balance Card */}
       <div className="bg-secondary/30 border border-border rounded-xl p-6">
         <div className="flex items-start justify-between mb-6">
