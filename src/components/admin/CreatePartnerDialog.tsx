@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Copy, KeyRound, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Copy, KeyRound, AlertTriangle, CheckCircle2, Upload, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { buildDefaultTheme, hexToHslString } from "@/lib/partnerTheme";
@@ -25,7 +25,6 @@ interface Props {
 
 const SLUG_REGEX = /^[a-z][a-z0-9_]{2,30}$/;
 const DOMAIN_REGEX = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
 
 function generateApiKey(): string {
@@ -55,10 +54,10 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
   // Step 2
   const [logoUrl, setLogoUrl] = useState("");
   const [primaryHex, setPrimaryHex] = useState("#7C3AED");
-  const [emailSenderName, setEmailSenderName] = useState("");
-  const [emailSenderAddress, setEmailSenderAddress] = useState("");
   const [nonSsoRedirectUrl, setNonSsoRedirectUrl] = useState("");
   const [logoutRedirectUrl, setLogoutRedirectUrl] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3
   const [generateKey, setGenerateKey] = useState(true);
@@ -71,7 +70,6 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
     setStep(1);
     setId(""); setName(""); setPrimaryDomain(""); setCountry("MX");
     setLogoUrl(""); setPrimaryHex("#7C3AED");
-    setEmailSenderName(""); setEmailSenderAddress("");
     setNonSsoRedirectUrl(""); setLogoutRedirectUrl("");
     setGenerateKey(true); setExternalSync(true);
     setInitialBalance("0"); setLowThreshold("1000");
@@ -95,11 +93,9 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
   const step2Errors = useMemo(() => {
     const e: Record<string, string> = {};
     if (!HEX_REGEX.test(primaryHex)) e.primaryHex = "Color hex inválido";
-    if (!emailSenderName.trim()) e.emailSenderName = "Requerido";
-    if (!EMAIL_REGEX.test(emailSenderAddress)) e.emailSenderAddress = "Email inválido";
     if (!logoUrl.trim()) e.logoUrl = "URL de logo requerida";
     return e;
-  }, [primaryHex, emailSenderName, emailSenderAddress, logoUrl]);
+  }, [primaryHex, logoUrl]);
 
   const balNum = Number(initialBalance);
   const thrNum = Number(lowThreshold);
@@ -121,12 +117,37 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
         toast.error("Ya existe un partner con ese ID o dominio");
         return;
       }
-      // Defaults for step 2
-      if (!emailSenderName) setEmailSenderName(name);
       setStep(2);
     } else if (step === 2) {
       if (Object.keys(step2Errors).length) return;
       setStep(3);
+    }
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("El logo no puede superar 2 MB");
+      return;
+    }
+    if (!id) {
+      toast.error("Define el ID del partner primero (paso 1)");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${id}/logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("partner-logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("partner-logos").getPublicUrl(path);
+      setLogoUrl(data.publicUrl);
+      toast.success("Logo subido");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al subir logo");
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -146,8 +167,8 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
         logo_url: logoUrl.trim(),
         primary_color_hex: primaryHex,
         primary_color_hsl: hsl,
-        email_sender_name: emailSenderName.trim(),
-        email_sender_address: emailSenderAddress.trim().toLowerCase(),
+        email_sender_name: name.trim(),
+        email_sender_address: `no-reply@${primaryDomain.toLowerCase().trim()}`,
         branding: branding as never,
         api_key: apiKey,
         external_sync_enabled: externalSync,
@@ -294,16 +315,58 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>URL del logo</Label>
-              <Input
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="/lovable-uploads/logo.png o https://..."
-              />
+              <Label>Logotipo</Label>
+              <div className="flex items-center gap-3">
+                <div className="h-16 w-16 shrink-0 rounded-md border border-border bg-muted flex items-center justify-center overflow-hidden">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="logo" className="max-h-full max-w-full object-contain" />
+                  ) : (
+                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleLogoUpload(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingLogo}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploadingLogo ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Subiendo...</>
+                    ) : (
+                      <><Upload className="h-4 w-4 mr-2" /> Subir logo</>
+                    )}
+                  </Button>
+                  <Input
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="o pega una URL"
+                    className="text-xs"
+                  />
+                </div>
+              </div>
               {step2Errors.logoUrl && <p className="text-xs text-destructive">{step2Errors.logoUrl}</p>}
-              <p className="text-xs text-muted-foreground">
-                Puedes subir una imagen mejor desde Apariencia tras crear el partner.
-              </p>
+              <div className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground space-y-1">
+                <p><strong>Recomendaciones:</strong></p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Formato: PNG o SVG con fondo transparente</li>
+                  <li>Tamaño: 512×512 px (cuadrado) o 800×200 px (horizontal)</li>
+                  <li>Peso máximo: 2 MB</li>
+                  <li>Relación de aspecto recomendada: 1:1 o 4:1</li>
+                </ul>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Color primario</Label>
@@ -317,22 +380,6 @@ export function CreatePartnerDialog({ open, onOpenChange, onCreated }: Props) {
                 <Input value={primaryHex} onChange={(e) => setPrimaryHex(e.target.value)} className="font-mono" />
               </div>
               {step2Errors.primaryHex && <p className="text-xs text-destructive">{step2Errors.primaryHex}</p>}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Email sender (nombre)</Label>
-                <Input value={emailSenderName} onChange={(e) => setEmailSenderName(e.target.value)} placeholder="Acme" />
-                {step2Errors.emailSenderName && <p className="text-xs text-destructive">{step2Errors.emailSenderName}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Email sender (dirección)</Label>
-                <Input
-                  value={emailSenderAddress}
-                  onChange={(e) => setEmailSenderAddress(e.target.value)}
-                  placeholder="no-reply@notifications.acme.com"
-                />
-                {step2Errors.emailSenderAddress && <p className="text-xs text-destructive">{step2Errors.emailSenderAddress}</p>}
-              </div>
             </div>
             <div className="space-y-2">
               <Label>URL de redirección Non-SSO (opcional)</Label>
