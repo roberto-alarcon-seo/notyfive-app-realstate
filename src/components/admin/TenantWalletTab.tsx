@@ -158,7 +158,10 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
   // Use the new credit system
   const monthlyRemaining = credits.monthly_credits_remaining ?? 0;
   const accumulated = credits.accumulated_credits ?? 0;
-  const totalCredits = monthlyRemaining + accumulated;
+  const extra = credits.extra_credits ?? 0;
+  // Canonical balance is `message_credits` (mantiene mensual + acumulados + extras
+  // y refleja recargas externas / Super Wallet). Fallback a la suma por si viniera nulo.
+  const totalCredits = credits.message_credits ?? monthlyRemaining + accumulated + extra;
   const planCredits = getPlanMonthlyCredits(credits.plan);
 
   // Determine status based on total credits
@@ -205,7 +208,7 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
         </div>
 
         {/* Monthly/Accumulated Breakdown */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-background/50 rounded-lg p-3">
             <p className="text-xs text-muted-foreground mb-1">Del mes</p>
             <p className="text-lg font-semibold text-foreground">
@@ -229,6 +232,24 @@ export function TenantWalletTab({ tenantId }: TenantWalletTabProps) {
             </div>
             <p className="text-lg font-semibold text-primary">
               {accumulated.toLocaleString('es-MX')}
+            </p>
+          </div>
+          <div className="bg-background/50 rounded-lg p-3">
+            <div className="flex items-center gap-1 mb-1">
+              <p className="text-xs text-muted-foreground">Extras</p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] text-xs">
+                    Recargas externas y asignaciones desde la Super Wallet del partner
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p className="text-lg font-semibold text-foreground">
+              {extra.toLocaleString('es-MX')}
             </p>
           </div>
           <div className="bg-background/50 rounded-lg p-3">
