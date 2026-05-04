@@ -55,6 +55,7 @@ import AdminLogs from "./pages/admin/AdminLogs";
 import PartnerSettings from "./pages/admin/PartnerSettings";
 import PartnerSuperWallet from "./pages/admin/PartnerSuperWallet";
 import PartnerDetail from "./pages/admin/PartnerDetail";
+import AdminPartners from "./pages/admin/AdminPartners";
 import MasterTemplates from "./pages/admin/MasterTemplates";
 import ApiDocs from "./pages/developers/ApiDocs";
 import Followups from "./pages/Followups";
@@ -148,6 +149,7 @@ const App = () => (
               <Route path="/admin" element={<Navigate to="/admin/tenants" replace />} />
               <Route path="/admin/tenants" element={<ProtectedRoute requireSuperAdmin><AdminTenants /></ProtectedRoute>} />
               <Route path="/admin/tenants/:id" element={<ProtectedRoute requireSuperAdmin><TenantAdminDetail /></ProtectedRoute>} />
+              <Route path="/admin/partners" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminPartners /></PartnerScopedAdminGuard></ProtectedRoute>} />
               <Route path="/admin/partners/:partnerId" element={<ProtectedRoute requireSuperAdmin><PartnerDetail /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminUsers /></PartnerScopedAdminGuard></ProtectedRoute>} />
               <Route path="/admin/logs" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminLogs /></PartnerScopedAdminGuard></ProtectedRoute>} />
