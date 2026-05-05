@@ -30,7 +30,6 @@ import {
   Trash2,
   Plus,
   X,
-  ExternalLink,
   ArrowLeft,
   Loader2,
   Palette,
