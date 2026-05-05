@@ -33,6 +33,8 @@ import {
   ExternalLink,
   ArrowLeft,
   Loader2,
+  Palette,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -44,6 +46,7 @@ import {
   useDeletePartner,
 } from "@/hooks/usePartner";
 import { usePartnerWallet } from "@/hooks/usePartnerWallet";
+import { PartnerSettingsPanels } from "@/components/admin/PartnerSettingsPanels";
 
 const DOMAIN_REGEX = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
 
@@ -305,6 +308,15 @@ export default function PartnerDetail() {
         <Tabs defaultValue="identity" className="space-y-4">
           <TabsList>
             <TabsTrigger value="identity">Identidad y Dominios</TabsTrigger>
+            <TabsTrigger value="appearance">
+              <Palette className="h-4 w-4 mr-1.5" /> Apariencia
+            </TabsTrigger>
+            <TabsTrigger value="email">
+              <Mail className="h-4 w-4 mr-1.5" /> Email
+            </TabsTrigger>
+            <TabsTrigger value="redirects">
+              <ExternalLink className="h-4 w-4 mr-1.5" /> Redirecciones
+            </TabsTrigger>
             <TabsTrigger value="integration">Integración</TabsTrigger>
             <TabsTrigger value="tenants">Tenants</TabsTrigger>
             <TabsTrigger value="wallet">Wallet</TabsTrigger>
