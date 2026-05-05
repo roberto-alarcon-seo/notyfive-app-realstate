@@ -529,11 +529,7 @@ export default function PartnerDetail() {
                 </div>
 
                 <div className="flex justify-between">
-                  <Button variant="outline" asChild>
-                    <a href="/admin/partner-settings">
-                      <ExternalLink className="h-4 w-4 mr-2" /> Apariencia y branding
-                    </a>
-                  </Button>
+                  <div />
                   <Button onClick={handleSaveIntegration} disabled={updateM.isPending}>
                     {updateM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Guardar
