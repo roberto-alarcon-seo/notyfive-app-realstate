@@ -314,9 +314,6 @@ export default function PartnerDetail() {
             <TabsTrigger value="email">
               <Mail className="h-4 w-4 mr-1.5" /> Email
             </TabsTrigger>
-            <TabsTrigger value="redirects">
-              <ExternalLink className="h-4 w-4 mr-1.5" /> Redirecciones
-            </TabsTrigger>
             <TabsTrigger value="integration">Integración</TabsTrigger>
             <TabsTrigger value="tenants">Tenants</TabsTrigger>
             <TabsTrigger value="wallet">Wallet</TabsTrigger>
@@ -438,11 +435,6 @@ export default function PartnerDetail() {
           {/* Email */}
           <TabsContent value="email">
             <PartnerSettingsPanels partnerId={partner.id} tabs={["email"]} embedded />
-          </TabsContent>
-
-          {/* Redirects */}
-          <TabsContent value="redirects">
-            <PartnerSettingsPanels partnerId={partner.id} tabs={["redirects"]} embedded />
           </TabsContent>
 
           {/* Integration */}
