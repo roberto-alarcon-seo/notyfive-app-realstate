@@ -33,6 +33,8 @@ import {
   ExternalLink,
   ArrowLeft,
   Loader2,
+  Palette,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -44,6 +46,7 @@ import {
   useDeletePartner,
 } from "@/hooks/usePartner";
 import { usePartnerWallet } from "@/hooks/usePartnerWallet";
+import { PartnerSettingsPanels } from "@/components/admin/PartnerSettingsPanels";
 
 const DOMAIN_REGEX = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
 
@@ -305,6 +308,15 @@ export default function PartnerDetail() {
         <Tabs defaultValue="identity" className="space-y-4">
           <TabsList>
             <TabsTrigger value="identity">Identidad y Dominios</TabsTrigger>
+            <TabsTrigger value="appearance">
+              <Palette className="h-4 w-4 mr-1.5" /> Apariencia
+            </TabsTrigger>
+            <TabsTrigger value="email">
+              <Mail className="h-4 w-4 mr-1.5" /> Email
+            </TabsTrigger>
+            <TabsTrigger value="redirects">
+              <ExternalLink className="h-4 w-4 mr-1.5" /> Redirecciones
+            </TabsTrigger>
             <TabsTrigger value="integration">Integración</TabsTrigger>
             <TabsTrigger value="tenants">Tenants</TabsTrigger>
             <TabsTrigger value="wallet">Wallet</TabsTrigger>
@@ -418,6 +430,21 @@ export default function PartnerDetail() {
             </Card>
           </TabsContent>
 
+          {/* Appearance (branding) */}
+          <TabsContent value="appearance">
+            <PartnerSettingsPanels partnerId={partner.id} tabs={["appearance"]} embedded />
+          </TabsContent>
+
+          {/* Email */}
+          <TabsContent value="email">
+            <PartnerSettingsPanels partnerId={partner.id} tabs={["email"]} embedded />
+          </TabsContent>
+
+          {/* Redirects */}
+          <TabsContent value="redirects">
+            <PartnerSettingsPanels partnerId={partner.id} tabs={["redirects"]} embedded />
+          </TabsContent>
+
           {/* Integration */}
           <TabsContent value="integration">
             <Card>
@@ -502,11 +529,7 @@ export default function PartnerDetail() {
                 </div>
 
                 <div className="flex justify-between">
-                  <Button variant="outline" asChild>
-                    <a href="/admin/partner-settings">
-                      <ExternalLink className="h-4 w-4 mr-2" /> Apariencia y branding
-                    </a>
-                  </Button>
+                  <div />
                   <Button onClick={handleSaveIntegration} disabled={updateM.isPending}>
                     {updateM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Guardar

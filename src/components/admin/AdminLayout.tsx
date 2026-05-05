@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Building2, Users, FileText, LogOut, User, Shield, Settings, Wallet, LibraryBig, Handshake } from "lucide-react";
+import { Building2, Users, FileText, LogOut, User, Shield, Wallet, LibraryBig, Handshake } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,13 +25,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSignOutRedirect } from "@/hooks/useSignOutRedirect";
 
 const navItems = [
-  { title: "Tenants", url: "/admin/tenants", icon: Building2 },
   { title: "Partners", url: "/admin/partners", icon: Handshake },
+  { title: "Tenants", url: "/admin/tenants", icon: Building2 },
   { title: "Super Wallet", url: "/admin/super-wallet", icon: Wallet },
   { title: "Usuarios", url: "/admin/users", icon: Users },
   { title: "Plantillas Globales", url: "/admin/master-templates", icon: LibraryBig },
   { title: "Logs", url: "/admin/logs", icon: FileText },
-  { title: "Configuración", url: "/admin/partner-settings", icon: Settings },
 ];
 
 function AdminSidebar() {
@@ -41,12 +40,18 @@ function AdminSidebar() {
   const navigate = useNavigate();
   const { partnerScope } = useAuth();
 
-  // Partner-scoped admins see Tenants + Configuración (their own partner branding).
-  // Global super admins see everything.
+  // Partner-scoped admins: see only Partners (their own) + Tenants + Super Wallet.
+  // Their "Partners" link points directly to their own partner detail page.
   const visibleItems = partnerScope
-    ? navItems.filter((item) =>
-        ["/admin/tenants", "/admin/super-wallet", "/admin/partner-settings"].includes(item.url),
-      )
+    ? navItems
+        .filter((item) =>
+          ["/admin/partners", "/admin/tenants", "/admin/super-wallet"].includes(item.url),
+        )
+        .map((item) =>
+          item.url === "/admin/partners"
+            ? { ...item, url: `/admin/partners/${partnerScope}`, title: "Mi Partner" }
+            : item,
+        )
     : navItems;
 
   const isActive = (path: string) =>
