@@ -122,6 +122,15 @@ const PartnerScopedAdminGuard = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+// Legacy /admin/partner-settings → unified Partner Detail page.
+// Partner-scoped admins go to their own partner; global admins to the list.
+const PartnerSettingsRedirect = () => {
+  const { partnerScope, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (partnerScope) return <Navigate to={`/admin/partners/${partnerScope}`} replace />;
+  return <Navigate to="/admin/partners" replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <PartnerBrandingProvider>
@@ -153,7 +162,7 @@ const App = () => (
               <Route path="/admin/partners/:partnerId" element={<ProtectedRoute requireSuperAdmin><PartnerDetail /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminUsers /></PartnerScopedAdminGuard></ProtectedRoute>} />
               <Route path="/admin/logs" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><AdminLogs /></PartnerScopedAdminGuard></ProtectedRoute>} />
-              <Route path="/admin/partner-settings" element={<ProtectedRoute requireSuperAdmin><PartnerSettings /></ProtectedRoute>} />
+              <Route path="/admin/partner-settings" element={<ProtectedRoute requireSuperAdmin><PartnerSettingsRedirect /></ProtectedRoute>} />
               <Route path="/admin/super-wallet" element={<ProtectedRoute requireSuperAdmin><PartnerSuperWallet /></ProtectedRoute>} />
               <Route path="/admin/master-templates" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><MasterTemplates /></PartnerScopedAdminGuard></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
