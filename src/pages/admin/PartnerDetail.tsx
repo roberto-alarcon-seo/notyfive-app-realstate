@@ -430,6 +430,21 @@ export default function PartnerDetail() {
             </Card>
           </TabsContent>
 
+          {/* Appearance (branding) */}
+          <TabsContent value="appearance">
+            <PartnerSettingsPanels partnerId={partner.id} tabs={["appearance"]} embedded />
+          </TabsContent>
+
+          {/* Email */}
+          <TabsContent value="email">
+            <PartnerSettingsPanels partnerId={partner.id} tabs={["email"]} embedded />
+          </TabsContent>
+
+          {/* Redirects */}
+          <TabsContent value="redirects">
+            <PartnerSettingsPanels partnerId={partner.id} tabs={["redirects"]} embedded />
+          </TabsContent>
+
           {/* Integration */}
           <TabsContent value="integration">
             <Card>
