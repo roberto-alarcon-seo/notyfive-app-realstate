@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, Phone, Link2, CheckCircle2, AlertCircle, XCircle, Clock, Settings, Copy, RefreshCw, Building2, Key, Hash, Loader2, Wand2, ExternalLink } from 'lucide-react';
+import { MessageSquare, Phone, Link2, CheckCircle2, AlertCircle, XCircle, Clock, Settings, Copy, RefreshCw, Building2, Key, Hash, Loader2, Wand2, ExternalLink, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TwilioConfigDialog } from './TwilioConfigDialog';
+import { ReplaceTwilioCredentialsDialog } from './ReplaceTwilioCredentialsDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -44,6 +45,7 @@ const getWhatsAppDisplay = (integration: TenantIntegration | null) => {
 
 export function TenantWhatsAppTab({ tenantId, tenantName }: TenantWhatsAppTabProps) {
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
   const [integration, setIntegration] = useState<TenantIntegration | null>(null);
   const [loading, setLoading] = useState(true);
   const [provisioning, setProvisioning] = useState(false);
@@ -265,6 +267,17 @@ export function TenantWhatsAppTab({ tenantId, tenantName }: TenantWhatsAppTabPro
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Modificar cuenta
+              </Button>
+            )}
+            {integration && (
+              <Button
+                onClick={() => setReplaceDialogOpen(true)}
+                variant="outline"
+                size="sm"
+                className="border-warning/40 text-warning hover:text-warning hover:bg-warning/10"
+              >
+                <ShieldAlert className="h-4 w-4 mr-2" />
+                Reemplazar credenciales
               </Button>
             )}
           </div>
@@ -522,6 +535,16 @@ export function TenantWhatsAppTab({ tenantId, tenantName }: TenantWhatsAppTabPro
         onOpenChange={handleDialogClose}
         tenantId={tenantId}
         tenantName={tenantName}
+      />
+
+      {/* Replace Credentials Dialog */}
+      <ReplaceTwilioCredentialsDialog
+        open={replaceDialogOpen}
+        onOpenChange={setReplaceDialogOpen}
+        tenantId={tenantId}
+        tenantName={tenantName}
+        current={integration}
+        onReplaced={fetchIntegration}
       />
     </div>
   );
