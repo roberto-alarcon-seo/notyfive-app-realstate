@@ -90,7 +90,7 @@ export default function Inbox() {
       if (!selectedContactId) return null;
       const { data } = await supabase
         .from('contacts')
-        .select('pipeline_stage')
+        .select('pipeline_stage, assigned_agent_id')
         .eq('id', selectedContactId)
         .single();
       return data;
@@ -638,6 +638,8 @@ export default function Inbox() {
                 <PipelineHeaderSelect
                   contactId={selectedContactId}
                   currentStage={headerContactData.pipeline_stage}
+                  conversationId={selectedConversation.id}
+                  assignedAgentId={headerContactData.assigned_agent_id ?? null}
                 />
               )}
                 {isMobile ? (
