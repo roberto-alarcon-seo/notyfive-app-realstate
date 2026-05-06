@@ -41,6 +41,7 @@ import KnowledgeBaseEditor from "./pages/settings/KnowledgeBaseEditor";
 import SettingsDeveloper from "./pages/settings/SettingsDeveloper";
 import SettingsConsentPage from "./pages/settings/SettingsConsentPage";
 import SettingsQuickAutomations from "./pages/settings/SettingsQuickAutomations";
+import SettingsAssignmentRules from "./pages/settings/SettingsAssignmentRules";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
@@ -205,6 +206,7 @@ const App = () => (
               <Route path="/settings/developer" element={<ProtectedRoute><MainLayout><SettingsDeveloper /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/conversions" element={<ProtectedRoute><MainLayout><SettingsConversions /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/quick-automations" element={<ProtectedRoute><MainLayout><SettingsQuickAutomations /></MainLayout></ProtectedRoute>} />
+              <Route path="/settings/assignment-rules" element={<ProtectedRoute requireRoles={["administrador"]}><MainLayout><SettingsAssignmentRules /></MainLayout></ProtectedRoute>} />
               <Route path="/settings/templates" element={<ProtectedRoute><MainLayout><Templates /></MainLayout></ProtectedRoute>} />
               {/* Redirects for removed sections */}
               <Route path="/settings/users" element={<Navigate to="/settings/whatsapp" replace />} />

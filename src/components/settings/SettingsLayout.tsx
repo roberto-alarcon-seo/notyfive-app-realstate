@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Bell, MessageSquare,
   Settings as SettingsIcon, ListPlus, Bot, BookOpen, Code2, ShieldCheck, BarChart3,
-  MessagesSquare, Brain, UserSquare2, Sparkles, FileText, Zap
+  MessagesSquare, Brain, UserSquare2, Sparkles, FileText, Zap, Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -83,6 +83,14 @@ const menuItems: MenuItem[] = [
     icon: ShieldCheck,
     title: "Consentimiento",
     description: "Opt-out, DND y bloqueos",
+    group: "Leads",
+  },
+  {
+    id: "assignment-rules",
+    path: "/settings/assignment-rules",
+    icon: Users,
+    title: "Asignación de leads",
+    description: "Round Robin, Sticky y timeouts",
     group: "Leads",
   },
   {
