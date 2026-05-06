@@ -119,6 +119,8 @@ export default function PropertyInfoTab({
   // Fetch only users with 'asesor' role for property assignment
   const { data: asesores } = useQuery({
     queryKey: ["tenant-asesores", tenantId],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       if (!tenantId) return [];
       
