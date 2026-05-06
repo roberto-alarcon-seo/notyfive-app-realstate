@@ -4184,6 +4184,14 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: boolean
       }
+      contact_visible_to_agent: {
+        Args: { _contact_id: string; _user_id: string }
+        Returns: boolean
+      }
+      conversation_visible_to_agent: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
       deduct_message_credit: {
         Args: { p_tenant_id: string }
         Returns: {
