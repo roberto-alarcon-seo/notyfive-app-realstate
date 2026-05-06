@@ -523,6 +523,23 @@ export default function Inbox() {
                             )}>
                               {conv.last_message_preview || 'Sin mensajes'}
                             </p>
+                            {conv.contact?.assigned_agent_id && (
+                              <div className="flex items-center gap-1 mt-1.5">
+                                <div className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[8px] font-semibold flex items-center justify-center">
+                                  {(memberMap.get(conv.contact.assigned_agent_id)?.name || "?")
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")
+                                    .substring(0, 2)
+                                    .toUpperCase()}
+                                </div>
+                                <span className="text-[10px] text-muted-foreground truncate">
+                                  {conv.contact.assigned_agent_id === profile?.id
+                                    ? "Asignado a ti"
+                                    : memberMap.get(conv.contact.assigned_agent_id)?.name || "Asignado"}
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
                             {conv.unread_count > 0 && (
