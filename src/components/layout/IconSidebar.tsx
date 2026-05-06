@@ -10,6 +10,7 @@ import {
   Settings,
   Kanban,
   ShieldCheck,
+  Building2,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
@@ -50,6 +51,7 @@ export function IconSidebar() {
   const { enabled: campaignsEnabled } = useFeatureFlag("campaigns");
   const { enabled: segmentsEnabled } = useFeatureFlag("segments");
   const { enabled: automationsEnabled } = useFeatureFlag("automations_builder");
+  const { enabled: inventoryEnabled } = useFeatureFlag("inventory_management");
   
   const badgeCounts: Record<string, number> = {
     inbox: totalUnread,
@@ -65,6 +67,7 @@ export function IconSidebar() {
     api_access: false,
     conversions_capi: false,
     custom_templates_management: false,
+    inventory_management: inventoryEnabled,
   };
 
   // Filtrado estricto: si el flag no está presente en enabled_features,
@@ -118,7 +121,12 @@ export function IconSidebar() {
 
       {/* Bottom Navigation */}
       <div className="flex flex-col items-center py-4 gap-1 border-t border-[#2b2b2b]">
-        {bottomItems
+        {[
+          ...(inventoryEnabled && isManagerOrAdmin
+            ? [{ icon: Building2, label: 'Inventario', path: '/properties', requireManager: true } as any]
+            : []),
+          ...bottomItems,
+        ]
           .filter((item) => {
             if ((item as any).requireAdmin && !isAdmin) return false;
             if ((item as any).requireManager && !isManagerOrAdmin) return false;
