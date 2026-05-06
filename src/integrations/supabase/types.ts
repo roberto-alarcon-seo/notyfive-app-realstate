@@ -3701,6 +3701,9 @@ export type Database = {
           warmup_level: number | null
           webhook_secret: string | null
           webhook_url: string | null
+          whatsapp_sender_error: string | null
+          whatsapp_sender_status: string | null
+          whatsapp_sender_verified_at: string | null
         }
         Insert: {
           account_sid?: string | null
@@ -3728,6 +3731,9 @@ export type Database = {
           warmup_level?: number | null
           webhook_secret?: string | null
           webhook_url?: string | null
+          whatsapp_sender_error?: string | null
+          whatsapp_sender_status?: string | null
+          whatsapp_sender_verified_at?: string | null
         }
         Update: {
           account_sid?: string | null
@@ -3755,6 +3761,9 @@ export type Database = {
           warmup_level?: number | null
           webhook_secret?: string | null
           webhook_url?: string | null
+          whatsapp_sender_error?: string | null
+          whatsapp_sender_status?: string | null
+          whatsapp_sender_verified_at?: string | null
         }
         Relationships: [
           {
