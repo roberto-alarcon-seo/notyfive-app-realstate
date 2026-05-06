@@ -851,6 +851,17 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
             <User className="h-4 w-4 text-muted-foreground" />
             Información
           </h4>
+          {contactId && (
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Asignado a</span>
+              <AssigneeSelector
+                conversationId={conversation.id}
+                contactId={contactId}
+                currentAgentId={(contactData as any)?.assigned_agent_id ?? null}
+                compact
+              />
+            </div>
+          )}
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Teléfono</span>
