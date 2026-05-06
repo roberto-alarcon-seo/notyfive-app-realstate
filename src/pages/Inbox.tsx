@@ -460,6 +460,9 @@ export default function Inbox() {
                             {conv.needs_human && (
                               <span className="w-2.5 h-2.5 rounded-full bg-amber-500" title="Requiere atención" />
                             )}
+                            {conv.status === 'risk' && (
+                              <span className="w-2.5 h-2.5 rounded-full bg-destructive animate-pulse" title="En riesgo: timeout sin respuesta" />
+                            )}
                           </div>
                         </div>
                       {conv.status === 'blocked' && (
