@@ -72,6 +72,7 @@ interface ContactCardProps {
 function ContactCard({ contact, onMoveToStage, onClick }: ContactCardProps) {
   const tempBadge = getTemperatureBadge(contact.lead_temperature);
   const hasBlockReason = !!contact.re_block_reason;
+  const isUnassigned = !contact.assigned_agent_id;
   
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -103,6 +104,12 @@ function ContactCard({ contact, onMoveToStage, onClick }: ContactCardProps) {
           {tempBadge.label}
         </Badge>
       </div>
+
+      {isUnassigned && (
+        <Badge variant="outline" className="text-[10px] mb-2 border-amber-500/40 bg-amber-500/10 text-amber-400">
+          Sin asignar
+        </Badge>
+      )}
 
       {/* Metadata */}
       <div className="space-y-1 text-xs text-muted-foreground">
