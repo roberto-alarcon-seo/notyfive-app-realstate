@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Building2, Search, Users, ChevronDown } from "lucide-react";
+import { Building2, Search, Users, ChevronDown, AlertTriangle } from "lucide-react";
 
 interface PropertyRow {
   id: string;
@@ -210,8 +210,9 @@ export default function InventoryAssignments() {
                     </div>
                     <div className="col-span-5 min-w-0">
                       {assignedList.length === 0 ? (
-                        <span className="text-xs text-muted-foreground italic">
-                          Sin asesores asignados
+                        <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          Sin asesores · los leads caerán al Round Robin global o al fallback
                         </span>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
