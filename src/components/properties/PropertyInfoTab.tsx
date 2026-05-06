@@ -18,6 +18,7 @@ import { Lock } from "lucide-react";
 import { Property } from "@/hooks/useProperties";
 import { useEffectiveTenantId } from "@/hooks/useEffectiveTenantId";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import PropertyAuthorizedAgents from "./PropertyAuthorizedAgents";
 
 interface PropertyInfoTabProps {
   formData: Partial<Property>;
@@ -539,6 +540,10 @@ export default function PropertyInfoTab({
           </CardContent>
         </Card>
       </div>
+
+      {propertyId && (
+        <PropertyAuthorizedAgents propertyId={propertyId} />
+      )}
     </div>
     </TooltipProvider>
   );
