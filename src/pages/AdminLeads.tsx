@@ -25,6 +25,16 @@ import {
   UserX,
   TrendingUp,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Cell,
+} from "recharts";
 
 interface ConvRow {
   id: string;
@@ -121,6 +131,22 @@ export default function AdminLeads() {
     return { total, unassigned, risk, needsHuman };
   }, [rows]);
 
+  const agentDistribution = useMemo(() => {
+    const map = new Map<string, { name: string; total: number; risk: number }>();
+    for (const r of rows) {
+      const id = r.contact?.assigned_agent_id;
+      if (!id) continue;
+      const name = r.contact?.agent?.name || r.contact?.agent?.email || "—";
+      const entry = map.get(id) ?? { name, total: 0, risk: 0 };
+      entry.total += 1;
+      if (r.risk_flagged_at) entry.risk += 1;
+      map.set(id, entry);
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+  }, [rows]);
+
   if (authLoading) return null;
   if (!isAllowed) return <Navigate to="/" replace />;
 
@@ -163,6 +189,54 @@ export default function AdminLeads() {
           onClick={() => setFilter("risk")}
         />
       </div>
+
+      {agentDistribution.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Distribución de leads por asesor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div style={{ width: "100%", height: 240 }}>
+              <ResponsiveContainer>
+                <BarChart
+                  data={agentDistribution}
+                  margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11, fill: "#6b7280" }}
+                    interval={0}
+                    angle={-15}
+                    textAnchor="end"
+                    height={50}
+                  />
+                  <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} allowDecimals={false} />
+                  <Tooltip
+                    cursor={{ fill: "rgba(148,44,204,0.08)" }}
+                    contentStyle={{
+                      fontSize: 12,
+                      borderRadius: 8,
+                      border: "1px solid #e5e7eb",
+                    }}
+                  />
+                  <Bar dataKey="total" name="Leads" radius={[4, 4, 0, 0]}>
+                    {agentDistribution.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={entry.risk > 0 ? "#ef4444" : "#942CCC"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
