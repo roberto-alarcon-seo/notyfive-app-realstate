@@ -4249,6 +4249,15 @@ export type Database = {
         }[]
       }
       fn_check_assignment_timeouts: { Args: never; Returns: Json }
+      fn_claim_conversation: {
+        Args: { p_conversation_id: string; p_reason?: string }
+        Returns: {
+          agent_id: string
+          error_code: string
+          strategy: string
+          success: boolean
+        }[]
+      }
       fn_count_active_leads_for_agent: {
         Args: { _agent_id: string; _tenant_id: string }
         Returns: number
