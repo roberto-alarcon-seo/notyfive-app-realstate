@@ -8,7 +8,8 @@ export type FeatureName =
   | "quick_automations"
   | "api_access"
   | "conversions_capi"
-  | "custom_templates_management";
+  | "custom_templates_management"
+  | "inventory_management";
 
 /**
  * Returns true if the current tenant has the given feature flag enabled.

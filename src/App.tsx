@@ -31,6 +31,8 @@ const AutomationEditor = lazy(() => import("./pages/AutomationEditor"));
 import Events from "./pages/Events";
 const AutomationRuns = lazy(() => import("./pages/AutomationRuns"));
 import Pipeline from "./pages/Pipeline";
+const Properties = lazy(() => import("./pages/Properties"));
+const PropertyEditor = lazy(() => import("./pages/PropertyEditor"));
 import { toast } from "sonner";
 import SettingsWhatsAppStatus from "./pages/settings/SettingsWhatsAppStatus";
 import SettingsContactFieldsPage from "./pages/settings/SettingsContactFieldsPage";
@@ -102,10 +104,12 @@ const RecoveryHashRedirector = () => {
   return null;
 };
 
-// Tenants no longer manage inventory locally — it's synced from Brokia24 Core.
+// Local inventory management is gated by the `inventory_management` feature flag.
+// When the flag is OFF, the tenant sees a notice (inventory comes from an external source).
+// When the flag is ON, only Manager/Administrador can access the editor.
 const PropertiesRedirect = () => {
   useEffect(() => {
-    toast.info("El inventario es gestionado desde Brokia24 Core");
+    toast.info("El inventario es gestionado desde el sistema externo");
   }, []);
   return <Navigate to="/" replace />;
 };
@@ -215,9 +219,10 @@ const App = () => (
               <Route path="/settings/billing" element={<Navigate to="/settings/whatsapp" replace />} />
               <Route path="/settings/security" element={<Navigate to="/settings/whatsapp" replace />} />
               <Route path="/settings/api" element={<Navigate to="/settings/developer" replace />} />
-              {/* Properties routes */}
-              <Route path="/properties" element={<PropertiesRedirect />} />
-              <Route path="/properties/:id" element={<PropertiesRedirect />} />
+              {/* Properties routes — only available when inventory_management flag is ON */}
+              <Route path="/properties" element={<ProtectedRoute requireRoles={["administrador","manager"]}><FeatureFlagGuard feature="inventory_management"><MainLayout><Properties /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/properties/new" element={<ProtectedRoute requireRoles={["administrador","manager"]}><FeatureFlagGuard feature="inventory_management"><MainLayout><PropertyEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/properties/:id" element={<ProtectedRoute requireRoles={["administrador","manager"]}><FeatureFlagGuard feature="inventory_management"><MainLayout><PropertyEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               {/* Developer docs (public-style page, no sidebar) */}
               <Route path="/developers/api" element={<ProtectedRoute><ApiDocs /></ProtectedRoute>} />
               {/* Redirect old integration routes */}
