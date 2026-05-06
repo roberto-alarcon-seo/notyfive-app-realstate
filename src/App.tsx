@@ -33,6 +33,7 @@ const AutomationRuns = lazy(() => import("./pages/AutomationRuns"));
 import Pipeline from "./pages/Pipeline";
 const Properties = lazy(() => import("./pages/Properties"));
 const PropertyEditor = lazy(() => import("./pages/PropertyEditor"));
+const InventoryAssignments = lazy(() => import("./pages/InventoryAssignments"));
 import { toast } from "sonner";
 import SettingsWhatsAppStatus from "./pages/settings/SettingsWhatsAppStatus";
 import SettingsContactFieldsPage from "./pages/settings/SettingsContactFieldsPage";
@@ -223,6 +224,8 @@ const App = () => (
               <Route path="/properties" element={<ProtectedRoute requireRoles={["administrador","manager"]}><FeatureFlagGuard feature="inventory_management"><MainLayout><Properties /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/properties/new" element={<ProtectedRoute requireRoles={["administrador","manager"]}><FeatureFlagGuard feature="inventory_management"><MainLayout><PropertyEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/properties/:id" element={<ProtectedRoute requireRoles={["administrador","manager"]}><FeatureFlagGuard feature="inventory_management"><MainLayout><PropertyEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              {/* Inventory assignments — manager/admin only, ALWAYS available regardless of inventory_management flag */}
+              <Route path="/inventory-assignments" element={<ProtectedRoute requireRoles={["administrador","manager"]}><MainLayout><InventoryAssignments /></MainLayout></ProtectedRoute>} />
               {/* Developer docs (public-style page, no sidebar) */}
               <Route path="/developers/api" element={<ProtectedRoute><ApiDocs /></ProtectedRoute>} />
               {/* Redirect old integration routes */}
