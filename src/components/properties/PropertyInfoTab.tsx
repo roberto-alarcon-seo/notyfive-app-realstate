@@ -31,14 +31,6 @@ const OPERATION_TYPES = [
   { value: "rent", label: "Renta" },
 ];
 
-const PROPERTY_TYPES = [
-  { value: "house", label: "Casa" },
-  { value: "apartment", label: "Departamento" },
-  { value: "land", label: "Terreno" },
-  { value: "commercial", label: "Comercial" },
-  { value: "office", label: "Oficina" },
-];
-
 const STATUS_OPTIONS = [
   { value: "available", label: "Disponible" },
   { value: "reserved", label: "Apartado" },
@@ -274,25 +266,15 @@ export default function PropertyInfoTab({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="property_type">Tipo de propiedad</Label>
-                <Select
-                  value={formData.property_type || "none"}
-                  onValueChange={(v) =>
-                    updateField("property_type", v === "none" ? null : v)
+                <Input
+                  id="property_type"
+                  value={formData.property_type || ""}
+                  onChange={(e) =>
+                    updateField("property_type", e.target.value || null)
                   }
+                  placeholder="Ej. Departamento, Apartamento, Casa, Terreno…"
                   disabled={isExternallyManaged}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin especificar</SelectItem>
-                    {PROPERTY_TYPES.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
             </div>
 
