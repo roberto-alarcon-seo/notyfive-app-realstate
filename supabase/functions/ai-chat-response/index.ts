@@ -25,6 +25,27 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string)
 // Helper for exponential backoff delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Trigger automatic agent assignment after AI handoff
+async function triggerAssignment(
+  supabase: any,
+  conversationId: string,
+  reason: string
+) {
+  try {
+    const { data, error } = await supabase.rpc('fn_assign_conversation', {
+      p_conversation_id: conversationId,
+      p_force_strategy: null,
+      p_force_agent_id: null,
+      p_assigned_by: null,
+      p_reason: `ai_handoff:${reason}`,
+    });
+    if (error) console.warn('⚠️ assignment error:', error);
+    else console.log('🎯 AI handoff assignment:', data?.[0]);
+  } catch (e) {
+    console.warn('⚠️ assignment skipped:', e);
+  }
+}
+
 interface AISettings {
   enabled: boolean;
   agent_name: string;
