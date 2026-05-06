@@ -4240,6 +4240,7 @@ export type Database = {
           success: boolean
         }[]
       }
+      fn_check_assignment_timeouts: { Args: never; Returns: Json }
       fn_count_active_leads_for_agent: {
         Args: { _agent_id: string; _tenant_id: string }
         Returns: number
