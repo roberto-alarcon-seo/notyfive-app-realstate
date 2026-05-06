@@ -44,6 +44,7 @@ import { PipelineStepper } from "./PipelineStepper";
 import { PipelineSuggestionBadge } from "./PipelineSuggestionBadge";
 import { ScheduleVisitModal } from "./ScheduleVisitModal";
 import { AddNoteModal } from "./AddNoteModal";
+import { AssigneeSelector } from "./AssigneeSelector";
 import { useContactNotes, useCreateNote, useTogglePinNote, useDeleteNote } from "@/hooks/useContactNotes";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProperties } from "@/hooks/useProperties";
@@ -164,7 +165,8 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
           re_credit_preapproved,
           re_property_interest_id,
           re_budget_estimated_mxn,
-          source
+          source,
+          assigned_agent_id
         `)
         .eq('id', contactId)
         .single();
@@ -850,6 +852,17 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
             <User className="h-4 w-4 text-muted-foreground" />
             Información
           </h4>
+          {contactId && (
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Asignado a</span>
+              <AssigneeSelector
+                conversationId={conversation.id}
+                contactId={contactId}
+                currentAgentId={(contactData as any)?.assigned_agent_id ?? null}
+                compact
+              />
+            </div>
+          )}
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Teléfono</span>

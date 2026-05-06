@@ -120,3 +120,46 @@ export function useAssignableAgents() {
 
   return { ...query, setActive };
 }
+
+// Like useAssignableAgents but includes managers and administradores (used in
+// reassignment pickers where any team member can take ownership).
+export function useAllAssignableMembers() {
+  const { profile } = useAuth();
+  const tenantId = profile?.tenant_id ?? null;
+
+  return useQuery({
+    queryKey: ["assignable-members", tenantId],
+    enabled: !!tenantId,
+    queryFn: async (): Promise<AssignableAgent[]> => {
+      if (!tenantId) return [];
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("id, name, email, status, is_active_for_assignment")
+        .eq("tenant_id", tenantId)
+        .eq("status", "active")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      const ids = (profiles ?? []).map((p: any) => p.id);
+      if (ids.length === 0) return [];
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id, tenant_role")
+        .in("user_id", ids);
+      const roleMap = new Map<string, string | null>(
+        (roles ?? []).map((r: any) => [r.user_id, r.tenant_role]),
+      );
+      return (profiles ?? [])
+        .map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          status: p.status,
+          is_active_for_assignment: (p as any).is_active_for_assignment ?? true,
+          tenant_role: roleMap.get(p.id) ?? null,
+        }))
+        .filter((p) =>
+          ["asesor", "manager", "administrador"].includes(p.tenant_role || ""),
+        );
+    },
+  });
+}

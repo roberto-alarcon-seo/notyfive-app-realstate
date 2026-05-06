@@ -58,6 +58,7 @@ import PartnerSuperWallet from "./pages/admin/PartnerSuperWallet";
 import PartnerDetail from "./pages/admin/PartnerDetail";
 import AdminPartners from "./pages/admin/AdminPartners";
 import MasterTemplates from "./pages/admin/MasterTemplates";
+import AdminLeads from "./pages/AdminLeads";
 import ApiDocs from "./pages/developers/ApiDocs";
 import Followups from "./pages/Followups";
 import Support from "./pages/Support";
@@ -171,6 +172,7 @@ const App = () => (
               <Route path="/contacts" element={<ProtectedRoute><MainLayout><Contacts /></MainLayout></ProtectedRoute>} />
               <Route path="/contacts/new" element={<ProtectedRoute><MainLayout><ContactEditor /></MainLayout></ProtectedRoute>} />
               <Route path="/contacts/:id" element={<ProtectedRoute><MainLayout><ContactEditor /></MainLayout></ProtectedRoute>} />
+              <Route path="/admin-leads" element={<ProtectedRoute><MainLayout><AdminLeads /></MainLayout></ProtectedRoute>} />
               <Route path="/segments" element={<ProtectedRoute><FeatureFlagGuard feature="segments"><MainLayout><Segments /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/segments/new" element={<ProtectedRoute><FeatureFlagGuard feature="segments"><MainLayout><SegmentEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/segments/:id" element={<ProtectedRoute><FeatureFlagGuard feature="segments"><MainLayout><SegmentEditor /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
