@@ -244,6 +244,34 @@ export default function PropertyInfoTab({
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="location_url">Ubicación (Google Maps)</Label>
+              <Input
+                id="location_url"
+                type="url"
+                value={formData.location_url || ""}
+                onChange={(e) => updateField("location_url", e.target.value)}
+                placeholder="https://maps.google.com/?q=..."
+                disabled={isExternallyManaged}
+              />
+              <p className="text-xs text-muted-foreground">
+                Pega el link de Google Maps. Se compartirá con el lead cuando
+                solicite ubicación.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción pública</Label>
+              <Textarea
+                id="description"
+                value={formData.description || ""}
+                onChange={(e) => updateField("description", e.target.value)}
+                placeholder="Descripción comercial visible para el cliente…"
+                className="min-h-[100px]"
+                disabled={isExternallyManaged}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="operation_type">Tipo de operación *</Label>
