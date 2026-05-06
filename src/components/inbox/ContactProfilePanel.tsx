@@ -44,6 +44,7 @@ import { PipelineStepper } from "./PipelineStepper";
 import { PipelineSuggestionBadge } from "./PipelineSuggestionBadge";
 import { ScheduleVisitModal } from "./ScheduleVisitModal";
 import { AddNoteModal } from "./AddNoteModal";
+import { AssigneeSelector } from "./AssigneeSelector";
 import { useContactNotes, useCreateNote, useTogglePinNote, useDeleteNote } from "@/hooks/useContactNotes";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProperties } from "@/hooks/useProperties";
