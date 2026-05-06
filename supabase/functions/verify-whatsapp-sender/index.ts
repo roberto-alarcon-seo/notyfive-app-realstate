@@ -120,22 +120,26 @@ serve(async (req) => {
 
     const target = normalizePhone(integration.phone_number);
 
-    // Fetch all WhatsApp senders
-    const sendersRes = await fetch(
-      `https://messaging.twilio.com/v1/Senders?Types=whatsapp`,
-      { headers },
-    );
 
     let matchedStatus: string | null = null;
     let errorMessage: string | null = null;
 
+    // Fetch all WhatsApp senders (Messaging v2 Channels/Senders API)
+    const sendersRes = await fetch(
+      `https://messaging.twilio.com/v2/Channels/Senders?PageSize=100`,
+      { headers },
+    );
+
+    let matchedStatusInner: string | null = null;
     if (sendersRes.ok) {
       const sendersData = await sendersRes.json();
-      const list: Array<{ phone_number?: string; status?: string }> =
+      const list: Array<{ sender_id?: string; status?: string }> =
         sendersData?.senders ?? [];
-      const match = list.find(
-        (s) => normalizePhone(s.phone_number) === target,
-      );
+      // sender_id format: "whatsapp:+15017122661"
+      const match = list.find((s) => {
+        const id = (s.sender_id || "").replace(/^whatsapp:/i, "");
+        return normalizePhone(id) === target;
+      });
       if (match) {
         matchedStatus = (match.status || "unknown").toLowerCase();
       } else {
