@@ -24,6 +24,9 @@ import { DateSeparator } from "@/components/inbox/DateSeparator";
 import { PipelineHeaderSelect } from "@/components/inbox/PipelineHeaderSelect";
 import { toast } from "sonner";
 import { useNewLeadSound } from "@/hooks/useNewLeadSound";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAllAssignableMembers } from "@/hooks/useAssignmentRules";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Inbox() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,6 +34,17 @@ export default function Inbox() {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
+  const { profile, tenantRole, isSuperAdmin } = useAuth();
+  const isManagerOrAdmin =
+    isSuperAdmin || ["manager", "administrador"].includes(tenantRole || "");
+  const { data: members = [] } = useAllAssignableMembers();
+  const memberMap = useMemo(
+    () => new Map(members.map((m) => [m.id, m])),
+    [members],
+  );
+  const [inboxTab, setInboxTab] = useState<"mine" | "unassigned" | "team">(
+    isManagerOrAdmin ? "team" : "mine",
+  );
 
   // Play notification sound on new inbound messages
   useNewLeadSound();
@@ -311,8 +325,37 @@ export default function Inbox() {
     const matchesFilter = filterNeedsHuman ? needsHuman : true;
     // Hide conversations where contact is in closed_lost stage
     const isClosedLost = conv.contact?.pipeline_stage === 'closed_lost';
-    return matchesSearch && matchesFilter && !isClosedLost;
+    // Tab filter
+    const assignee = conv.contact?.assigned_agent_id ?? null;
+    let matchesTab = true;
+    if (inboxTab === "mine") {
+      matchesTab = assignee === profile?.id;
+    } else if (inboxTab === "unassigned") {
+      matchesTab = assignee === null;
+    } else {
+      matchesTab = true; // team: all visible
+    }
+    return matchesSearch && matchesFilter && !isClosedLost && matchesTab;
   }) || [];
+
+  const tabCounts = useMemo(() => {
+    const list = conversations || [];
+    return {
+      mine: list.filter(
+        (c) =>
+          c.contact?.assigned_agent_id === profile?.id &&
+          c.contact?.pipeline_stage !== "closed_lost",
+      ).length,
+      unassigned: list.filter(
+        (c) =>
+          !c.contact?.assigned_agent_id &&
+          c.contact?.pipeline_stage !== "closed_lost",
+      ).length,
+      team: list.filter(
+        (c) => c.contact?.pipeline_stage !== "closed_lost",
+      ).length,
+    };
+  }, [conversations, profile?.id]);
 
   const needsHumanCount = conversations?.filter(c => c.needs_human === true || c.ai_state === 'escalated').length || 0;
 
@@ -355,6 +398,36 @@ export default function Inbox() {
         {/* Search Header */}
         <div className="p-4 border-b border-border space-y-3">
           <h2 className="text-xl font-semibold text-foreground">Conversaciones</h2>
+          <Tabs value={inboxTab} onValueChange={(v) => setInboxTab(v as any)}>
+            <TabsList className="grid w-full grid-cols-3 h-9">
+              <TabsTrigger value="mine" className="text-xs px-1">
+                Míos
+                {tabCounts.mine > 0 && (
+                  <span className="ml-1 text-[10px] opacity-70">
+                    {tabCounts.mine}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="unassigned" className="text-xs px-1">
+                Sin asignar
+                {tabCounts.unassigned > 0 && (
+                  <span className="ml-1 text-[10px] opacity-70">
+                    {tabCounts.unassigned}
+                  </span>
+                )}
+              </TabsTrigger>
+              {isManagerOrAdmin && (
+                <TabsTrigger value="team" className="text-xs px-1">
+                  Equipo
+                  {tabCounts.team > 0 && (
+                    <span className="ml-1 text-[10px] opacity-70">
+                      {tabCounts.team}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </Tabs>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
