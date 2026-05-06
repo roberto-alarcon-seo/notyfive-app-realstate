@@ -266,7 +266,7 @@ export function useContacts() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, fetchCustomFields]);
+  }, [tenantId, fetchCustomFields, tenantRole, isSuperAdmin, user?.id]);
 
   useEffect(() => {
     fetchContacts();
