@@ -61,6 +61,7 @@ import PartnerSuperWallet from "./pages/admin/PartnerSuperWallet";
 import PartnerDetail from "./pages/admin/PartnerDetail";
 import AdminPartners from "./pages/admin/AdminPartners";
 import MasterTemplates from "./pages/admin/MasterTemplates";
+import AdminAssignmentTests from "./pages/admin/AdminAssignmentTests";
 import AdminLeads from "./pages/AdminLeads";
 import ApiDocs from "./pages/developers/ApiDocs";
 import Followups from "./pages/Followups";
@@ -172,6 +173,7 @@ const App = () => (
               <Route path="/admin/partner-settings" element={<ProtectedRoute requireSuperAdmin><PartnerSettingsRedirect /></ProtectedRoute>} />
               <Route path="/admin/super-wallet" element={<ProtectedRoute requireSuperAdmin><PartnerSuperWallet /></ProtectedRoute>} />
               <Route path="/admin/master-templates" element={<ProtectedRoute requireSuperAdmin><PartnerScopedAdminGuard><MasterTemplates /></PartnerScopedAdminGuard></ProtectedRoute>} />
+              <Route path="/admin/assignment-tests" element={<ProtectedRoute requireSuperAdmin><AdminAssignmentTests /></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
               <Route path="/inbox" element={<ProtectedRoute><MainLayout><Inbox /></MainLayout></ProtectedRoute>} />
               <Route path="/contacts" element={<ProtectedRoute><MainLayout><Contacts /></MainLayout></ProtectedRoute>} />
