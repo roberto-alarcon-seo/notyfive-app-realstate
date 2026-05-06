@@ -150,7 +150,10 @@ serve(async (req) => {
 
     // Decode auth token
     const authToken = atob(integration.auth_token_encrypted);
-    let fromNumber = integration.phone_number || conversation.twilio_whatsapp_number;
+    // Prefer the number Twilio actually used when delivering messages to this conversation
+    // (it's the canonical WhatsApp Sender registered in Twilio). Fall back to the integration
+    // phone_number only if no inbound number has been recorded yet.
+    let fromNumber = conversation.twilio_whatsapp_number || integration.phone_number;
 
     if (!fromNumber) {
       return new Response(
