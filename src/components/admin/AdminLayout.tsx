@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Building2, Users, FileText, LogOut, User, Shield, Wallet, LibraryBig, Handshake } from "lucide-react";
+import { Building2, Users, FileText, LogOut, User, Shield, Wallet, LibraryBig, Handshake, FlaskConical } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,7 @@ const navItems = [
   { title: "Usuarios", url: "/admin/users", icon: Users },
   { title: "Plantillas Globales", url: "/admin/master-templates", icon: LibraryBig },
   { title: "Logs", url: "/admin/logs", icon: FileText },
+  { title: "Diagnóstico Asignación", url: "/admin/assignment-tests", icon: FlaskConical },
 ];
 
 function AdminSidebar() {
