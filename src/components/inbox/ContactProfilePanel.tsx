@@ -164,7 +164,8 @@ export function ContactProfilePanel({ conversation, onClose }: ContactProfilePan
           re_credit_preapproved,
           re_property_interest_id,
           re_budget_estimated_mxn,
-          source
+          source,
+          assigned_agent_id
         `)
         .eq('id', contactId)
         .single();
