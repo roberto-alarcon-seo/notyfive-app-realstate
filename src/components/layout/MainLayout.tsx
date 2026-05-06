@@ -5,6 +5,7 @@ import { SupportModeBanner } from "./SupportModeBanner";
 import { MobileLayout } from "./MobileLayout";
 import { CreditsBadge } from "./CreditsBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAtRiskAlerts } from "@/hooks/useAtRiskAlerts";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const isMobile = useIsMobile();
+  useAtRiskAlerts();
 
   if (isMobile) {
     return <MobileLayout>{children}</MobileLayout>;
