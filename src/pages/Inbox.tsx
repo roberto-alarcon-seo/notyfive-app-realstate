@@ -671,6 +671,22 @@ export default function Inbox() {
               </div>
             </div>
 
+            {/* Foreign-assignment awareness banner */}
+            {selectedConversation.contact?.assigned_agent_id &&
+              selectedConversation.contact.assigned_agent_id !== profile?.id && (
+                <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                  <Info className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    Esta conversación está asignada a{" "}
+                    <strong>
+                      {memberMap.get(selectedConversation.contact.assigned_agent_id)?.name ||
+                        "otro asesor"}
+                    </strong>
+                    . Coordina antes de responder para evitar duplicar la atención.
+                  </span>
+                </div>
+              )}
+
             {/* Messages */}
             <ScrollArea 
               className="flex-1 p-6" 
