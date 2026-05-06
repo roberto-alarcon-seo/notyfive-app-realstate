@@ -46,7 +46,7 @@ interface ConvRow {
 }
 
 export default function AdminLeads() {
-  const { profile, tenantRole, isSuperAdmin, isLoading } = useAuth();
+  const { profile, tenantRole, isSuperAdmin, isLoading: authLoading } = useAuth();
   const tenantId = profile?.tenant_id ?? null;
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -121,7 +121,7 @@ export default function AdminLeads() {
     return { total, unassigned, risk, needsHuman };
   }, [rows]);
 
-  if (isLoading) return null;
+  if (authLoading) return null;
   if (!isAllowed) return <Navigate to="/" replace />;
 
   return (
