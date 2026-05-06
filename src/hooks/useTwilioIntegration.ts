@@ -54,6 +54,9 @@ interface TenantIntegration {
   status: string;
   created_at: string;
   updated_at: string;
+  whatsapp_sender_status?: string | null;
+  whatsapp_sender_verified_at?: string | null;
+  whatsapp_sender_error?: string | null;
 }
 
 export function useTwilioIntegration() {
