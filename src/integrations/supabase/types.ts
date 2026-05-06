@@ -4225,6 +4225,25 @@ export type Database = {
           success: boolean
         }[]
       }
+      fn_assign_conversation: {
+        Args: {
+          p_assigned_by?: string
+          p_conversation_id: string
+          p_force_agent_id?: string
+          p_force_strategy?: string
+          p_reason?: string
+        }
+        Returns: {
+          agent_id: string
+          error_code: string
+          strategy: string
+          success: boolean
+        }[]
+      }
+      fn_count_active_leads_for_agent: {
+        Args: { _agent_id: string; _tenant_id: string }
+        Returns: number
+      }
       fn_debit_credits: {
         Args: {
           p_amount?: number
@@ -4263,6 +4282,19 @@ export type Database = {
           balance_rollover: number
           status: Database["public"]["Enums"]["wallet_status"]
           total: number
+        }[]
+      }
+      fn_reassign_conversation: {
+        Args: {
+          p_agent_id: string
+          p_conversation_id: string
+          p_reason?: string
+        }
+        Returns: {
+          agent_id: string
+          error_code: string
+          strategy: string
+          success: boolean
         }[]
       }
       fn_refill_monthly_credits: {
