@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type AiState = 'active' | 'paused' | 'escalated';
 export type AiPauseReason = 'human_request' | 'frustration' | 'no_answer' | 'no_balance' | 'error' | null;
@@ -80,11 +81,13 @@ export interface Message {
 
 export function useConversations() {
   const queryClient = useQueryClient();
+  const { user, tenantRole, isSuperAdmin } = useAuth();
+  const isAsesor = tenantRole === 'asesor' && !isSuperAdmin;
 
   const query = useQuery({
-    queryKey: ['conversations'],
+    queryKey: ['conversations', isAsesor ? user?.id : 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('conversations')
         .select(`
           *,
@@ -92,8 +95,14 @@ export function useConversations() {
         `)
         .order('updated_at', { ascending: false });
 
+      const { data, error } = await q;
       if (error) throw error;
-      return data as Conversation[];
+      let rows = data as Conversation[];
+      // Scope: asesores ven solo conversaciones de sus leads o sin asignar
+      if (isAsesor && user?.id) {
+        rows = rows.filter(c => !c.contact?.assigned_agent_id || c.contact.assigned_agent_id === user.id);
+      }
+      return rows;
     },
   });
 

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffectiveTenantId } from '@/hooks/useEffectiveTenantId';
 import { toast } from '@/hooks/use-toast';
 import { usePipelineStageChange } from '@/hooks/usePipelineStageChange';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface Contact {
   id: string;
@@ -126,6 +127,7 @@ export interface ContactFormData {
 export function useContacts() {
   const tenantId = useEffectiveTenantId();
   const { handlePipelineStageChange } = usePipelineStageChange();
+  const { user, tenantRole, isSuperAdmin } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customFieldOptions, setCustomFieldOptions] = useState<Record<string, CustomFieldOption[]>>({});
@@ -189,12 +191,19 @@ export function useContacts() {
     setLoading(true);
     try {
       // Fetch contacts
-      const { data: contactsData, error: contactsError } = await supabase
+      let query = supabase
         .from('contacts')
         .select('*')
         .eq('tenant_id', tenantId)
         .neq('status', 'deleted')
         .order('created_at', { ascending: false });
+
+      // Scope: asesores solo ven sus leads + pool sin asignar
+      if (tenantRole === 'asesor' && !isSuperAdmin && user?.id) {
+        query = query.or(`assigned_agent_id.eq.${user.id},assigned_agent_id.is.null`);
+      }
+
+      const { data: contactsData, error: contactsError } = await query;
 
       if (contactsError) throw contactsError;
 
@@ -257,7 +266,7 @@ export function useContacts() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, fetchCustomFields]);
+  }, [tenantId, fetchCustomFields, tenantRole, isSuperAdmin, user?.id]);
 
   useEffect(() => {
     fetchContacts();

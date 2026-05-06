@@ -40,6 +40,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePipelineStageChange } from "@/hooks/usePipelineStageChange";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Pipeline stages configuration
 const PIPELINE_STAGES = [
@@ -71,6 +72,7 @@ interface ContactCardProps {
 function ContactCard({ contact, onMoveToStage, onClick }: ContactCardProps) {
   const tempBadge = getTemperatureBadge(contact.lead_temperature);
   const hasBlockReason = !!contact.re_block_reason;
+  const isUnassigned = !contact.assigned_agent_id;
   
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -102,6 +104,12 @@ function ContactCard({ contact, onMoveToStage, onClick }: ContactCardProps) {
           {tempBadge.label}
         </Badge>
       </div>
+
+      {isUnassigned && (
+        <Badge variant="outline" className="text-[10px] mb-2 border-amber-500/40 bg-amber-500/10 text-amber-400">
+          Sin asignar
+        </Badge>
+      )}
 
       {/* Metadata */}
       <div className="space-y-1 text-xs text-muted-foreground">
@@ -249,23 +257,30 @@ export default function Pipeline() {
   const tenantId = useEffectiveTenantId();
   const queryClient = useQueryClient();
   const { handlePipelineStageChange } = usePipelineStageChange();
+  const { user, tenantRole, isSuperAdmin } = useAuth();
+  const isAsesor = tenantRole === 'asesor' && !isSuperAdmin;
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
   // Fetch contacts using react-query
   const { data: contacts = [], isLoading: loading, refetch } = useQuery({
-    queryKey: ['pipeline-contacts', tenantId],
+    queryKey: ['pipeline-contacts', tenantId, isAsesor ? user?.id : 'all'],
     queryFn: async () => {
       if (!tenantId) return [];
       
-      const { data, error } = await supabase
+      let q = supabase
         .from('contacts')
         .select('*')
         .eq('tenant_id', tenantId)
         .neq('status', 'deleted')
         .order('created_at', { ascending: false });
 
+      if (isAsesor && user?.id) {
+        q = q.or(`assigned_agent_id.eq.${user.id},assigned_agent_id.is.null`);
+      }
+
+      const { data, error } = await q;
       if (error) throw error;
       return (data || []) as Contact[];
     },
