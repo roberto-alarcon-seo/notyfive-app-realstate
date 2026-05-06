@@ -211,6 +211,21 @@ serve(async (req) => {
       }
       conversationId = newConv.id;
       aiEnabled = newConv.ai_enabled ?? true;
+
+      // Trigger automatic assignment for new conversations
+      try {
+        const { data: assignRes, error: assignErr } = await supabase.rpc('fn_assign_conversation', {
+          p_conversation_id: conversationId,
+          p_force_strategy: null,
+          p_force_agent_id: null,
+          p_assigned_by: null,
+          p_reason: 'new_conversation',
+        });
+        if (assignErr) console.warn('⚠️ fn_assign_conversation error:', assignErr);
+        else console.log('🎯 New conversation assigned:', assignRes?.[0]);
+      } catch (e) {
+        console.warn('⚠️ assignment skipped:', e);
+      }
     }
 
     // Insert message
