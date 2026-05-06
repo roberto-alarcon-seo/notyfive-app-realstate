@@ -5,6 +5,17 @@ import { toast } from "sonner";
 import { PIPELINE_STAGES } from "./PipelineStepper";
 import { usePipelineStageChange } from "@/hooks/usePipelineStageChange";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -16,13 +27,18 @@ import {
 interface PipelineHeaderSelectProps {
   contactId: string;
   currentStage: string;
+  conversationId?: string;
+  assignedAgentId?: string | null;
 }
 
-export function PipelineHeaderSelect({ contactId, currentStage }: PipelineHeaderSelectProps) {
+export function PipelineHeaderSelect({ contactId, currentStage, conversationId, assignedAgentId }: PipelineHeaderSelectProps) {
   const [localStage, setLocalStage] = useState(currentStage);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+  const [pendingStage, setPendingStage] = useState<string | null>(null);
   const { handlePipelineStageChange } = usePipelineStageChange();
   const queryClient = useQueryClient();
+  const { user, tenantRole, isSuperAdmin } = useAuth();
 
   useEffect(() => {
     setLocalStage(currentStage);
@@ -31,9 +47,11 @@ export function PipelineHeaderSelect({ contactId, currentStage }: PipelineHeader
   const isClosed = localStage === 'closed_won';
   const isLost = localStage === 'closed_lost';
 
-  const handleChange = async (newStage: string) => {
-    if (isUpdating || newStage === localStage) return;
+  const isAsesor = tenantRole === 'asesor' && !isSuperAdmin;
+  const isUnassigned = !assignedAgentId;
+  const isOwnedByOther = !!assignedAgentId && assignedAgentId !== user?.id;
 
+  const performStageUpdate = async (newStage: string) => {
     const oldStage = localStage;
     setIsUpdating(true);
     try {
@@ -99,10 +117,68 @@ export function PipelineHeaderSelect({ contactId, currentStage }: PipelineHeader
     }
   };
 
+  const handleChange = async (newStage: string) => {
+    if (isUpdating || newStage === localStage) return;
+
+    // Asesor trying to change a lead owned by another asesor → block
+    if (isAsesor && isOwnedByOther) {
+      toast.error("Este lead pertenece a otro asesor. Pídele que haga el cambio o escala a tu manager.");
+      return;
+    }
+
+    // Asesor on unassigned lead → ask to claim first
+    if (isAsesor && isUnassigned && conversationId) {
+      setPendingStage(newStage);
+      setClaimDialogOpen(true);
+      return;
+    }
+
+    await performStageUpdate(newStage);
+  };
+
+  const handleConfirmClaim = async () => {
+    if (!conversationId || !pendingStage) return;
+    setClaimDialogOpen(false);
+    setIsUpdating(true);
+    try {
+      const { data, error } = await supabase.rpc('fn_claim_conversation', {
+        p_conversation_id: conversationId,
+        p_reason: 'manual_claim_pipeline_change',
+      });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row?.success) {
+        const code = row?.error_code || 'CLAIM_FAILED';
+        if (code === 'ALREADY_ASSIGNED') {
+          toast.error("Otro asesor tomó este lead primero.");
+        } else {
+          toast.error(`No se pudo tomar el lead (${code})`);
+        }
+        setIsUpdating(false);
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['contact-pipeline', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      toast.success("Lead asignado a ti");
+    } catch (e) {
+      console.error('claim error', e);
+      toast.error("Error al tomar el lead");
+      setIsUpdating(false);
+      return;
+    } finally {
+      setIsUpdating(false);
+    }
+    // Now apply stage change
+    const stage = pendingStage;
+    setPendingStage(null);
+    await performStageUpdate(stage);
+  };
+
   const currentLabel = PIPELINE_STAGES.find(s => s.value === localStage)?.short || localStage;
   const currentIndex = PIPELINE_STAGES.findIndex(s => s.value === localStage);
 
   return (
+    <>
     <Select value={localStage} onValueChange={handleChange} disabled={isUpdating}>
       <SelectTrigger 
         className={cn(
@@ -111,6 +187,7 @@ export function PipelineHeaderSelect({ contactId, currentStage }: PipelineHeader
           isClosed && "bg-green-500/15 text-green-400 hover:bg-green-500/20",
           !isClosed && !isLost && "bg-primary/15 text-primary hover:bg-primary/20"
         )}
+        title={isAsesor && isOwnedByOther ? "Lead asignado a otro asesor" : undefined}
       >
         <span className={cn(
           "w-1.5 h-1.5 rounded-full shrink-0",
@@ -140,5 +217,23 @@ export function PipelineHeaderSelect({ contactId, currentStage }: PipelineHeader
         ))}
       </SelectContent>
     </Select>
+
+    <AlertDialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Tomar este lead</AlertDialogTitle>
+          <AlertDialogDescription>
+            Este lead aún no tiene asesor asignado. Para cambiar la etapa a{" "}
+            <strong>{PIPELINE_STAGES.find(s => s.value === pendingStage)?.label}</strong>{" "}
+            primero se te asignará a ti. ¿Continuar?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setPendingStage(null)}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmClaim}>Tomar y continuar</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
