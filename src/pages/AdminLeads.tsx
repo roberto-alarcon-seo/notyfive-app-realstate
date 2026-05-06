@@ -422,3 +422,45 @@ function StatCard({
     </Card>
   );
 }
+
+function SlaDot({
+  lastCustomerAt,
+  atRisk,
+}: {
+  lastCustomerAt: string | null;
+  atRisk: boolean;
+}) {
+  let tone: "green" | "amber" | "red" | "gray" = "gray";
+  let label = "Sin actividad reciente";
+  if (atRisk) {
+    tone = "red";
+    label = "En riesgo: timeout vencido";
+  } else if (lastCustomerAt) {
+    const mins = (Date.now() - new Date(lastCustomerAt).getTime()) / 60000;
+    if (mins < 30) {
+      tone = "green";
+      label = "Respondido recientemente (<30 min)";
+    } else if (mins < 60) {
+      tone = "amber";
+      label = "Por atender (30-60 min)";
+    } else {
+      tone = "red";
+      label = `Sin respuesta hace ${Math.round(mins)} min`;
+    }
+  }
+  const color =
+    tone === "green"
+      ? "bg-emerald-500"
+      : tone === "amber"
+        ? "bg-amber-500"
+        : tone === "red"
+          ? "bg-red-500"
+          : "bg-muted-foreground/40";
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      className={`inline-block w-2.5 h-2.5 rounded-full ${color}`}
+    />
+  );
+}
