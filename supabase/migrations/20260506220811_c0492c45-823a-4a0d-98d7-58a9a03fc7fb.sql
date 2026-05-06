@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE FUNCTION public.fn_run_assignment_tests()
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -32,7 +31,6 @@ BEGIN
     RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE = '42501';
   END IF;
 
-  -- managed_externally = true bypasses the trial-plan max_users=1 override
   INSERT INTO public.tenants (id, name, plan, status, max_users, max_contacts, managed_externally)
   VALUES (v_tenant, '__assignment_test_' || substr(v_tenant::text,1,8), 'trial', 'active', 999, 999999, true);
 

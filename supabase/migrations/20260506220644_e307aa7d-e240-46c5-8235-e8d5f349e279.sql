@@ -1,0 +1,2 @@
+-- Re-apply full fn_run_assignment_tests with corrected threshold (count(logs) >= 5)
+-- Function body sourced from migration 20260506213827; only diff is the >= 5 threshold on test #10.
