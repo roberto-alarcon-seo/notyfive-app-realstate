@@ -191,12 +191,19 @@ export function useContacts() {
     setLoading(true);
     try {
       // Fetch contacts
-      const { data: contactsData, error: contactsError } = await supabase
+      let query = supabase
         .from('contacts')
         .select('*')
         .eq('tenant_id', tenantId)
         .neq('status', 'deleted')
         .order('created_at', { ascending: false });
+
+      // Scope: asesores solo ven sus leads + pool sin asignar
+      if (tenantRole === 'asesor' && !isSuperAdmin && user?.id) {
+        query = query.or(`assigned_agent_id.eq.${user.id},assigned_agent_id.is.null`);
+      }
+
+      const { data: contactsData, error: contactsError } = await query;
 
       if (contactsError) throw contactsError;
 
