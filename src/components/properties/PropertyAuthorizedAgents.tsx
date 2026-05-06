@@ -18,6 +18,8 @@ export default function PropertyAuthorizedAgents({ propertyId }: Props) {
   const { data: asesores } = useQuery({
     queryKey: ["tenant-asesores-list", tenantId],
     enabled: !!tenantId,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data: roles } = await supabase
         .from("user_roles")
