@@ -60,8 +60,8 @@ export default function AdminLeads() {
   const tenantId = profile?.tenant_id ?? null;
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "unassigned" | "risk" | "needs_human">(
-    "all",
+  const [filter, setFilter] = useState<"attention" | "all" | "unassigned" | "risk" | "needs_human">(
+    "attention",
   );
 
   const isAllowed =
@@ -112,6 +112,11 @@ export default function AdminLeads() {
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     return rows.filter((r) => {
+      if (filter === "attention") {
+        const needsAttention =
+          !r.contact?.assigned_agent_id || !!r.risk_flagged_at || !!r.needs_human;
+        if (!needsAttention) return false;
+      }
       if (filter === "unassigned" && r.contact?.assigned_agent_id) return false;
       if (filter === "risk" && !r.risk_flagged_at) return false;
       if (filter === "needs_human" && !r.needs_human) return false;
@@ -240,11 +245,19 @@ export default function AdminLeads() {
 
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <CardTitle className="text-base">Conversaciones recientes</CardTitle>
+          <div>
+            <CardTitle className="text-base">Conversaciones recientes</CardTitle>
+            {filter === "attention" && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Mostrando solo leads que requieren acción: sin asignar, en riesgo o con humano pendiente.
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <div className="flex rounded-md border bg-muted/30 p-0.5 text-xs">
               {(
                 [
+                  ["attention", "Atención"],
                   ["all", "Todas"],
                   ["unassigned", "Sin asignar"],
                   ["needs_human", "Humano"],
@@ -276,6 +289,7 @@ export default function AdminLeads() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px]" />
                 <TableHead>Contacto</TableHead>
                 <TableHead>Etapa</TableHead>
                 <TableHead>Asignado a</TableHead>
@@ -287,20 +301,26 @@ export default function AdminLeads() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     Cargando…
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     Sin conversaciones que coincidan.
                   </TableCell>
                 </TableRow>
               )}
               {filtered.map((r) => (
                 <TableRow key={r.id}>
+                  <TableCell>
+                    <SlaDot
+                      lastCustomerAt={r.last_customer_message_at}
+                      atRisk={!!r.risk_flagged_at}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium">
                       {r.contact?.name || (
