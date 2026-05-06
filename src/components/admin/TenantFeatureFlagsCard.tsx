@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Megaphone, Filter, Workflow, Save, Loader2, ToggleLeft, KeyRound, Target, FileText } from 'lucide-react';
+import { Megaphone, Filter, Workflow, Save, Loader2, ToggleLeft, KeyRound, Target, FileText, Building2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,7 +31,8 @@ type FeatureKey =
   | 'automations_builder'
   | 'api_access'
   | 'conversions_capi'
-  | 'custom_templates_management';
+  | 'custom_templates_management'
+  | 'inventory_management';
 
 interface FeatureOption {
   key: FeatureKey;
@@ -87,6 +88,15 @@ const FEATURE_OPTIONS: FeatureOption[] = [
     value:
       'Permite al tenant diseñar plantillas HSM propias y enviarlas a aprobación de WhatsApp.',
     icon: FileText,
+  },
+  {
+    key: 'inventory_management',
+    label: 'Inventario',
+    description:
+      'Habilita la gestión local de propiedades: alta, edición y asignación de asesores desde la interfaz del tenant.',
+    value:
+      'Ideal para partners que NO sincronizan inventario desde un sistema externo y necesitan capturar propiedades directamente. Solo visible para Manager y Administrador.',
+    icon: Building2,
   },
 ];
 
