@@ -9,6 +9,7 @@ import {
   CalendarDays,
   Settings,
   Kanban,
+  ShieldCheck,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
@@ -37,6 +38,7 @@ const menuItems: MenuItem[] = [
 ];
 
 const bottomItems = [
+  { icon: ShieldCheck, label: "Supervisión de leads", path: "/admin-leads", requireManager: true },
   { icon: Settings, label: "Configuración", path: "/settings", requireAdmin: true },
 ];
 
@@ -74,6 +76,7 @@ export function IconSidebar() {
   
   // Solo administrador ve la opción de Configuración
   const isAdmin = tenantRole === 'administrador' || isSuperAdmin;
+  const isManagerOrAdmin = isAdmin || tenantRole === 'manager';
 
   return (
     <aside className="flex flex-col h-screen w-16 bg-[#141414] border-r border-[#2b2b2b]">
@@ -116,7 +119,11 @@ export function IconSidebar() {
       {/* Bottom Navigation */}
       <div className="flex flex-col items-center py-4 gap-1 border-t border-[#2b2b2b]">
         {bottomItems
-          .filter((item) => !item.requireAdmin || isAdmin)
+          .filter((item) => {
+            if ((item as any).requireAdmin && !isAdmin) return false;
+            if ((item as any).requireManager && !isManagerOrAdmin) return false;
+            return true;
+          })
           .map((item) => (
             <Tooltip key={item.path} delayDuration={0}>
               <TooltipTrigger asChild>
