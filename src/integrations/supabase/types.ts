@@ -4320,6 +4320,7 @@ export type Database = {
           total_credits: number
         }[]
       }
+      fn_run_assignment_tests: { Args: never; Returns: Json }
       fn_wallet_debit_credits: {
         Args: {
           p_amount?: number
