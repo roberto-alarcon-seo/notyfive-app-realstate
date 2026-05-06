@@ -1,12 +1,40 @@
-import { Wifi, WifiOff, AlertTriangle, Phone, Loader2, MessageSquare, Wallet, CheckCircle2 } from "lucide-react";
+import { Wifi, WifiOff, AlertTriangle, Phone, Loader2, MessageSquare, Wallet, CheckCircle2, ShieldCheck, RefreshCw } from "lucide-react";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { Badge } from "@/components/ui/badge";
 import { useTwilioIntegration } from "@/hooks/useTwilioIntegration";
 import { useWallet } from "@/hooks/useWallet";
+import { Button } from "@/components/ui/button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function SettingsWhatsAppStatus() {
   const { integration, isLoading: twilioLoading, isConnected } = useTwilioIntegration();
   const { data: wallet, isLoading: walletLoading } = useWallet();
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+
+  const verifyMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('verify-whatsapp-sender', {
+        body: {},
+      });
+      if (error) throw error;
+      return data as { ok: boolean; status: string | null; error?: string | null };
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['twilio-integration', profile?.tenant_id] });
+      if (res.ok) {
+        toast.success('WhatsApp Sender verificado correctamente');
+      } else {
+        toast.error(res.error || `Sender no aprobado (estado: ${res.status ?? 'desconocido'})`);
+      }
+    },
+    onError: (e: Error) => {
+      toast.error(e.message || 'Error al verificar el WhatsApp Sender');
+    },
+  });
 
   const isLoading = twilioLoading || walletLoading;
 
@@ -135,6 +163,60 @@ export default function SettingsWhatsAppStatus() {
                         </div>
                       </div>
                     )}
+
+                    {/* Sender Verification Block */}
+                    {integration.phone_number && !integration.messaging_service_sid && (() => {
+                      const status = (integration.whatsapp_sender_status || '').toLowerCase();
+                      const isApproved = ['online', 'approved', 'verified'].includes(status);
+                      const verifiedAt = integration.whatsapp_sender_verified_at
+                        ? new Date(integration.whatsapp_sender_verified_at)
+                        : null;
+                      return (
+                        <div className={`p-3 rounded-lg border flex items-start gap-3 ${
+                          isApproved
+                            ? 'bg-green-500/10 border-green-500/30'
+                            : status
+                              ? 'bg-destructive/10 border-destructive/30'
+                              : 'bg-muted/30 border-border'
+                        }`}>
+                          {isApproved ? (
+                            <ShieldCheck className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${status ? 'text-destructive' : 'text-muted-foreground'}`} />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground">
+                              {isApproved
+                                ? 'Sender aprobado en Twilio'
+                                : status === 'not_found'
+                                  ? 'Número no encontrado en Twilio'
+                                  : status
+                                    ? `Sender no aprobado (${status})`
+                                    : 'Sender no verificado'}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {integration.whatsapp_sender_error
+                                ?? (verifiedAt
+                                  ? `Última verificación: ${verifiedAt.toLocaleString('es-MX')}`
+                                  : 'Sin verificaciones recientes. Las campañas se bloquearán hasta validar el número.')}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => verifyMutation.mutate()}
+                            disabled={verifyMutation.isPending}
+                          >
+                            {verifyMutation.isPending ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            )}
+                            <span className="ml-1.5">Verificar</span>
+                          </Button>
+                        </div>
+                      );
+                    })()}
                     
                     {/* Messaging Service Display (when no direct number) */}
                     {integration.messaging_service_sid && !integration.phone_number && (
