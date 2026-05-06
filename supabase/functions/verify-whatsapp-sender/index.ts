@@ -130,7 +130,6 @@ serve(async (req) => {
       { headers },
     );
 
-    let matchedStatusInner: string | null = null;
     if (sendersRes.ok) {
       const sendersData = await sendersRes.json();
       const list: Array<{ sender_id?: string; status?: string }> =
