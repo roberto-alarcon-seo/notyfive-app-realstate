@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffectiveTenantId } from '@/hooks/useEffectiveTenantId';
 import { toast } from '@/hooks/use-toast';
 import { usePipelineStageChange } from '@/hooks/usePipelineStageChange';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface Contact {
   id: string;
@@ -126,6 +127,7 @@ export interface ContactFormData {
 export function useContacts() {
   const tenantId = useEffectiveTenantId();
   const { handlePipelineStageChange } = usePipelineStageChange();
+  const { user, tenantRole, isSuperAdmin } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customFieldOptions, setCustomFieldOptions] = useState<Record<string, CustomFieldOption[]>>({});
