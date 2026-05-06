@@ -15,6 +15,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
 import { useFollowupBadgeCount } from "@/hooks/useFollowupBadgeCount";
+import { useAtRiskBadgeCount } from "@/hooks/useAtRiskBadgeCount";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
 import { useFeatureFlag, type FeatureName } from "@/hooks/useFeatureFlag";
@@ -23,7 +24,7 @@ type MenuItem = {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   path: string;
-  badgeKey: 'inbox' | 'followups' | null;
+  badgeKey: 'inbox' | 'followups' | 'atRisk' | null;
   feature?: FeatureName;
 };
 
@@ -39,13 +40,14 @@ const menuItems: MenuItem[] = [
 ];
 
 const bottomItems = [
-  { icon: ShieldCheck, label: "Supervisión de leads", path: "/admin-leads", requireManager: true },
+  { icon: ShieldCheck, label: "Supervisión de leads", path: "/admin-leads", requireManager: true, badgeKey: 'atRisk' as const },
   { icon: Settings, label: "Configuración", path: "/settings", requireAdmin: true },
 ];
 
 export function IconSidebar() {
   const totalUnread = useTotalUnreadCount();
   const followupBadge = useFollowupBadgeCount();
+  const atRiskBadge = useAtRiskBadgeCount();
   const { tenantRole, isSuperAdmin } = useAuth();
   const { partner } = usePartnerBranding();
   const { enabled: campaignsEnabled } = useFeatureFlag("campaigns");
@@ -56,6 +58,7 @@ export function IconSidebar() {
   const badgeCounts: Record<string, number> = {
     inbox: totalUnread,
     followups: followupBadge,
+    atRisk: atRiskBadge,
   };
 
   const featureEnabled: Record<FeatureName, boolean> = {
@@ -140,10 +143,15 @@ export function IconSidebar() {
               <TooltipTrigger asChild>
                 <NavLink
                   to={item.path}
-                  className="w-12 h-12 flex items-center justify-center rounded-xl text-[#6b7280] hover:text-primary hover:bg-primary/10 transition-all duration-200"
+                  className="w-12 h-12 flex items-center justify-center rounded-xl text-[#6b7280] hover:text-primary hover:bg-primary/10 transition-all duration-200 relative"
                   activeClassName="bg-[#242424] text-primary"
                 >
                   <item.icon className="w-5 h-5" />
+                  {(item as any).badgeKey && (badgeCounts[(item as any).badgeKey] ?? 0) > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-medium flex items-center justify-center px-1">
+                      {(badgeCounts[(item as any).badgeKey] ?? 0) > 99 ? '99+' : badgeCounts[(item as any).badgeKey]}
+                    </span>
+                  )}
                 </NavLink>
               </TooltipTrigger>
               <TooltipContent side="right" className="bg-card border-border">
