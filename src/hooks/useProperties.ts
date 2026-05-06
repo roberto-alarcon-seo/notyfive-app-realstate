@@ -31,6 +31,8 @@ export interface Property {
   ai_description_template: string | null;
   created_at: string;
   updated_at: string;
+  description?: string | null;
+  location_url?: string | null;
   cover_image?: string | null;
   assigned_user?: { name: string } | null;
   template?: { name: string } | null;

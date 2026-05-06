@@ -53,6 +53,8 @@ export default function PropertyEditor() {
     parking_spots: null,
     sq_meters: null,
     ai_description_template: "",
+    description: "",
+    location_url: "",
   });
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -84,6 +86,8 @@ export default function PropertyEditor() {
         parking_spots: property.parking_spots ?? null,
         sq_meters: property.sq_meters ?? null,
         ai_description_template: property.ai_description_template || "",
+        description: (property as any).description || "",
+        location_url: (property as any).location_url || "",
       });
     }
   }, [property, isNew]);
