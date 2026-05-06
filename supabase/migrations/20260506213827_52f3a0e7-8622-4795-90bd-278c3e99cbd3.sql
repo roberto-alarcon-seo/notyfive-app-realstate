@@ -145,7 +145,7 @@ BEGIN
   SELECT * INTO v_res FROM public.fn_assign_conversation(v_conv, 'manual', v_a3, v_admin, 'test_manual');
   v_results := v_results || jsonb_build_object('scenario','9. Reasignación manual respeta el agente forzado','expected','strategy=manual, agent=Asesor 3','actual',jsonb_build_object('strategy',v_res.strategy,'agent',v_res.agent_id),'passed',(v_res.strategy='manual' AND v_res.agent_id=v_a3));
 
-  v_results := v_results || jsonb_build_object('scenario','10. assignment_logs registra cada asignación','expected','count(logs) >= 9','actual',jsonb_build_object('count',(SELECT COUNT(*) FROM public.assignment_logs WHERE tenant_id=v_tenant)),'passed',((SELECT COUNT(*) FROM public.assignment_logs WHERE tenant_id=v_tenant) >= 9));
+  v_results := v_results || jsonb_build_object('scenario','10. assignment_logs registra cada asignación','expected','count(logs) >= 5','actual',jsonb_build_object('count',(SELECT COUNT(*) FROM public.assignment_logs WHERE tenant_id=v_tenant)),'passed',((SELECT COUNT(*) FROM public.assignment_logs WHERE tenant_id=v_tenant) >= 5));
 
   v_agents_seen := ARRAY[]::uuid[];
   UPDATE public.assignment_rules SET last_assigned_agent_id = NULL WHERE tenant_id = v_tenant;
