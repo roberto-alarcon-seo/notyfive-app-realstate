@@ -200,6 +200,7 @@ serve(async (req) => {
           ai_paused_at: new Date().toISOString()
         })
         .eq('id', conversation_id);
+      await triggerAssignment(supabase, conversation_id, 'no_balance');
 
       // Log the interaction
       await supabase.from('ai_interaction_logs').insert({
@@ -346,6 +347,7 @@ serve(async (req) => {
             ai_paused_at: new Date().toISOString()
           })
           .eq('id', conversation_id);
+      await triggerAssignment(supabase, conversation_id, 'human_request');
 
         await supabase.from('ai_interaction_logs').insert({
           tenant_id,
@@ -388,6 +390,7 @@ serve(async (req) => {
             ai_paused_at: new Date().toISOString()
           })
           .eq('id', conversation_id);
+      await triggerAssignment(supabase, conversation_id, 'frustration');
 
         await supabase.from('ai_interaction_logs').insert({
           tenant_id,
@@ -448,6 +451,7 @@ serve(async (req) => {
           ai_paused_at: new Date().toISOString()
         })
         .eq('id', conversation_id);
+      await triggerAssignment(supabase, conversation_id, 'visit_request');
 
       await supabase.from('ai_interaction_logs').insert({
         tenant_id,
@@ -628,6 +632,7 @@ ${propertiesContext}`;
           ai_paused_at: new Date().toISOString()
         })
         .eq('id', conversation_id);
+      await triggerAssignment(supabase, conversation_id, 'ai_error');
 
       await supabase.from('ai_interaction_logs').insert({
         tenant_id,
@@ -666,6 +671,7 @@ ${propertiesContext}`;
           ai_paused_at: new Date().toISOString()
         })
         .eq('id', conversation_id);
+      await triggerAssignment(supabase, conversation_id, 'no_answer');
 
       await supabase.from('ai_interaction_logs').insert({
         tenant_id,
@@ -763,6 +769,7 @@ ${propertiesContext}`;
           ai_paused_at: new Date().toISOString()
         })
         .eq('id', conversation_id);
+      await triggerAssignment(supabase, conversation_id, 'qualification_handoff');
 
       await supabase.from('ai_interaction_logs').insert({
         tenant_id,
