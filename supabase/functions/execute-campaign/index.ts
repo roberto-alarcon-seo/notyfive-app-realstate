@@ -111,6 +111,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validate WhatsApp Sender is approved (skip for messaging service flows)
+    if (integration.phone_number && !integration.messaging_service_sid) {
+      const senderStatus = (integration.whatsapp_sender_status || '').toLowerCase();
+      const verifiedAt = integration.whatsapp_sender_verified_at
+        ? new Date(integration.whatsapp_sender_verified_at).getTime()
+        : 0;
+      const isFresh = Date.now() - verifiedAt < 24 * 60 * 60 * 1000; // 24h
+      const isApproved = ['online', 'approved', 'verified', 'messaging_service'].includes(senderStatus);
+
+      if (!isApproved || !isFresh) {
+        console.error(`[Campaign ${campaignId}] WhatsApp Sender not approved or stale (status=${senderStatus}, fresh=${isFresh})`);
+        return new Response(JSON.stringify({
+          error: 'WHATSAPP_SENDER_NOT_APPROVED',
+          message: integration.whatsapp_sender_error
+            || 'El número de WhatsApp no está aprobado en Twilio. Verifica el sender en Configuración → WhatsApp.',
+          sender_status: senderStatus || null,
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Check if tenant can send using centralized function
     const { data: canSendResult } = await supabase.rpc('can_send_message', { p_tenant_id: campaign.tenant_id });
     
