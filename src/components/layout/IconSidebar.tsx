@@ -125,6 +125,9 @@ export function IconSidebar() {
           ...(inventoryEnabled && isManagerOrAdmin
             ? [{ icon: Building2, label: 'Inventario', path: '/properties', requireManager: true } as any]
             : []),
+          ...(isManagerOrAdmin
+            ? [{ icon: Users, label: 'Asesores por propiedad', path: '/inventory-assignments', requireManager: true } as any]
+            : []),
           ...bottomItems,
         ]
           .filter((item) => {
