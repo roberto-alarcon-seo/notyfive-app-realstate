@@ -192,6 +192,145 @@ export type Database = {
           },
         ]
       }
+      assignment_logs: {
+        Row: {
+          assigned_by: string | null
+          contact_id: string | null
+          conversation_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          new_agent_id: string | null
+          previous_agent_id: string | null
+          reason: string | null
+          strategy: string
+          tenant_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          contact_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          new_agent_id?: string | null
+          previous_agent_id?: string | null
+          reason?: string | null
+          strategy: string
+          tenant_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          contact_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          new_agent_id?: string | null
+          previous_agent_id?: string | null
+          reason?: string | null
+          strategy?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_logs_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_logs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_logs_new_agent_id_fkey"
+            columns: ["new_agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_logs_previous_agent_id_fkey"
+            columns: ["previous_agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_rules: {
+        Row: {
+          created_at: string
+          last_assigned_agent_id: string | null
+          lead_timeout_minutes: number
+          max_active_leads_per_agent: number | null
+          round_robin_enabled: boolean
+          sticky_agent_enabled: boolean
+          sticky_overrides_property: boolean
+          tenant_id: string
+          timeout_action: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          last_assigned_agent_id?: string | null
+          lead_timeout_minutes?: number
+          max_active_leads_per_agent?: number | null
+          round_robin_enabled?: boolean
+          sticky_agent_enabled?: boolean
+          sticky_overrides_property?: boolean
+          tenant_id: string
+          timeout_action?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          last_assigned_agent_id?: string | null
+          lead_timeout_minutes?: number
+          max_active_leads_per_agent?: number | null
+          round_robin_enabled?: boolean
+          sticky_agent_enabled?: boolean
+          sticky_overrides_property?: boolean
+          tenant_id?: string
+          timeout_action?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_rules_last_assigned_agent_id_fkey"
+            columns: ["last_assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_events: {
         Row: {
           created_at: string
@@ -1569,11 +1708,13 @@ export type Database = {
           customer_whatsapp: string
           id: string
           last_agent_message_at: string | null
+          last_assigned_at: string | null
           last_customer_message_at: string | null
           last_message_direction: string | null
           last_message_preview: string | null
           last_message_source: string | null
           needs_human: boolean | null
+          risk_flagged_at: string | null
           status: string
           tenant_id: string
           twilio_subaccount_sid: string | null
@@ -1592,11 +1733,13 @@ export type Database = {
           customer_whatsapp: string
           id?: string
           last_agent_message_at?: string | null
+          last_assigned_at?: string | null
           last_customer_message_at?: string | null
           last_message_direction?: string | null
           last_message_preview?: string | null
           last_message_source?: string | null
           needs_human?: boolean | null
+          risk_flagged_at?: string | null
           status?: string
           tenant_id: string
           twilio_subaccount_sid?: string | null
@@ -1615,11 +1758,13 @@ export type Database = {
           customer_whatsapp?: string
           id?: string
           last_agent_message_at?: string | null
+          last_assigned_at?: string | null
           last_customer_message_at?: string | null
           last_message_direction?: string | null
           last_message_preview?: string | null
           last_message_source?: string | null
           needs_human?: boolean | null
+          risk_flagged_at?: string | null
           status?: string
           tenant_id?: string
           twilio_subaccount_sid?: string | null
@@ -2455,6 +2600,7 @@ export type Database = {
           id: string
           invited_at: string | null
           invited_by: string | null
+          is_active_for_assignment: boolean
           last_login_at: string | null
           name: string
           password_set_at: string | null
@@ -2470,6 +2616,7 @@ export type Database = {
           id: string
           invited_at?: string | null
           invited_by?: string | null
+          is_active_for_assignment?: boolean
           last_login_at?: string | null
           name: string
           password_set_at?: string | null
@@ -2485,6 +2632,7 @@ export type Database = {
           id?: string
           invited_at?: string | null
           invited_by?: string | null
+          is_active_for_assignment?: boolean
           last_login_at?: string | null
           name?: string
           password_set_at?: string | null
