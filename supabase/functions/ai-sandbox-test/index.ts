@@ -152,7 +152,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { settings, messages, tenant_id } = await req.json();
+    const { settings, messages, tenant_id, simulate_delay } = await req.json();
     if (!settings || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "settings y messages requeridos" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -180,6 +180,71 @@ serve(async (req) => {
 
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
+
+    // === Pre-AI checks (mirror production) ===
+    const lastUser = [...messages].reverse().find((m: any) => m.role === "user")?.content || "";
+    const lower = lastUser.toLowerCase();
+    const ht = settings.handoff_triggers || {};
+
+    // Business hours
+    const bh = isWithinBusinessHours(settings.business_hours);
+    if (bh.configured && !bh.open && ht.on_after_hours !== false) {
+      const oohMsg = settings.out_of_hours_message || "Gracias por escribirnos. Te responderemos en cuanto abramos.";
+      return new Response(JSON.stringify({
+        response: oohMsg, raw: oohMsg,
+        detected: { escalar: true, seguimiento: false },
+        pre_ai_escalation: "after_hours",
+        system_prompt_preview: "[Pre-AI] Fuera de horario de atención.",
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Max AI turns
+    const aiTurns = messages.filter((m: any) => m.role === "assistant").length;
+    const maxTurns = settings.max_ai_turns_before_handoff || 8;
+    if (ht.on_max_turns !== false && aiTurns >= maxTurns) {
+      const msg = settings.fallback_message || "Enseguida te atiende un asesor.";
+      return new Response(JSON.stringify({
+        response: msg, raw: `${msg} [ESCALAR]`,
+        detected: { escalar: true, seguimiento: false },
+        pre_ai_escalation: "max_turns",
+        system_prompt_preview: `[Pre-AI] Máximo de ${maxTurns} turnos alcanzado.`,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Trigger keywords
+    const triggerHits: { reason: string; matched: string } | null = (() => {
+      if (settings.escalate_on_human_request !== false) {
+        const m = HUMAN_REQUEST_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "human_request", matched: m };
+      }
+      if (settings.escalate_on_frustration !== false) {
+        const m = FRUSTRATION_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "frustration", matched: m };
+      }
+      if (ht.on_schedule_visit !== false) {
+        const m = VISIT_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "visit_request", matched: m };
+      }
+      if (ht.on_price_negotiation) {
+        const m = PRICE_NEGOTIATION_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "price_negotiation", matched: m };
+      }
+      if (ht.on_legal_question) {
+        const m = LEGAL_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "legal_question", matched: m };
+      }
+      return null;
+    })();
+    if (triggerHits) {
+      const msg = settings.fallback_message || "Enseguida te atiende un asesor.";
+      return new Response(JSON.stringify({
+        response: msg, raw: `${msg} [ESCALAR]`,
+        detected: { escalar: true, seguimiento: false },
+        pre_ai_escalation: triggerHits.reason,
+        matched_trigger: triggerHits.matched,
+        system_prompt_preview: `[Pre-AI] Trigger "${triggerHits.matched}" → ${triggerHits.reason}.`,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Cargar inventario y KB del tenant para contexto realista
     let inventoryContext = "";
@@ -268,8 +333,18 @@ serve(async (req) => {
     let clean = text;
     for (const re of Object.values(markers)) clean = clean.replace(re, "").trim();
 
+    // Simulate response delay (capped at 5s)
+    const delaySec = Math.min(Number(settings.response_delay_seconds || 0), 5);
+    if (simulate_delay && delaySec > 0) {
+      await new Promise(r => setTimeout(r, delaySec * 1000));
+    }
+
     return new Response(
-      JSON.stringify({ response: clean, raw: text, detected, system_prompt_preview: systemPrompt.slice(0, 600) }),
+      JSON.stringify({
+        response: clean, raw: text, detected,
+        applied_delay_seconds: simulate_delay ? delaySec : 0,
+        system_prompt_preview: systemPrompt.slice(0, 1200),
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
