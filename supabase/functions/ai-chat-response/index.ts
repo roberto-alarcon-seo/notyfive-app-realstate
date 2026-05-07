@@ -81,13 +81,13 @@ interface KnowledgeEntry {
 
 // ===== Regional / conversation helpers =====
 const REGION_CONTEXT: Record<string, { country: string; currency: string; modismos: string }> = {
-  MX: { country: 'México', currency: 'MXN ($)', modismos: 'Términos: "departamento", "recámara", "Infonavit/Fovissste", "enganche". Evita "piso", "habitación".' },
-  CO: { country: 'Colombia', currency: 'COP ($)', modismos: 'Términos: "apartamento", "habitación", "subsidio MiCasaYa", "cuota inicial". Evita "departamento".' },
-  PE: { country: 'Perú', currency: 'PEN (S/)', modismos: 'Términos: "departamento", "dormitorio", "crédito Mivivienda".' },
-  AR: { country: 'Argentina', currency: 'ARS ($)', modismos: 'Términos: "departamento", "ambientes", "expensas". Trato con "vos" si aplica.' },
-  CL: { country: 'Chile', currency: 'CLP ($)', modismos: 'Términos: "departamento", "dormitorio", "UF", "pie".' },
-  ES: { country: 'España', currency: 'EUR (€)', modismos: 'Términos: "piso", "habitación", "hipoteca", "comunidad", "IBI", "arras".' },
-  US: { country: 'Estados Unidos (hispano)', currency: 'USD ($)', modismos: 'Términos bilingües si aplica.' },
+  MX: { country: 'México', currency: 'MXN ($)', modismos: 'Español de México. USA: "departamento", "recámara", "alberca", "cochera", "Infonavit/Fovissste", "enganche", "mensualidades", "ahorita", "platicar". EVITA: "piso", "habitación", "vale", "vosotros", "tío/tía".' },
+  CO: { country: 'Colombia', currency: 'COP ($)', modismos: 'Español colombiano. USA: "apartamento", "habitación/alcoba", "parqueadero", "subsidio MiCasaYa", "cuota inicial", "arriendo", "chévere", "con mucho gusto", "le cuento que…". EVITA: "departamento", "recámara", "piso", "vale", "vosotros".' },
+  PE: { country: 'Perú', currency: 'PEN (S/)', modismos: 'Español peruano. USA: "departamento", "dormitorio", "cochera", "crédito Mivivienda/Techo Propio", "inicial", "chévere", "bacán". EVITA: "piso", "vale", "vosotros".' },
+  AR: { country: 'Argentina', currency: 'ARS ($)', modismos: 'Español rioplatense. USA "vos" y conjugación voseante (tenés, querés, podés). USA: "departamento", "ambientes", "expensas", "cochera", "che", "dale". EVITA: "tú", "vosotros", "piso".' },
+  CL: { country: 'Chile', currency: 'CLP ($)', modismos: 'Español chileno. USA: "departamento", "dormitorio", "estacionamiento", "UF", "pie", "bacán". EVITA: "piso", "recámara", "vale", "vosotros".' },
+  ES: { country: 'España', currency: 'EUR (€)', modismos: 'OBLIGATORIO ESPAÑOL DE ESPAÑA (castellano peninsular). USA SIEMPRE: "piso" (NUNCA "departamento" ni "apartamento"), "habitación" (NUNCA "recámara"/"dormitorio" como término principal), "salón", "cuarto de baño/aseo", "plaza de garaje", "trastero", "comunidad de propietarios", "IBI", "arras", "hipoteca", "ascensor". USA expresiones locales: "vale", "venga", "estupendo", "genial", "qué tal", "encantado/a", "un saludo cordial". USA "coger", "ordenador", "móvil", "coche". PROHIBIDO: "ahorita", "platicar", "departamento", "recámara", "carro", "celular", "computadora", "okey", "sale", "chévere", "parqueadero", "alberca" (di "piscina"), "cochera" (di "garaje"), "enganche" (di "entrada"), "mensualidades" (di "cuota mensual/letra").' },
+  US: { country: 'Estados Unidos (hispano)', currency: 'USD ($)', modismos: 'Español neutro latino, términos bilingües si aplica.' },
 };
 
 const FORMALITY_TEXT: Record<string, string> = {
@@ -446,9 +446,23 @@ serve(async (req) => {
       'asesor', 'ejecutivo'
     ];
     const frustrationTriggers = [
-      'esto no sirve', 'no me ayudas', 'eres inutil', 'incompetente',
-      'urgente', 'es una emergencia', 'llevo horas', 'llevo días'
+      'esto no sirve', 'no me ayudas', 'eres inutil', 'eres inútil', 'incompetente',
+      'urgente', 'es una emergencia', 'llevo horas', 'llevo días', 'llevo dias',
+      'estoy enojado', 'estoy enojada', 'estoy molesto', 'estoy molesta',
+      'estoy harto', 'estoy harta', 'estoy furioso', 'estoy furiosa',
+      'estoy cabreado', 'estoy cabreada', 'qué frustrante', 'que frustrante',
+      'me tienen harto', 'me tienen harta', 'esto es ridículo', 'esto es ridiculo',
+      'pésimo servicio', 'pesimo servicio', 'mal servicio', 'una vergüenza', 'una verguenza',
+      'no me sirve', 'estoy frustrado', 'estoy frustrada', 'no entiendes nada',
+      'coño', 'joder', 'mierda', 'estafa', 'estafadores'
     ];
+    const humanRequestExtras = [
+      'hablar con humano', 'hablar con un humano', 'una persona', 'con una persona',
+      'eres una maquina', 'eres una máquina', 'eres un bot', 'eres robot',
+      'quiero un humano', 'pasame con', 'pásame con', 'comunicame con', 'comunícame con',
+      'me atienda alguien', 'que me atienda', 'alguien que me atienda'
+    ];
+    humanRequestTriggers.push(...humanRequestExtras);
 
     // Check if customer wants human
     if (aiSettings.escalate_on_human_request) {
