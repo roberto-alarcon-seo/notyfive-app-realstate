@@ -62,6 +62,14 @@ interface AISettings {
   escalate_on_human_request: boolean;
   behavior_prompt: string | null;
   fallback_message: string | null;
+  region_code?: string;
+  language?: string;
+  formality?: string;
+  max_message_length?: number;
+  max_ai_turns_before_handoff?: number;
+  business_hours?: any;
+  out_of_hours_message?: string | null;
+  handoff_triggers?: any;
 }
 
 interface KnowledgeEntry {
