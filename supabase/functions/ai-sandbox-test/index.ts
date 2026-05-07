@@ -258,7 +258,7 @@ serve(async (req) => {
       const [propsRes, kbRes] = await Promise.all([
         supabase
           .from("properties")
-          .select("title, property_code, zone, price, currency, operation_type, property_type, status, address, description, accepted_credits")
+          .select("id, title, property_code, zone, price, currency, operation_type, property_type, status, address, description, accepted_credits")
           .eq("tenant_id", tenant_id)
           .eq("is_active", true)
           .limit(50),
@@ -270,11 +270,26 @@ serve(async (req) => {
           .limit(50),
       ]);
       const props = propsRes.data || [];
+      let faqsByProp: Record<string, { question: string; answer: string }[]> = {};
+      if (props.length) {
+        const ids = props.map((p: any) => p.id);
+        const { data: faqs } = await supabase
+          .from("property_faq")
+          .select("property_id, question, answer")
+          .in("property_id", ids);
+        for (const f of faqs || []) {
+          (faqsByProp[(f as any).property_id] ||= []).push({ question: (f as any).question, answer: (f as any).answer });
+        }
+      }
       if (props.length) {
         inventoryContext = "\n\nPROPIEDADES DISPONIBLES (inventario real del tenant):\n" +
-          props.map((p: any) =>
-            `- ${p.title} (Código: ${p.property_code}) | Zona: ${p.zone} | Precio: $${(p.price || 0).toLocaleString()} ${p.currency} | ${p.operation_type} | Tipo: ${p.property_type || "—"} | Estatus: ${p.status}${p.address ? ` | Dirección: ${p.address}` : ""}${p.description ? `\n  Descripción: ${p.description}` : ""}${p.accepted_credits?.length ? `\n  Créditos: ${p.accepted_credits.join(", ")}` : ""}`
-          ).join("\n");
+          props.map((p: any) => {
+            const faqs = faqsByProp[p.id] || [];
+            const faqText = faqs.length
+              ? `\n  FAQs:\n${faqs.map(f => `    P: ${f.question}\n    R: ${f.answer}`).join("\n")}`
+              : "";
+            return `- ${p.title} (Código: ${p.property_code}) | Zona: ${p.zone} | Precio: $${(p.price || 0).toLocaleString()} ${p.currency} | ${p.operation_type} | Tipo: ${p.property_type || "—"} | Estatus: ${p.status}${p.address ? ` | Dirección: ${p.address}` : ""}${p.description ? `\n  Descripción: ${p.description}` : ""}${p.accepted_credits?.length ? `\n  Créditos: ${p.accepted_credits.join(", ")}` : ""}${faqText}`;
+          }).join("\n");
       } else {
         inventoryContext = "\n\nPROPIEDADES DISPONIBLES: (no hay inmuebles activos cargados)";
       }
