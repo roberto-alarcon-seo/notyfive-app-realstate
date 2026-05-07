@@ -246,6 +246,33 @@ serve(async (req) => {
 
     const aiSettings = settings;
 
+    // ===== Business hours check =====
+    const bhCheck = isWithinBusinessHours(aiSettings.business_hours);
+    const handoffTriggers = aiSettings.handoff_triggers || {};
+    if (bhCheck.configured && !bhCheck.open && handoffTriggers.on_after_hours !== false) {
+      console.log('⏰ Out of business hours, sending OOH message');
+      const oohMsg = aiSettings.out_of_hours_message
+        || 'Gracias por escribirnos. Te responderemos en cuanto abramos.';
+      const customerOoh = aiSettings.use_customer_name && contact_name
+        ? `Hola ${contact_name}. ${oohMsg}`
+        : oohMsg;
+      await supabase.from('conversations').update({
+        ai_state: 'paused',
+        needs_human: true,
+        ai_pause_reason: 'after_hours',
+        ai_paused_at: new Date().toISOString(),
+      }).eq('id', conversation_id);
+      await supabase.from('ai_interaction_logs').insert({
+        tenant_id, conversation_id, contact_id, inbound_message,
+        was_escalated: true, escalation_reason: 'after_hours',
+      });
+      return new Response(JSON.stringify({
+        action: 'respond',
+        response: customerOoh,
+        delay_seconds: aiSettings.response_delay_seconds,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     // Check if tenant can send using centralized function
     const { data: canSendResult } = await supabase.rpc('can_send_message', { p_tenant_id: tenant_id });
 
