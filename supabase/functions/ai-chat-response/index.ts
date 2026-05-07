@@ -888,6 +888,12 @@ ${propertiesContext}`;
     // Remove internal markers from response
     cleanResponse = cleanResponse.replace(/\[SEGUIMIENTO_HUMANO\]/g, '').trim();
 
+    // Enforce style settings post-LLM
+    if (!aiSettings.use_emojis) {
+      cleanResponse = stripEmojis(cleanResponse);
+    }
+    cleanResponse = enforceMaxLength(cleanResponse, aiSettings.max_message_length || 320);
+
     // If handoff is needed, send the AI's final message AND escalate
     if (needsHandoff) {
       console.log('🤝 AI triggered human handoff via [SEGUIMIENTO_HUMANO]');
