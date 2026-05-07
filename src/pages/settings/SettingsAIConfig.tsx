@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAISettings, useUpdateAISettings, useToggleAI, AITone, BusinessHours, HandoffTriggers } from '@/hooks/useAISettings';
 import { supabase } from '@/integrations/supabase/client';
 import { AISandboxDialog } from '@/components/settings/AISandboxDialog';
-import { Sparkles as SparklesIcon, PlayCircle } from 'lucide-react';
+import { PlayCircle } from 'lucide-react';
 
 const TONE_OPTIONS: { value: AITone; label: string; description: string }[] = [
   { value: 'cordial', label: 'Cordial', description: 'Amable y respetuoso' },
