@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -15,6 +15,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { AssigneeSelector } from "@/components/inbox/AssigneeSelector";
@@ -24,6 +30,8 @@ import {
   UserCheck,
   UserX,
   TrendingUp,
+  History,
+  ArrowRight,
 } from "lucide-react";
 import {
   BarChart,
@@ -59,10 +67,13 @@ export default function AdminLeads() {
   const { profile, tenantRole, isSuperAdmin, isLoading: authLoading } = useAuth();
   const tenantId = profile?.tenant_id ?? null;
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"attention" | "all" | "unassigned" | "risk" | "needs_human">(
     "attention",
   );
+  const [historyContactId, setHistoryContactId] = useState<string | null>(null);
+  const [historyContactName, setHistoryContactName] = useState<string>("");
 
   const isAllowed =
     isSuperAdmin || ["administrador", "manager"].includes(tenantRole || "");
@@ -106,6 +117,60 @@ export default function AdminLeads() {
         }
       }
       return list;
+    },
+  });
+
+  // Realtime: refresh supervisión when new messages arrive or conversations change
+  useEffect(() => {
+    if (!tenantId || !isAllowed) return;
+    const channel = supabase
+      .channel(`admin-leads-${tenantId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `tenant_id=eq.${tenantId}` },
+        () => queryClient.invalidateQueries({ queryKey: ["admin-leads", tenantId] }),
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversations", filter: `tenant_id=eq.${tenantId}` },
+        () => queryClient.invalidateQueries({ queryKey: ["admin-leads", tenantId] }),
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "assignment_logs", filter: `tenant_id=eq.${tenantId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-leads", tenantId] });
+          queryClient.invalidateQueries({ queryKey: ["assignment-logs-recent", tenantId] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tenantId, isAllowed, queryClient]);
+
+  // Assignment logs (últimos 30 días) — tenant-wide reassignment history
+  const { data: recentLogs = [] } = useQuery({
+    queryKey: ["assignment-logs-recent", tenantId],
+    enabled: !!tenantId && isAllowed,
+    queryFn: async () => {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("assignment_logs")
+        .select(
+          `id, created_at, reason, strategy, previous_agent_id, new_agent_id,
+           assigned_by, contact_id,
+           contact:contacts(id, name),
+           previous_agent:profiles!assignment_logs_previous_agent_id_fkey(id, name, email),
+           new_agent:profiles!assignment_logs_new_agent_id_fkey(id, name, email),
+           assigned_by_profile:profiles!assignment_logs_assigned_by_fkey(id, name, email)`,
+        )
+        .eq("tenant_id", tenantId!)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as any[];
     },
   });
 
@@ -194,6 +259,72 @@ export default function AdminLeads() {
           onClick={() => setFilter("risk")}
         />
       </div>
+
+      {recentLogs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Reasignaciones recientes (últimos 30 días)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cuándo</TableHead>
+                  <TableHead>Contacto</TableHead>
+                  <TableHead>De</TableHead>
+                  <TableHead />
+                  <TableHead>A</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead>Por</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentLogs.slice(0, 15).map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDistanceToNow(new Date(log.created_at), {
+                        addSuffix: true,
+                        locale: es,
+                      })}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {log.contact?.name || (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {log.previous_agent?.name || log.previous_agent?.email || (
+                        <span className="text-muted-foreground italic">Sin asignar</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      <ArrowRight className="h-3 w-3" />
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {log.new_agent?.name || log.new_agent?.email || (
+                        <span className="text-muted-foreground italic">Sin asignar</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {labelForReason(log.reason, log.strategy)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {log.assigned_by_profile?.name ||
+                        log.assigned_by_profile?.email ||
+                        "Sistema"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {agentDistribution.length > 0 && (
         <Card>
@@ -377,6 +508,17 @@ export default function AdminLeads() {
                     >
                       Abrir
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setHistoryContactId(r.contact_id);
+                        setHistoryContactName(r.contact?.name || "Lead");
+                      }}
+                      title="Ver historial de reasignaciones"
+                    >
+                      <History className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -384,7 +526,121 @@ export default function AdminLeads() {
           </Table>
         </CardContent>
       </Card>
+
+      <ContactAssignmentHistoryDialog
+        contactId={historyContactId}
+        contactName={historyContactName}
+        onOpenChange={(open) => !open && setHistoryContactId(null)}
+      />
     </div>
+  );
+}
+
+function labelForReason(reason: string | null, strategy: string): string {
+  const r = (reason || "").toLowerCase();
+  if (r.includes("manual")) return "Manual";
+  if (r.includes("claim")) return "Reclamado";
+  if (r.includes("timeout")) return "Por timeout";
+  if (r.includes("round_robin") || strategy === "round_robin") return "Round-robin";
+  if (r.includes("property")) return "Por propiedad";
+  if (r.includes("sticky")) return "Sticky";
+  return reason || strategy;
+}
+
+function ContactAssignmentHistoryDialog({
+  contactId,
+  contactName,
+  onOpenChange,
+}: {
+  contactId: string | null;
+  contactName: string;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["assignment-logs-contact", contactId],
+    enabled: !!contactId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assignment_logs")
+        .select(
+          `id, created_at, reason, strategy,
+           previous_agent:profiles!assignment_logs_previous_agent_id_fkey(name, email),
+           new_agent:profiles!assignment_logs_new_agent_id_fkey(name, email),
+           assigned_by_profile:profiles!assignment_logs_assigned_by_fkey(name, email)`,
+        )
+        .eq("contact_id", contactId!)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  return (
+    <Dialog open={!!contactId} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Historial de reasignaciones — {contactName}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto">
+          {isLoading && (
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              Cargando…
+            </p>
+          )}
+          {!isLoading && logs.length === 0 && (
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              Este lead no tiene reasignaciones registradas.
+            </p>
+          )}
+          {!isLoading && logs.length > 0 && (
+            <ol className="space-y-3">
+              {logs.map((log) => (
+                <li
+                  key={log.id}
+                  className="border-l-2 border-primary/30 pl-3 py-1"
+                >
+                  <div className="text-xs text-muted-foreground">
+                    {format(new Date(log.created_at), "PPpp", { locale: es })}
+                  </div>
+                  <div className="text-sm flex items-center gap-2 flex-wrap mt-0.5">
+                    <span>
+                      {log.previous_agent?.name ||
+                        log.previous_agent?.email || (
+                          <span className="italic text-muted-foreground">
+                            Sin asignar
+                          </span>
+                        )}
+                    </span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                    <span className="font-medium">
+                      {log.new_agent?.name || log.new_agent?.email || (
+                        <span className="italic text-muted-foreground">
+                          Sin asignar
+                        </span>
+                      )}
+                    </span>
+                    <Badge variant="outline" className="text-xs ml-1">
+                      {labelForReason(log.reason, log.strategy)}
+                    </Badge>
+                  </div>
+                  {log.assigned_by_profile && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Por:{" "}
+                      {log.assigned_by_profile.name ||
+                        log.assigned_by_profile.email}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
