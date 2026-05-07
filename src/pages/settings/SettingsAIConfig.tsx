@@ -71,7 +71,7 @@ function usePromptPresets() {
         .select('id, region_code, name, description, prompt')
         .order('region_code', { ascending: true });
       if (error) throw error;
-      return (data || []) as Array<{ id: string; region_code: string; name: string; description: string | null; prompt: string }>;
+      return ((data || []) as unknown) as Array<{ id: string; region_code: string; name: string; description: string | null; prompt: string }>;
     },
   });
 }
