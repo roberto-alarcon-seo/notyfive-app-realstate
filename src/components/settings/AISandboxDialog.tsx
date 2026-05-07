@@ -112,7 +112,15 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
 
         <div className="flex-1 flex min-h-0">
           <div className={cn('flex flex-col min-h-0', debugOpen ? 'flex-1 border-r' : 'flex-1')}>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-muted/20">
+            <div
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-muted/20 relative"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 20% 20%, hsl(var(--primary)/0.08) 0, transparent 35%), radial-gradient(circle at 80% 70%, hsl(var(--primary)/0.06) 0, transparent 40%), url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g fill='none' stroke='%23000000' stroke-opacity='0.06' stroke-width='1.2'><circle cx='20' cy='20' r='8'/><path d='M50 15 q5 -8 10 0 t10 0' /><circle cx='95' cy='30' r='4'/><path d='M15 60 l8 -4 l0 8 z'/><circle cx='60' cy='60' r='12'/><path d='M52 60 a8 8 0 0 0 16 0'/><path d='M95 80 q-6 6 0 12 t0 12'/><circle cx='30' cy='100' r='5'/><path d='M70 100 l6 6 l-12 0 z'/><circle cx='105' cy='105' r='7'/></g></svg>\")",
+                backgroundSize: 'auto, auto, 220px 220px',
+              }}
+            >
           {messages.length === 0 && (
             <div className="text-center text-sm text-muted-foreground py-12">
               <Bot className="h-8 w-8 mx-auto mb-2 opacity-50" />
