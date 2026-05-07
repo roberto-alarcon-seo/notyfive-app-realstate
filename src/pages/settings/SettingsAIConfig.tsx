@@ -14,6 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAISettings, useUpdateAISettings, useToggleAI, AITone, BusinessHours, HandoffTriggers } from '@/hooks/useAISettings';
 import { supabase } from '@/integrations/supabase/client';
+import { AISandboxDialog } from '@/components/settings/AISandboxDialog';
+import { PlayCircle } from 'lucide-react';
 
 const TONE_OPTIONS: { value: AITone; label: string; description: string }[] = [
   { value: 'cordial', label: 'Cordial', description: 'Amable y respetuoso' },
@@ -81,6 +83,7 @@ export default function SettingsAIConfig() {
   const updateSettings = useUpdateAISettings();
   const toggleAI = useToggleAI();
   const { data: presets = [] } = usePromptPresets();
+  const [sandboxOpen, setSandboxOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     agent_name: 'Asistente',
@@ -507,11 +510,16 @@ export default function SettingsAIConfig() {
         </Tabs>
 
         <div className="flex justify-end pt-4 border-t sticky bottom-0 bg-background py-3">
+          <Button variant="outline" onClick={() => setSandboxOpen(true)} size="lg" className="mr-2">
+            <PlayCircle className="h-4 w-4 mr-2" />
+            Probar conversación
+          </Button>
           <Button onClick={handleSave} disabled={updateSettings.isPending} size="lg">
             {updateSettings.isPending ? 'Guardando...' : 'Guardar configuración'}
           </Button>
         </div>
       </div>
+      <AISandboxDialog open={sandboxOpen} onOpenChange={setSandboxOpen} settings={formData} />
     </SettingsLayout>
   );
 }
