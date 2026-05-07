@@ -29,6 +29,58 @@ const LANGUAGE_TEXT: Record<string, string> = {
   pt: "Responde SIEMPRE en portugués.",
 };
 
+// === Trigger lists (must match ai-chat-response) ===
+const HUMAN_REQUEST_TRIGGERS = [
+  "hablar con persona", "agente humano", "representante", "persona real",
+  "no quiero bot", "quiero hablar con alguien", "asesor", "ejecutivo",
+  "hablar con humano", "hablar con un humano", "una persona", "con una persona",
+  "eres una maquina", "eres una máquina", "eres un bot", "eres robot",
+  "quiero un humano", "pasame con", "pásame con", "comunicame con", "comunícame con",
+  "me atienda alguien", "que me atienda", "alguien que me atienda",
+];
+const FRUSTRATION_TRIGGERS = [
+  "esto no sirve", "no me ayudas", "eres inutil", "eres inútil", "incompetente",
+  "urgente", "es una emergencia", "llevo horas", "llevo días", "llevo dias",
+  "estoy enojado", "estoy enojada", "estoy molesto", "estoy molesta",
+  "estoy harto", "estoy harta", "estoy furioso", "estoy furiosa",
+  "estoy cabreado", "estoy cabreada", "qué frustrante", "que frustrante",
+  "me tienen harto", "me tienen harta", "esto es ridículo", "esto es ridiculo",
+  "pésimo servicio", "pesimo servicio", "mal servicio", "una vergüenza", "una verguenza",
+  "no me sirve", "estoy frustrado", "estoy frustrada", "no entiendes nada",
+  "coño", "joder", "mierda", "estafa", "estafadores",
+];
+const VISIT_TRIGGERS = [
+  "agendar visita", "agendar cita", "quiero visitar", "quiero ver el", "quiero ver la",
+  "puedo ir a ver", "puedo verla", "puedo verlo", "ir a verla", "ir a verlo",
+  "visitar el inmueble", "visitar la propiedad", "ver la casa", "ver el departamento",
+  "cuando puedo ir", "cuándo puedo ir", "horario para visita", "programar visita",
+];
+const PRICE_NEGOTIATION_TRIGGERS = [
+  "descuento", "rebaja", "negociar precio", "negociable", "mejor precio",
+  "más barato", "mas barato", "bajar el precio", "reducir el precio",
+];
+const LEGAL_TRIGGERS = [
+  "escritura", "notario", "notaría", "notaria", "impuestos", "fiscal",
+  "simulación de crédito", "simulacion de credito", "trámite legal", "tramite legal",
+];
+
+function isWithinBusinessHours(bh: any): { open: boolean; configured: boolean } {
+  if (!bh || !bh.enabled) return { open: true, configured: false };
+  try {
+    const tz = bh.timezone || "America/Mexico_City";
+    const now = new Date();
+    const fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+    const parts = fmt.formatToParts(now);
+    const wd = parts.find(p => p.type === "weekday")?.value?.toLowerCase().slice(0, 3) || "";
+    const hh = parts.find(p => p.type === "hour")?.value || "00";
+    const mm = parts.find(p => p.type === "minute")?.value || "00";
+    const day = bh.days?.[wd];
+    if (!day || !day.open || !day.close) return { open: false, configured: true };
+    const cur = `${hh}:${mm}`;
+    return { open: cur >= day.open && cur <= day.close, configured: true };
+  } catch { return { open: true, configured: false }; }
+}
+
 function stripEmojis(text: string): string {
   return text
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}]/gu, "")
@@ -90,6 +142,11 @@ INSTRUCCIONES DE ESTILO:
 - ${emojiInstr}
 - ${identity}${handoffBlock}
 
+REGLA CRÍTICA ANTI-ALUCINACIÓN:
+- Responde ÚNICAMENTE con datos que aparezcan textualmente en BASE DE CONOCIMIENTO o PROPIEDADES DISPONIBLES más abajo.
+- Si el cliente pregunta por un crédito, requisito, política, comisión, horario, dirección o cualquier dato que NO esté literal en este prompt, NO inventes. Responde una frase breve ("Déjame conectarte con un asesor para darte el dato exacto.") y AÑADE [ESCALAR] al final.
+- Si te preguntan por una propiedad y NO está en PROPIEDADES DISPONIBLES, di que no la tienes registrada y AÑADE [ESCALAR].
+
 MODO SANDBOX: Esta es una conversación de prueba para validar el comportamiento configurado. Responde como lo harías con un cliente real, respetando todas las reglas.
 
 COMPORTAMIENTO DEL NEGOCIO:
@@ -100,7 +157,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { settings, messages, tenant_id } = await req.json();
+    const { settings, messages, tenant_id, simulate_delay } = await req.json();
     if (!settings || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "settings y messages requeridos" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -129,6 +186,71 @@ serve(async (req) => {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
 
+    // === Pre-AI checks (mirror production) ===
+    const lastUser = [...messages].reverse().find((m: any) => m.role === "user")?.content || "";
+    const lower = lastUser.toLowerCase();
+    const ht = settings.handoff_triggers || {};
+
+    // Business hours
+    const bh = isWithinBusinessHours(settings.business_hours);
+    if (bh.configured && !bh.open && ht.on_after_hours !== false) {
+      const oohMsg = settings.out_of_hours_message || "Gracias por escribirnos. Te responderemos en cuanto abramos.";
+      return new Response(JSON.stringify({
+        response: oohMsg, raw: oohMsg,
+        detected: { escalar: true, seguimiento: false },
+        pre_ai_escalation: "after_hours",
+        system_prompt_preview: "[Pre-AI] Fuera de horario de atención.",
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Max AI turns
+    const aiTurns = messages.filter((m: any) => m.role === "assistant").length;
+    const maxTurns = settings.max_ai_turns_before_handoff || 8;
+    if (ht.on_max_turns !== false && aiTurns >= maxTurns) {
+      const msg = settings.fallback_message || "Enseguida te atiende un asesor.";
+      return new Response(JSON.stringify({
+        response: msg, raw: `${msg} [ESCALAR]`,
+        detected: { escalar: true, seguimiento: false },
+        pre_ai_escalation: "max_turns",
+        system_prompt_preview: `[Pre-AI] Máximo de ${maxTurns} turnos alcanzado.`,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Trigger keywords
+    const triggerHits: { reason: string; matched: string } | null = (() => {
+      if (settings.escalate_on_human_request !== false) {
+        const m = HUMAN_REQUEST_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "human_request", matched: m };
+      }
+      if (settings.escalate_on_frustration !== false) {
+        const m = FRUSTRATION_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "frustration", matched: m };
+      }
+      if (ht.on_schedule_visit !== false) {
+        const m = VISIT_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "visit_request", matched: m };
+      }
+      if (ht.on_price_negotiation) {
+        const m = PRICE_NEGOTIATION_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "price_negotiation", matched: m };
+      }
+      if (ht.on_legal_question) {
+        const m = LEGAL_TRIGGERS.find(t => lower.includes(t));
+        if (m) return { reason: "legal_question", matched: m };
+      }
+      return null;
+    })();
+    if (triggerHits) {
+      const msg = settings.fallback_message || "Enseguida te atiende un asesor.";
+      return new Response(JSON.stringify({
+        response: msg, raw: `${msg} [ESCALAR]`,
+        detected: { escalar: true, seguimiento: false },
+        pre_ai_escalation: triggerHits.reason,
+        matched_trigger: triggerHits.matched,
+        system_prompt_preview: `[Pre-AI] Trigger "${triggerHits.matched}" → ${triggerHits.reason}.`,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Cargar inventario y KB del tenant para contexto realista
     let inventoryContext = "";
     let kbContext = "";
@@ -136,7 +258,7 @@ serve(async (req) => {
       const [propsRes, kbRes] = await Promise.all([
         supabase
           .from("properties")
-          .select("title, property_code, zone, price, currency, operation_type, property_type, status, address, description, accepted_credits")
+          .select("id, title, property_code, zone, price, currency, operation_type, property_type, status, address, description, accepted_credits")
           .eq("tenant_id", tenant_id)
           .eq("is_active", true)
           .limit(50),
@@ -148,11 +270,26 @@ serve(async (req) => {
           .limit(50),
       ]);
       const props = propsRes.data || [];
+      let faqsByProp: Record<string, { question: string; answer: string }[]> = {};
+      if (props.length) {
+        const ids = props.map((p: any) => p.id);
+        const { data: faqs } = await supabase
+          .from("property_faq")
+          .select("property_id, question, answer")
+          .in("property_id", ids);
+        for (const f of faqs || []) {
+          (faqsByProp[(f as any).property_id] ||= []).push({ question: (f as any).question, answer: (f as any).answer });
+        }
+      }
       if (props.length) {
         inventoryContext = "\n\nPROPIEDADES DISPONIBLES (inventario real del tenant):\n" +
-          props.map((p: any) =>
-            `- ${p.title} (Código: ${p.property_code}) | Zona: ${p.zone} | Precio: $${(p.price || 0).toLocaleString()} ${p.currency} | ${p.operation_type} | Tipo: ${p.property_type || "—"} | Estatus: ${p.status}${p.address ? ` | Dirección: ${p.address}` : ""}${p.description ? `\n  Descripción: ${p.description}` : ""}${p.accepted_credits?.length ? `\n  Créditos: ${p.accepted_credits.join(", ")}` : ""}`
-          ).join("\n");
+          props.map((p: any) => {
+            const faqs = faqsByProp[p.id] || [];
+            const faqText = faqs.length
+              ? `\n  FAQs:\n${faqs.map(f => `    P: ${f.question}\n    R: ${f.answer}`).join("\n")}`
+              : "";
+            return `- ${p.title} (Código: ${p.property_code}) | Zona: ${p.zone} | Precio: $${(p.price || 0).toLocaleString()} ${p.currency} | ${p.operation_type} | Tipo: ${p.property_type || "—"} | Estatus: ${p.status}${p.address ? ` | Dirección: ${p.address}` : ""}${p.description ? `\n  Descripción: ${p.description}` : ""}${p.accepted_credits?.length ? `\n  Créditos: ${p.accepted_credits.join(", ")}` : ""}${faqText}`;
+          }).join("\n");
       } else {
         inventoryContext = "\n\nPROPIEDADES DISPONIBLES: (no hay inmuebles activos cargados)";
       }
@@ -216,8 +353,18 @@ serve(async (req) => {
     let clean = text;
     for (const re of Object.values(markers)) clean = clean.replace(re, "").trim();
 
+    // Simulate response delay (capped at 5s)
+    const delaySec = Math.min(Number(settings.response_delay_seconds || 0), 5);
+    if (simulate_delay && delaySec > 0) {
+      await new Promise(r => setTimeout(r, delaySec * 1000));
+    }
+
     return new Response(
-      JSON.stringify({ response: clean, raw: text, detected, system_prompt_preview: systemPrompt.slice(0, 600) }),
+      JSON.stringify({
+        response: clean, raw: text, detected,
+        applied_delay_seconds: simulate_delay ? delaySec : 0,
+        system_prompt_preview: systemPrompt.slice(0, 1200),
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
