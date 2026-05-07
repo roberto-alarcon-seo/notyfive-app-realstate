@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -74,6 +75,7 @@ export default function AdminLeads() {
   );
   const [historyContactId, setHistoryContactId] = useState<string | null>(null);
   const [historyContactName, setHistoryContactName] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"current" | "history">("current");
 
   const isAllowed =
     isSuperAdmin || ["administrador", "manager"].includes(tenantRole || "");
@@ -260,73 +262,25 @@ export default function AdminLeads() {
         />
       </div>
 
-      {recentLogs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <History className="h-4 w-4" />
-              Reasignaciones recientes (últimos 30 días)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cuándo</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead>De</TableHead>
-                  <TableHead />
-                  <TableHead>A</TableHead>
-                  <TableHead>Motivo</TableHead>
-                  <TableHead>Por</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentLogs.slice(0, 15).map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNow(new Date(log.created_at), {
-                        addSuffix: true,
-                        locale: es,
-                      })}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {log.contact?.name || (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {log.previous_agent?.name || log.previous_agent?.email || (
-                        <span className="text-muted-foreground italic">Sin asignar</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <ArrowRight className="h-3 w-3" />
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {log.new_agent?.name || log.new_agent?.email || (
-                        <span className="text-muted-foreground italic">Sin asignar</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {labelForReason(log.reason, log.strategy)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {log.assigned_by_profile?.name ||
-                        log.assigned_by_profile?.email ||
-                        "Sistema"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "current" | "history")} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="current" className="gap-2">
+            <Users className="h-4 w-4" />
+            Conversaciones y asignaciones
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
+            Histórico de reasignaciones
+            {recentLogs.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                {recentLogs.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {agentDistribution.length > 0 && (
+        <TabsContent value="current" className="space-y-6 mt-4">
+          {agentDistribution.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -526,6 +480,84 @@ export default function AdminLeads() {
           </Table>
         </CardContent>
       </Card>
+
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Reasignaciones recientes (últimos 30 días)
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Auditoría de todos los cambios de asesor: manual, por timeout, round-robin o reclamados.
+              </p>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              {recentLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  No hay reasignaciones registradas en los últimos 30 días.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cuándo</TableHead>
+                      <TableHead>Contacto</TableHead>
+                      <TableHead>De</TableHead>
+                      <TableHead />
+                      <TableHead>A</TableHead>
+                      <TableHead>Motivo</TableHead>
+                      <TableHead>Por</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentLogs.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDistanceToNow(new Date(log.created_at), {
+                            addSuffix: true,
+                            locale: es,
+                          })}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {log.contact?.name || (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {log.previous_agent?.name || log.previous_agent?.email || (
+                            <span className="text-muted-foreground italic">Sin asignar</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <ArrowRight className="h-3 w-3" />
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {log.new_agent?.name || log.new_agent?.email || (
+                            <span className="text-muted-foreground italic">Sin asignar</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {labelForReason(log.reason, log.strategy)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {log.assigned_by_profile?.name ||
+                            log.assigned_by_profile?.email ||
+                            "Sistema"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <ContactAssignmentHistoryDialog
         contactId={historyContactId}
