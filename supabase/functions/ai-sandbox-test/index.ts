@@ -8,13 +8,13 @@ const corsHeaders = {
 };
 
 const REGION_CONTEXT: Record<string, { country: string; currency: string; modismos: string }> = {
-  MX: { country: "México", currency: "MXN ($)", modismos: 'Términos: "departamento", "recámara", "Infonavit/Fovissste", "enganche". Evita "piso", "habitación".' },
-  CO: { country: "Colombia", currency: "COP ($)", modismos: 'Términos: "apartamento", "habitación", "subsidio MiCasaYa", "cuota inicial". Evita "departamento".' },
-  PE: { country: "Perú", currency: "PEN (S/)", modismos: 'Términos: "departamento", "dormitorio", "crédito Mivivienda".' },
-  AR: { country: "Argentina", currency: "ARS ($)", modismos: 'Términos: "departamento", "ambientes", "expensas". Trato con "vos" si aplica.' },
-  CL: { country: "Chile", currency: "CLP ($)", modismos: 'Términos: "departamento", "dormitorio", "UF", "pie".' },
-  ES: { country: "España", currency: "EUR (€)", modismos: 'Términos: "piso", "habitación", "hipoteca", "comunidad", "IBI", "arras".' },
-  US: { country: "Estados Unidos (hispano)", currency: "USD ($)", modismos: "Términos bilingües si aplica." },
+  MX: { country: "México", currency: "MXN ($)", modismos: 'Español de México neutral. USA: "departamento", "recámara", "alberca", "cochera", "Infonavit/Fovissste", "enganche", "mensualidades", "ahorita", "platicar". EVITA: "piso" (usa departamento), "habitación" (usa recámara), "coche" (usa carro/auto), "vale" (usa "ok/sale"), "vosotros", "tío/tía".' },
+  CO: { country: "Colombia", currency: "COP ($)", modismos: 'Español colombiano (acento bogotano neutro). USA: "apartamento", "habitación/alcoba", "parqueadero", "subsidio MiCasaYa", "cuota inicial", "arriendo", "chévere", "parcero" (informal), "¿cómo le va?", "le cuento que…", "con mucho gusto". EVITA: "departamento", "recámara", "piso", "vale", "guay", "tío/tía", "vosotros".' },
+  PE: { country: "Perú", currency: "PEN (S/)", modismos: 'Español peruano. USA: "departamento", "dormitorio", "cochera", "crédito Mivivienda/Techo Propio", "inicial", "cuotas", "chévere", "bacán". EVITA: "piso", "vale", "vosotros".' },
+  AR: { country: "Argentina", currency: "ARS ($)", modismos: 'Español rioplatense. USA "vos" y conjugación voseante (tenés, querés, podés, sabés). USA: "departamento", "ambientes" (no "recámaras"), "expensas", "cochera", "che", "dale", "barbaro". EVITA: "tú", "vosotros", "piso".' },
+  CL: { country: "Chile", currency: "CLP ($)", modismos: 'Español chileno. USA: "departamento", "dormitorio", "estacionamiento", "UF", "pie" (enganche), "bacán", "cachái". EVITA: "piso", "recámara", "vale", "vosotros".' },
+  ES: { country: "España", currency: "EUR (€)", modismos: 'OBLIGATORIO ESPAÑOL DE ESPAÑA (castellano peninsular). USA SIEMPRE: "piso" (NUNCA "departamento" ni "apartamento" salvo unifamiliar pequeño), "habitación" (NUNCA "recámara" ni "dormitorio" como término principal), "salón", "cocina", "cuarto de baño/aseo", "plaza de garaje", "trastero", "comunidad de propietarios", "IBI", "arras", "hipoteca", "nómina", "Hacienda", "ascensor". USA expresiones locales: "vale", "venga", "estupendo", "genial", "que tal", "perfecto", "encantado/a", "un saludo cordial". USA "coger" (tomar), "ordenador" (no "computadora"), "móvil" (no "celular"), "coche" (no "carro/auto"). PROHIBIDO: "ahorita", "platicar", "departamento", "recámara", "carro", "celular", "computadora", "okey", "sale", "chévere", "bacán", "parqueadero", "alberca" (di "piscina"), "cochera" (di "garaje"), "enganche" (di "entrada"), "mensualidades" (di "cuota mensual/letra"). NO uses "vosotros" salvo para grupo informal; con cliente usa "usted" o "tú" según formalidad.' },
+  US: { country: "Estados Unidos (hispano)", currency: "USD ($)", modismos: "Español neutro latino, términos bilingües si el cliente cambia de idioma." },
 };
 
 const FORMALITY_TEXT: Record<string, string> = {
@@ -62,6 +62,19 @@ function buildSystemPrompt(s: any) {
     ? "NUNCA reveles que eres una IA. Actúa como un asistente humano."
     : "";
 
+  // Handoff rules (must be explicit so the model emits [ESCALAR])
+  const ht = s.handoff_triggers || {};
+  const handoffRules: string[] = [];
+  if (s.escalate_on_human_request !== false) handoffRules.push('Si el cliente pide hablar con una persona/asesor/agente/humano (ej: "quiero hablar con alguien", "una persona real", "un humano", "un asesor"), responde una frase breve y empática y AÑADE al final el marcador literal [ESCALAR].');
+  if (s.escalate_on_frustration !== false) handoffRules.push('Si detectas frustración, enojo o molestia ("estoy enojado/molesto/harto", "no me ayudas", "esto no sirve", "llevo horas", "urgente", insultos, mayúsculas sostenidas, signos de exclamación múltiples), discúlpate brevemente y AÑADE al final [ESCALAR]. NO intentes resolver tú mismo.');
+  if (ht.on_price_negotiation) handoffRules.push("Si el cliente quiere negociar precio o pedir descuento, AÑADE [ESCALAR] al final.");
+  if (ht.on_legal_question) handoffRules.push("Si el cliente hace una pregunta legal, fiscal o financiera específica (escrituras, notario, simulación de crédito), AÑADE [ESCALAR] al final.");
+  if (ht.on_schedule_visit) handoffRules.push("Si el cliente pide agendar una visita, AÑADE [ESCALAR] al final.");
+  if (s.escalate_on_no_answer !== false) handoffRules.push("Si NO tienes el dato en la base de conocimiento ni en el inventario, NO inventes. Responde brevemente y AÑADE [ESCALAR].");
+  const handoffBlock = handoffRules.length
+    ? `\n\nREGLAS DE ESCALAMIENTO A HUMANO (CRÍTICO — debes obedecer SIEMPRE):\n- ${handoffRules.join("\n- ")}\n- El marcador [ESCALAR] debe ir SIEMPRE al final del mensaje, en mayúsculas y entre corchetes literales. Es invisible para el cliente; el sistema lo detecta para reasignar.`
+    : "";
+
   return `Eres ${s.agent_name || "Asistente"}, asistente de ${s.company_name || "la empresa"}.
 
 CONTEXTO REGIONAL (OBLIGATORIO):
@@ -75,7 +88,7 @@ CONTEXTO REGIONAL (OBLIGATORIO):
 INSTRUCCIONES DE ESTILO:
 - ${tone[s.tone] || tone.professional}
 - ${emojiInstr}
-- ${identity}
+- ${identity}${handoffBlock}
 
 MODO SANDBOX: Esta es una conversación de prueba para validar el comportamiento configurado. Responde como lo harías con un cliente real, respetando todas las reglas.
 
