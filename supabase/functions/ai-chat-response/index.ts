@@ -549,8 +549,8 @@ serve(async (req) => {
     };
 
     const emojiInstruction = aiSettings.use_emojis 
-      ? `Puedes usar hasta ${aiSettings.max_emojis_per_message} emoji(s) por mensaje.`
-      : 'No uses emojis.';
+      ? `Puedes usar hasta ${aiSettings.max_emojis_per_message} emoji(s) por mensaje. NUNCA superes ese límite.`
+      : 'PROHIBIDO usar emojis. No incluyas ningún emoji en tu respuesta bajo ninguna circunstancia.';
 
     const nameInstruction = aiSettings.use_customer_name && contact_name
       ? `El nombre del cliente es ${contact_name}. Úsalo cuando sea natural.`
@@ -568,7 +568,21 @@ serve(async (req) => {
       ? `\nCOMPORTAMIENTO DEL NEGOCIO:\n${aiSettings.behavior_prompt}`
       : '';
 
+    // Regional context block
+    const regionInfo = REGION_CONTEXT[(aiSettings.region_code || 'MX').toUpperCase()] || REGION_CONTEXT.MX;
+    const formalityInstr = FORMALITY_TEXT[aiSettings.formality || 'tu'] || FORMALITY_TEXT.tu;
+    const languageInstr = LANGUAGE_TEXT[aiSettings.language || 'es'] || LANGUAGE_TEXT.es;
+    const maxLen = aiSettings.max_message_length || 320;
+    const regionalBlock = `\nCONTEXTO REGIONAL (OBLIGATORIO):
+- País del cliente: ${regionInfo.country}
+- Moneda local: ${regionInfo.currency}
+- ${regionInfo.modismos}
+- ${formalityInstr}
+- ${languageInstr}
+- LONGITUD MÁXIMA: cada mensaje debe tener máximo ${maxLen} caracteres. Sé breve, claro y directo.`;
+
     const systemPrompt = `Eres ${aiSettings.agent_name}, asistente de ${aiSettings.company_name || 'la empresa'}.
+${regionalBlock}
 
 REGLA CRÍTICA: NUNCA inventes, supongas o alucines información que no esté EXACTAMENTE en los datos proporcionados abajo. Si un dato no aparece explícitamente (como metros cuadrados, número de recámaras, precio, amenidades), NO lo menciones. Solo comparte la información que aparece textualmente en este prompt.
 
