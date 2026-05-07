@@ -366,6 +366,35 @@ serve(async (req) => {
         content: m.body!,
       }));
 
+    // ===== Max AI turns handoff =====
+    const maxTurns = aiSettings.max_ai_turns_before_handoff || 8;
+    if (handoffTriggers.on_max_turns !== false) {
+      const aiTurns = conversationHistory.filter(m => m.role === 'assistant').length;
+      if (aiTurns >= maxTurns) {
+        console.log(`🤝 Max AI turns reached (${aiTurns}/${maxTurns}), escalating`);
+        await supabase.from('conversations').update({
+          ai_enabled: false,
+          ai_state: 'escalated',
+          needs_human: true,
+          ai_pause_reason: 'max_turns',
+          ai_paused_at: new Date().toISOString(),
+        }).eq('id', conversation_id);
+        await triggerAssignment(supabase, conversation_id, 'max_turns');
+        await supabase.from('ai_interaction_logs').insert({
+          tenant_id, conversation_id, contact_id, inbound_message,
+          was_escalated: true, escalation_reason: 'max_turns',
+        });
+        const fallbackText = aiSettings.fallback_message || 'Enseguida te atiende un asesor.';
+        const customerMsg = aiSettings.use_customer_name && contact_name
+          ? `Hola ${contact_name}. ${fallbackText}`
+          : fallbackText;
+        return new Response(JSON.stringify({
+          action: 'escalate', reason: 'max_turns', message: customerMsg,
+          delay_seconds: aiSettings.response_delay_seconds,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
+
     // Build properties context for AI
     let propertiesContext = '';
     if (properties.length > 0) {
