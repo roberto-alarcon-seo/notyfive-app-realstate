@@ -1,147 +1,103 @@
-# Plan: Módulo de Roles y Asignación Inteligente de Leads
 
-## Estado actual (lo que ya existe)
-- Roles `administrador / manager / asesor` ya definidos con RLS y helpers (`is_tenant_admin`, `is_tenant_manager_or_admin`, `has_property_assignment`, `can_access_conversation`).
-- `contacts.assigned_agent_id` (FK a profiles) ya existe.
-- `properties` con asignaciones vía tabla `property_assignments`.
-- Handoff IA → humano ya marca `needs_human=true` y `ai_state='escalated'` en `conversations`, pero **no asigna asesor**.
-- Permisos del manager y admin sobre Inbox ya están en RLS; el manager ya puede ver todas las conversaciones.
+## Contexto
 
-## Lo que falta (gap funcional)
-1. No existe motor de asignación al hacer handoff (Sticky / Property / Round Robin).
-2. No hay configuración por tenant para reglas de asignación.
-3. No hay log de auditoría de asignaciones (`assignment_logs`).
-4. No hay timeout de respuesta del asesor con marcado "en riesgo".
-5. No hay UI de reasignación manual ni para el manager ni para el admin.
-6. Falta flag `is_active` operativo a nivel asesor para excluirlos de la rotación.
+Hoy `tenant_ai_settings` tiene 14 campos editables en `/settings/ai-config`. Auditando `supabase/functions/ai-chat-response/index.ts` confirmo qué se usa de verdad y qué no:
 
----
+| Campo UI | ¿Se aplica en el prompt? | Notas |
+|---|---|---|
+| `agent_name` | Sí — se inyecta en system prompt | OK |
+| `company_name` | Sí | OK |
+| `timezone` | Sí (fechas de visita) | OK |
+| `behavior_prompt` | Sí — bloque "COMPORTAMIENTO DEL NEGOCIO" | **Núcleo** |
+| `fallback_message` | Sí (handoff) | OK |
+| `tone` (4 opciones) | Sí, pero es 1 línea genérica | **Débil**, no diferencia LATAM vs ES |
+| `use_emojis` + `max_emojis_per_message` | Sí, pero solo "puedes usar hasta N" | **Débil**, el modelo lo ignora a menudo |
+| `never_reveal_ai` | Sí | OK |
+| `use_customer_name` | Sí (en mensajes de fallback) | OK |
+| `response_delay_seconds` | Sí (delay real de envío) | OK |
+| `escalate_on_human_request` | Sí (keywords "humano", "asesor"…) | OK |
+| `escalate_on_frustration` | Sí (keywords "molesto", "enojado"…) | Frágil, basado en regex |
+| `escalate_on_no_answer` | Sí (marcador `[ESCALAR]`) | OK |
 
-## Fase 1 — Fundamentos de datos y configuración (sin lógica activa)
-
-**Objetivo:** dejar el esquema y la UI de settings listos sin cambiar comportamiento.
-
-1. Migración SQL:
-   - Tabla `assignment_rules` (1:1 con tenant):
-     - `tenant_id` (PK), `round_robin_enabled bool default true`,
-     - `sticky_agent_enabled bool default true`,
-     - `sticky_overrides_property bool default false` (configurable),
-     - `lead_timeout_minutes int default 30`,
-     - `timeout_action text default 'notify'` (`notify` | `reassign` | `notify_and_reassign`),
-     - `max_active_leads_per_agent int null` (null = sin tope),
-     - `last_assigned_agent_id uuid null` (puntero round robin).
-   - Tabla `assignment_logs`:
-     - `id`, `tenant_id`, `conversation_id`, `contact_id`, `previous_agent_id`, `new_agent_id`, `assigned_by` (uuid o null si sistema), `strategy text` (`sticky|property|round_robin|manual|timeout_reassign|fallback`), `reason text`, `created_at`.
-   - Columnas en `conversations`: `last_assigned_at timestamptz`, `risk_flagged_at timestamptz`, agregar valor `'risk'` permitido en status (mantener enum/text actual).
-   - Columna en `profiles`: `is_active_for_assignment bool default true` (independiente de status, controlable por admin/manager).
-   - RLS:
-     - `assignment_rules`: select para usuarios del tenant; update solo `administrador` + `super_admin`.
-     - `assignment_logs`: select admin/manager; insert solo SECURITY DEFINER.
-
-2. Hook `useAssignmentRules` + página `/settings/assignment-rules` (solo admin):
-   - Toggles: Round Robin, Sticky, Sticky overrides property.
-   - Inputs: Timeout (min), Acción al timeout, Máx leads activos por asesor.
-   - Lista de asesores con switch `is_active_for_assignment`.
-   - Visible en `SettingsLayout`. Bloqueado para manager/asesor (RLS + UI).
-
-**Pruebas Fase 1:** crear/editar reglas como admin; manager no ve la entrada; valores persisten.
+**Lo que NO existe hoy y el usuario necesita:**
+- Variante regional (México vs Colombia vs España vs Argentina) → modismos, "tú/usted/vos", formato de moneda y teléfono.
+- Idioma de respuesta forzado.
+- Largo máximo de mensaje y máximo de mensajes antes de handoff.
+- Reglas claras de cuándo hacer handoff (no solo por keyword): después de N idas y vueltas, fuera de horario, intent específico (precio, escrituras, agendar visita).
+- Horario de atención del equipo humano (para que la IA diga "te contestamos mañana 9am" en vez de prometer asesor inmediato).
 
 ---
 
-## Fase 2 — Motor de asignación (core)
+## Plan
 
-**Objetivo:** función SQL determinística que decide a quién se asigna.
+### Fase 1 — Auditoría y limpieza de la UI actual (sin romper nada)
 
-1. Función `public.fn_assign_conversation(p_conversation_id uuid, p_assigned_by uuid, p_force_strategy text default null)` `SECURITY DEFINER`:
-   - Carga conversation + contact + property_interest + rules.
-   - Orden:
-     a. Si `sticky_agent_enabled` y existe `contacts.assigned_agent_id` activo → usar ese (a menos que `sticky_overrides_property=false` y el inmueble actual tenga otro asesor activo).
-     b. Si el `re_property_interest_id` tiene asesor en `property_assignments` activo → usar ese.
-     c. Si `round_robin_enabled` → seleccionar siguiente asesor activo de la lista del tenant ordenada por `profiles.id`, partiendo del que sigue a `last_assigned_agent_id`. Saltar a quien tenga > `max_active_leads_per_agent` (si está definido). Persistir `last_assigned_agent_id`.
-     d. Fallback: cualquier admin/manager activo. Si no hay → dejar `assigned_agent_id=null` y log `reason='no_active_agents'`.
-   - Actualizar `conversations.assigned_agent_id`, `last_assigned_at`, `contacts.assigned_agent_id`.
-   - Insertar en `assignment_logs`.
-   - Devolver `{ agent_id, strategy, reason }`.
+**Objetivo:** que cada switch de `/settings/ai-config` tenga efecto real y verificable.
 
-2. Edge function `assign-conversation`: wrapper para reasignación manual desde UI (valida que caller sea admin o manager via RLS helpers).
+1. Reescribir cómo `ai-chat-response` aplica `tone`, `use_emojis` y `max_emojis_per_message`:
+   - Inyectar reglas explícitas y con ejemplos en el system prompt en vez de una línea suelta.
+   - Añadir validación post-respuesta: si `use_emojis = false`, hacer strip de emojis antes de enviar.
+2. Marcar visualmente en la UI los campos que aplican "siempre" vs los que dependen de otros (ej. el slider de emojis solo si `use_emojis=true` ya está bien, replicar patrón).
+3. Quitar de la UI el campo `escalate_on_frustration` o reemplazarlo por detección vía LLM (tool call con score 0–1) para que deje de ser regex falso-positivo.
 
-**Pruebas Fase 2:** invocar la función en SQL con casos:
-- Lead nuevo sin sticky → round robin rota.
-- Lead recurrente con sticky on → mismo asesor.
-- Inmueble con asesor distinto y sticky_overrides_property → usa inmueble.
-- Sin asesores activos → fallback null + log.
+### Fase 2 — Nuevo modelo: "Perfil regional + Reglas de conversación"
 
----
+**Cambios en BD** (`tenant_ai_settings`): agregar columnas
 
-## Fase 3 — Integración con el handoff de IA
+- `region_code` text (`MX`, `CO`, `PE`, `AR`, `CL`, `ES`, `US-Hispanic`)
+- `language` text (`es`, `en`, `pt`)
+- `formality` text (`tu`, `usted`, `vos`)
+- `max_message_length` int (default 320 caracteres WhatsApp)
+- `max_ai_turns_before_handoff` int (default 8)
+- `business_hours` jsonb (días + rango horario por tenant)
+- `handoff_triggers` jsonb (`{ on_price_question: bool, on_legal_question: bool, on_schedule_visit: bool, on_after_hours: bool, on_n_turns: bool }`)
+- `out_of_hours_message` text
 
-**Objetivo:** cada vez que la IA escala, se asigne automáticamente.
+**Edge function** `ai-chat-response`:
+- Cargar el perfil regional y prepender un bloque "CONTEXTO REGIONAL" al system prompt con modismos, moneda, formato de teléfono y trato (tú/usted/vos).
+- Contar turnos AI en la conversación; si `max_ai_turns_before_handoff` se supera y el lead no avanzó de etapa → handoff automático.
+- Antes de responder, chequear `business_hours`; fuera de horario, responder con `out_of_hours_message` y marcar handoff diferido.
+- Forzar `max_message_length` con instrucción + truncado defensivo.
 
-1. En `supabase/functions/ai-chat-response/index.ts`, en cada bloque que setea `needs_human=true` (no_balance, human_request, frustration, visit_request, ai_api_error, [ESCALAR]):
-   - Llamar `supabase.rpc('fn_assign_conversation', { p_conversation_id, p_assigned_by: null })` después del update.
-   - Registrar `conversation_activity` con `event_type='lead_assigned'` (payload con strategy + agent).
+### Fase 3 — Reorganizar la UI de `/settings/ai-config`
 
-2. Igual en `twilio-inbound-webhook` cuando se cree una conversación que arranque sin IA.
+Pasar de 3 tabs ambiguas a 4 tabs con propósito claro:
 
-3. Mostrar en Inbox el badge "Asignado a: …" basado en `conversations.assigned_agent_id`.
+1. **Identidad** — agente, empresa, nunca revelar IA, idioma, región, formalidad.
+2. **Instrucciones** — `behavior_prompt` (núcleo) + plantillas pre-cargadas por vertical, mostrar contador de tokens estimados.
+3. **Estilo** — tono, emojis (con ejemplo en vivo), `max_message_length`, delay de respuesta, usar nombre del cliente.
+4. **Handoff y horarios** — horario de atención, mensaje fuera de horario, triggers de handoff (toggles), `max_ai_turns_before_handoff`, mensaje de escalamiento.
 
-**Pruebas Fase 3:** simular mensaje "quiero hablar con un humano" → verificar log + asignación + badge.
+Agregar al final un botón **"Probar conversación"** que abra un chat sandbox (reusa `ai-chat-response` con un `conversation_id` ficticio) para que el admin valide en 30 segundos cómo quedó la configuración antes de exponerla a clientes reales.
 
----
+### Fase 4 — Plantillas regionales pre-cargadas (acelera onboarding)
 
-## Fase 4 — Reasignación manual y supervisión del manager
+Crear 3 plantillas de `behavior_prompt` listas para aplicar con un click:
+- México (ya existe `SUGGESTED_REAL_ESTATE_PROMPT`).
+- Colombia (usted, "apartamento", COP).
+- España (vosotros opcional, "piso", €, "hipoteca" en vez de "crédito hipotecario").
 
-1. UI en `ContactProfilePanel` / Inbox header:
-   - Selector "Asesor asignado" para admin y manager (asesor ve solo lectura).
-   - Acción "Reasignar" → llama `assign-conversation` con `p_force_strategy='manual'`.
-2. Vista nueva `/admin-leads` (manager + admin):
-   - Tabla de conversaciones con `assigned_agent_id`, último mensaje, status, badge `risk`.
-   - Filtros por asesor, status, riesgo.
-   - Botón "Reasignar" inline.
-3. Mostrar timeline de `assignment_logs` por conversación en `ContactActivityTimeline` (evento "Reasignado por X de A → B").
-
-**Pruebas Fase 4:** manager reasigna; asesor antiguo pierde acceso (RLS), nuevo lo ve; log auditado.
+Guardadas en una tabla `ai_prompt_presets` (tenant_id NULL = global) para que cada partner pueda agregar las suyas.
 
 ---
 
-## Fase 5 — Timeout y leads en riesgo
+## Detalle técnico
 
-1. Cron edge function `assignment-timeout-monitor` (cada 5 min, scheduler):
-   - Selecciona conversaciones con `assigned_agent_id not null`, `last_agent_message_at < now() - interval lead_timeout_minutes`, status no `closed`, `risk_flagged_at is null`.
-   - Marca `status='risk'`, `risk_flagged_at=now()`.
-   - Según `timeout_action`:
-     - `notify`: insert en `notifications` para manager/admin.
-     - `reassign`: llama `fn_assign_conversation` con `p_force_strategy='timeout_reassign'` (excluye al asesor actual).
-     - `notify_and_reassign`: ambas.
-2. Badge visual "En riesgo" en Inbox y `/admin-leads`.
-3. Limpiar `risk` y `risk_flagged_at` cuando el asesor (o manager) responde.
+- Tablas tocadas: `tenant_ai_settings` (ALTER), nueva `ai_prompt_presets`.
+- Edge function tocada: `ai-chat-response/index.ts` (system prompt + post-procesado).
+- Frontend tocado: `src/pages/settings/SettingsAIConfig.tsx`, `src/hooks/useAISettings.ts` (extender tipos).
+- Sin breaking changes: defaults en BD garantizan que tenants existentes siguen funcionando.
 
-**Pruebas Fase 5:** forzar `last_agent_message_at` antiguo → verificar marcado, notificación y reasignación según config.
+## Lo que **no** se toca
 
----
+- Pipeline de 10 etapas, knowledge base, scoring, flujos de propiedades — fuera de alcance.
+- Lógica de Twilio / envío — solo cambia el contenido del mensaje.
 
-## Fase 6 — Pulido, métricas y memoria
+## Orden sugerido de ejecución
 
-1. Mini dashboard en `/admin-leads`: leads por asesor, tasa de respuesta, leads en riesgo (Recharts hex).
-2. Documentación: actualizar `docs/MODULO_USUARIOS_ROLES.md` con nuevo módulo.
-3. Memoria del proyecto: agregar `mem://features/lead-assignment-engine` con la jerarquía Sticky → Property → RR y la ubicación de las reglas.
-4. QA cross-rol y pruebas RLS finales.
+1. Migración de BD (Fase 2).
+2. Edge function `ai-chat-response` (Fases 1 + 2).
+3. UI `/settings/ai-config` reorganizada (Fase 3).
+4. Plantillas regionales + sandbox de prueba (Fase 4).
 
----
-
-## Decisiones confirmadas
-- **Saturación:** `max_active_leads_per_agent` opcional, default sin tope.
-- **Sticky vs Inmueble:** configurable por tenant (`sticky_overrides_property`).
-- **Timeout:** acción configurable (notify / reassign / ambos).
-- **Manager intervención:** sin typing presence; solo lectura realtime de mensajes ya enviados (lo actual).
-
----
-
-## Detalles técnicos clave
-- Toda la decisión de asignación vive en `fn_assign_conversation` (SECURITY DEFINER, search_path=public) para no duplicar lógica entre edge functions y UI.
-- `assignment_logs` es append-only; sin policies de update/delete (solo super_admin).
-- Round robin usa `last_assigned_agent_id` por tenant para evitar contar leads en cada asignación (O(n) donde n = asesores activos).
-- Se reutiliza `is_active_for_assignment` en lugar de `profiles.status` para no acoplar bajas operativas con bajas de cuenta.
-- Cron usa `pg_cron` o el patrón existente de `automation-scheduler` (revisar cuál está activo antes de fase 5).
-
-¿Avanzamos con Fase 1?
+Cada fase es desplegable de forma independiente; si paramos después de la Fase 1 ya queda más limpio.
