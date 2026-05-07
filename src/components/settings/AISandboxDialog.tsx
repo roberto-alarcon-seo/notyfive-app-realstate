@@ -7,6 +7,7 @@ import { Send, Bot, User, AlertTriangle, Sparkles, RotateCcw, Bug } from 'lucide
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useEffectiveTenantId } from '@/hooks/useEffectiveTenantId';
 
 interface Msg { role: 'user' | 'assistant'; content: string; flags?: { escalar?: boolean; seguimiento?: boolean }; raw?: string }
 
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
+  const tenantId = useEffectiveTenantId();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,6 +50,7 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
       const { data, error } = await supabase.functions.invoke('ai-sandbox-test', {
         body: {
           settings,
+          tenant_id: tenantId,
           messages: next.map(m => ({ role: m.role, content: m.content })),
         },
       });

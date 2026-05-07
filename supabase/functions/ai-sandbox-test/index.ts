@@ -87,7 +87,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { settings, messages } = await req.json();
+    const { settings, messages, tenant_id } = await req.json();
     if (!settings || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "settings y messages requeridos" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -116,7 +116,41 @@ serve(async (req) => {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
 
-    const systemPrompt = buildSystemPrompt(settings);
+    // Cargar inventario y KB del tenant para contexto realista
+    let inventoryContext = "";
+    let kbContext = "";
+    if (tenant_id) {
+      const [propsRes, kbRes] = await Promise.all([
+        supabase
+          .from("properties")
+          .select("title, property_code, zone, price, currency, operation_type, property_type, status, address, description, accepted_credits")
+          .eq("tenant_id", tenant_id)
+          .eq("is_active", true)
+          .limit(50),
+        supabase
+          .from("ai_knowledge_base")
+          .select("question, answer, category")
+          .eq("tenant_id", tenant_id)
+          .eq("is_active", true)
+          .limit(50),
+      ]);
+      const props = propsRes.data || [];
+      if (props.length) {
+        inventoryContext = "\n\nPROPIEDADES DISPONIBLES (inventario real del tenant):\n" +
+          props.map((p: any) =>
+            `- ${p.title} (Código: ${p.property_code}) | Zona: ${p.zone} | Precio: $${(p.price || 0).toLocaleString()} ${p.currency} | ${p.operation_type} | Tipo: ${p.property_type || "—"} | Estatus: ${p.status}${p.address ? ` | Dirección: ${p.address}` : ""}${p.description ? `\n  Descripción: ${p.description}` : ""}${p.accepted_credits?.length ? `\n  Créditos: ${p.accepted_credits.join(", ")}` : ""}`
+          ).join("\n");
+      } else {
+        inventoryContext = "\n\nPROPIEDADES DISPONIBLES: (no hay inmuebles activos cargados)";
+      }
+      const kb = kbRes.data || [];
+      if (kb.length) {
+        kbContext = "\n\nBASE DE CONOCIMIENTO:\n" +
+          kb.map((k: any) => `- [${k.category || "general"}] P: ${k.question}\n  R: ${k.answer}`).join("\n");
+      }
+    }
+
+    const systemPrompt = buildSystemPrompt(settings) + inventoryContext + kbContext;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
