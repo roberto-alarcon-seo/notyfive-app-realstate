@@ -412,6 +412,9 @@ export default function SettingsAIConfig() {
                 <ToggleRow label="Cliente pide hablar con humano" desc='Detecta "asesor", "agente", "persona real"…'
                   checked={formData.escalate_on_human_request}
                   onChange={(c) => setFormData({ ...formData, escalate_on_human_request: c })} />
+                <ToggleRow label="Cliente molesto o frustrado" desc='Detecta "no me ayudas", "esto no sirve", "urgente", "llevo horas"…'
+                  checked={formData.escalate_on_frustration}
+                  onChange={(c) => setFormData({ ...formData, escalate_on_frustration: c })} />
                 <ToggleRow label="Cliente pide negociar precio" desc="Pasa la negociación al equipo comercial"
                   checked={formData.handoff_triggers.on_price_negotiation}
                   onChange={(c) => setTrigger('on_price_negotiation', c)} />
