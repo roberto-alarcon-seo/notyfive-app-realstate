@@ -79,6 +79,61 @@ interface KnowledgeEntry {
   category: string;
 }
 
+// ===== Regional / conversation helpers =====
+const REGION_CONTEXT: Record<string, { country: string; currency: string; modismos: string }> = {
+  MX: { country: 'México', currency: 'MXN ($)', modismos: 'Términos: "departamento", "recámara", "Infonavit/Fovissste", "enganche". Evita "piso", "habitación".' },
+  CO: { country: 'Colombia', currency: 'COP ($)', modismos: 'Términos: "apartamento", "habitación", "subsidio MiCasaYa", "cuota inicial". Evita "departamento".' },
+  PE: { country: 'Perú', currency: 'PEN (S/)', modismos: 'Términos: "departamento", "dormitorio", "crédito Mivivienda".' },
+  AR: { country: 'Argentina', currency: 'ARS ($)', modismos: 'Términos: "departamento", "ambientes", "expensas". Trato con "vos" si aplica.' },
+  CL: { country: 'Chile', currency: 'CLP ($)', modismos: 'Términos: "departamento", "dormitorio", "UF", "pie".' },
+  ES: { country: 'España', currency: 'EUR (€)', modismos: 'Términos: "piso", "habitación", "hipoteca", "comunidad", "IBI", "arras".' },
+  US: { country: 'Estados Unidos (hispano)', currency: 'USD ($)', modismos: 'Términos bilingües si aplica.' },
+};
+
+const FORMALITY_TEXT: Record<string, string> = {
+  tu: 'Trata al cliente de "tú" (informal cercano).',
+  usted: 'Trata al cliente de "usted" (formal y respetuoso). Nunca uses "tú".',
+  vos: 'Trata al cliente de "vos" (informal rioplatense).',
+};
+
+const LANGUAGE_TEXT: Record<string, string> = {
+  es: 'Responde SIEMPRE en español.',
+  en: 'Responde SIEMPRE en inglés.',
+  pt: 'Responde SIEMPRE en portugués.',
+};
+
+function stripEmojis(text: string): string {
+  return text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}]/gu, '').replace(/\s+/g, ' ').trim();
+}
+
+function enforceMaxLength(text: string, maxLen: number): string {
+  if (!maxLen || text.length <= maxLen) return text;
+  const cut = text.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > maxLen * 0.7 ? cut.slice(0, lastSpace) : cut).trim() + '…';
+}
+
+function isWithinBusinessHours(bh: any): { open: boolean; configured: boolean } {
+  if (!bh || !bh.enabled) return { open: true, configured: false };
+  try {
+    const tz = bh.timezone || 'America/Mexico_City';
+    const now = new Date();
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+    const parts = fmt.formatToParts(now);
+    const wd = parts.find(p => p.type === 'weekday')?.value?.toLowerCase().slice(0,3) || '';
+    const hh = parts.find(p => p.type === 'hour')?.value || '00';
+    const mm = parts.find(p => p.type === 'minute')?.value || '00';
+    const dayKey: Record<string,string> = { mon:'mon', tue:'tue', wed:'wed', thu:'thu', fri:'fri', sat:'sat', sun:'sun' };
+    const day = bh.days?.[dayKey[wd]];
+    if (!day || !day.open || !day.close) return { open: false, configured: true };
+    const cur = `${hh}:${mm}`;
+    return { open: cur >= day.open && cur <= day.close, configured: true };
+  } catch (e) {
+    console.warn('business hours check failed', e);
+    return { open: true, configured: false };
+  }
+}
+
 serve(async (req) => {
   const startTime = Date.now();
   
