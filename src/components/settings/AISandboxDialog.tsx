@@ -114,11 +114,12 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
           <div className={cn('flex flex-col min-h-0', debugOpen ? 'flex-1 border-r' : 'flex-1')}>
             <div
               ref={scrollRef}
-              className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-muted/20 relative"
+              className="flex-1 overflow-y-auto px-6 py-4 space-y-4 relative"
               style={{
-                backgroundImage:
-                  "radial-gradient(circle at 20% 20%, hsl(var(--primary)/0.08) 0, transparent 35%), radial-gradient(circle at 80% 70%, hsl(var(--primary)/0.06) 0, transparent 40%), url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g fill='none' stroke='%23000000' stroke-opacity='0.06' stroke-width='1.2'><circle cx='20' cy='20' r='8'/><path d='M50 15 q5 -8 10 0 t10 0' /><circle cx='95' cy='30' r='4'/><path d='M15 60 l8 -4 l0 8 z'/><circle cx='60' cy='60' r='12'/><path d='M52 60 a8 8 0 0 0 16 0'/><path d='M95 80 q-6 6 0 12 t0 12'/><circle cx='30' cy='100' r='5'/><path d='M70 100 l6 6 l-12 0 z'/><circle cx='105' cy='105' r='7'/></g></svg>\")",
-                backgroundSize: 'auto, auto, 220px 220px',
+                backgroundColor: 'hsl(var(--muted))',
+                backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><g fill='none' stroke='hsl(279 65%25 49%25)' stroke-opacity='0.18' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><circle cx='30' cy='30' r='10'/><path d='M65 22 q6 -10 12 0 t12 0 t12 0'/><circle cx='140' cy='35' r='5'/><path d='M155 25 l-6 12 l12 0 z'/><circle cx='25' cy='90' r='6'/><path d='M55 85 a12 12 0 0 0 24 0'/><circle cx='90' cy='95' r='14'/><path d='M82 95 a8 8 0 0 0 16 0'/><circle cx='150' cy='100' r='8'/><path d='M20 145 q8 -8 16 0 t16 0'/><circle cx='75' cy='150' r='5'/><path d='M110 145 l8 8 l-16 0 z'/><circle cx='155' cy='155' r='9'/><path d='M145 155 a10 10 0 0 0 20 0'/></g></svg>"), radial-gradient(circle at 25% 20%, hsl(var(--primary) / 0.10), transparent 45%), radial-gradient(circle at 80% 80%, hsl(var(--primary) / 0.08), transparent 45%)`,
+                backgroundSize: '180px 180px, auto, auto',
+                backgroundRepeat: 'repeat, no-repeat, no-repeat',
               }}
             >
           {messages.length === 0 && (
