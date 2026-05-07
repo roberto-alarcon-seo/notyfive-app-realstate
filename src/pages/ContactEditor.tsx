@@ -163,7 +163,7 @@ export default function ContactEditor() {
   const [tagInput, setTagInput] = useState('');
 
   const isEditing = !!id;
-  const canManageContacts = hasRole(['administrador', 'manager']);
+  const canManageContacts = hasRole(['administrador', 'manager', 'asesor']);
 
   // Group custom fields by category
   const fieldsByCategory = useMemo(() => {
