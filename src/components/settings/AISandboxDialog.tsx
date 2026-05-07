@@ -3,13 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Send, Bot, User, AlertTriangle, Sparkles, RotateCcw, Bug } from 'lucide-react';
+import { Send, Bot, User, AlertTriangle, Sparkles, RotateCcw, Bug, Clock } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useEffectiveTenantId } from '@/hooks/useEffectiveTenantId';
 
-interface Msg { role: 'user' | 'assistant'; content: string; flags?: { escalar?: boolean; seguimiento?: boolean }; raw?: string }
+interface Msg { role: 'user' | 'assistant'; content: string; flags?: { escalar?: boolean; seguimiento?: boolean }; raw?: string; preAi?: string | null; matched?: string | null }
 
 interface Props {
   open: boolean;
@@ -24,7 +26,8 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
   const [loading, setLoading] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState<string>('');
-  const [lastDebug, setLastDebug] = useState<{ raw: string; clean: string; flags: any; chars: number } | null>(null);
+  const [simulateDelay, setSimulateDelay] = useState(false);
+  const [lastDebug, setLastDebug] = useState<{ raw: string; clean: string; flags: any; chars: number; preAi?: string | null; matched?: string | null; appliedDelay?: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,6 +54,7 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
         body: {
           settings,
           tenant_id: tenantId,
+          simulate_delay: simulateDelay,
           messages: next.map(m => ({ role: m.role, content: m.content })),
         },
       });
@@ -62,6 +66,8 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
         content: d.response || '(sin respuesta)',
         flags: d.detected,
         raw: d.raw,
+        preAi: d.pre_ai_escalation || null,
+        matched: d.matched_trigger || null,
       }]);
       if (d.system_prompt_preview) setSystemPrompt(d.system_prompt_preview);
       setLastDebug({
@@ -69,6 +75,9 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
         clean: d.response || '',
         flags: d.detected || {},
         chars: (d.response || '').length,
+        preAi: d.pre_ai_escalation || null,
+        matched: d.matched_trigger || null,
+        appliedDelay: d.applied_delay_seconds || 0,
       });
     } catch (e: any) {
       toast.error(e.message || 'Error en el sandbox');
@@ -128,6 +137,7 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
                   <div className="flex gap-1 mt-2 flex-wrap">
                     {m.flags.escalar && <Badge variant="destructive" className="text-[10px] gap-1"><AlertTriangle className="h-3 w-3" />ESCALAR</Badge>}
                     {m.flags.seguimiento && <Badge variant="secondary" className="text-[10px]">SEGUIMIENTO_HUMANO</Badge>}
+                    {m.preAi && <Badge variant="outline" className="text-[10px]">pre-AI: {m.preAi}{m.matched ? ` · "${m.matched}"` : ''}</Badge>}
                   </div>
                 )}
               </div>
@@ -151,6 +161,12 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
             </div>
 
             <div className="border-t p-4 flex gap-2 items-center">
+          <div className="flex items-center gap-2 mr-2">
+            <Switch id="sim-delay" checked={simulateDelay} onCheckedChange={setSimulateDelay} />
+            <Label htmlFor="sim-delay" className="text-xs flex items-center gap-1 cursor-pointer">
+              <Clock className="h-3 w-3" /> Delay
+            </Label>
+          </div>
           <Button variant="ghost" size="icon" onClick={() => setMessages([])} disabled={loading || messages.length === 0} title="Reiniciar">
             <RotateCcw className="h-4 w-4" />
           </Button>
@@ -184,15 +200,22 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
                   <DebugSection title="Procesada (mostrada al cliente)">
                     <pre className="whitespace-pre-wrap font-mono text-[11px]">{lastDebug.clean || '—'}</pre>
                     <p className="mt-1 text-muted-foreground">{lastDebug.chars} chars (límite {settings.max_message_length || 320})</p>
+                    {lastDebug.appliedDelay ? (
+                      <p className="mt-1 text-muted-foreground">Delay aplicado: {lastDebug.appliedDelay}s</p>
+                    ) : null}
                   </DebugSection>
                   <DebugSection title="Marcadores detectados">
                     <div className="flex flex-wrap gap-1">
                       {lastDebug.flags.escalar && <Badge variant="destructive" className="text-[10px]">ESCALAR</Badge>}
                       {lastDebug.flags.seguimiento && <Badge variant="secondary" className="text-[10px]">SEGUIMIENTO_HUMANO</Badge>}
-                      {!lastDebug.flags.escalar && !lastDebug.flags.seguimiento && (
+                      {lastDebug.preAi && <Badge variant="outline" className="text-[10px]">pre-AI: {lastDebug.preAi}</Badge>}
+                      {!lastDebug.flags.escalar && !lastDebug.flags.seguimiento && !lastDebug.preAi && (
                         <span className="text-muted-foreground">Ninguno</span>
                       )}
                     </div>
+                    {lastDebug.matched && (
+                      <p className="mt-1 text-muted-foreground">Trigger: "{lastDebug.matched}"</p>
+                    )}
                   </DebugSection>
                 </>
               )}
