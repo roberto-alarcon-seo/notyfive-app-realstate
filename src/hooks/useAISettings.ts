@@ -74,7 +74,7 @@ export function useAISettings() {
         .maybeSingle();
 
       if (error) throw error;
-      return data as AISettings | null;
+      return data as unknown as AISettings | null;
     },
     enabled: !!tenantId,
   });
@@ -98,7 +98,7 @@ export function useUpdateAISettings() {
       if (existing) {
         const { data, error } = await supabase
           .from('tenant_ai_settings')
-          .update(settings)
+          .update(settings as any)
           .eq('tenant_id', tenantId)
           .select()
           .single();
@@ -109,7 +109,7 @@ export function useUpdateAISettings() {
 
       const { data, error } = await supabase
         .from('tenant_ai_settings')
-        .insert({ ...settings, tenant_id: tenantId })
+        .insert({ ...settings, tenant_id: tenantId } as any)
         .select()
         .single();
 
