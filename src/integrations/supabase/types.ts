@@ -142,6 +142,53 @@ export type Database = {
           },
         ]
       }
+      ai_prompt_presets: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_global: boolean
+          language: string
+          name: string
+          prompt: string
+          region_code: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          language?: string
+          name: string
+          prompt: string
+          region_code: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          language?: string
+          name?: string
+          prompt?: string
+          region_code?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_prompt_presets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_tokens: {
         Row: {
           created_at: string
@@ -3604,6 +3651,7 @@ export type Database = {
         Row: {
           agent_name: string
           behavior_prompt: string | null
+          business_hours: Json
           company_name: string | null
           created_at: string
           enabled: boolean
@@ -3611,9 +3659,16 @@ export type Database = {
           escalate_on_human_request: boolean
           escalate_on_no_answer: boolean
           fallback_message: string | null
+          formality: string
+          handoff_triggers: Json
           id: string
+          language: string
+          max_ai_turns_before_handoff: number
           max_emojis_per_message: number
+          max_message_length: number
           never_reveal_ai: boolean
+          out_of_hours_message: string | null
+          region_code: string
           response_delay_seconds: number
           tenant_id: string
           timezone: string
@@ -3625,6 +3680,7 @@ export type Database = {
         Insert: {
           agent_name?: string
           behavior_prompt?: string | null
+          business_hours?: Json
           company_name?: string | null
           created_at?: string
           enabled?: boolean
@@ -3632,9 +3688,16 @@ export type Database = {
           escalate_on_human_request?: boolean
           escalate_on_no_answer?: boolean
           fallback_message?: string | null
+          formality?: string
+          handoff_triggers?: Json
           id?: string
+          language?: string
+          max_ai_turns_before_handoff?: number
           max_emojis_per_message?: number
+          max_message_length?: number
           never_reveal_ai?: boolean
+          out_of_hours_message?: string | null
+          region_code?: string
           response_delay_seconds?: number
           tenant_id: string
           timezone?: string
@@ -3646,6 +3709,7 @@ export type Database = {
         Update: {
           agent_name?: string
           behavior_prompt?: string | null
+          business_hours?: Json
           company_name?: string | null
           created_at?: string
           enabled?: boolean
@@ -3653,9 +3717,16 @@ export type Database = {
           escalate_on_human_request?: boolean
           escalate_on_no_answer?: boolean
           fallback_message?: string | null
+          formality?: string
+          handoff_triggers?: Json
           id?: string
+          language?: string
+          max_ai_turns_before_handoff?: number
           max_emojis_per_message?: number
+          max_message_length?: number
           never_reveal_ai?: boolean
+          out_of_hours_message?: string | null
+          region_code?: string
           response_delay_seconds?: number
           tenant_id?: string
           timezone?: string

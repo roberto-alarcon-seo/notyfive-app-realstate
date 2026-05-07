@@ -62,6 +62,14 @@ interface AISettings {
   escalate_on_human_request: boolean;
   behavior_prompt: string | null;
   fallback_message: string | null;
+  region_code?: string;
+  language?: string;
+  formality?: string;
+  max_message_length?: number;
+  max_ai_turns_before_handoff?: number;
+  business_hours?: any;
+  out_of_hours_message?: string | null;
+  handoff_triggers?: any;
 }
 
 interface KnowledgeEntry {
@@ -69,6 +77,61 @@ interface KnowledgeEntry {
   question: string;
   answer: string;
   category: string;
+}
+
+// ===== Regional / conversation helpers =====
+const REGION_CONTEXT: Record<string, { country: string; currency: string; modismos: string }> = {
+  MX: { country: 'México', currency: 'MXN ($)', modismos: 'Términos: "departamento", "recámara", "Infonavit/Fovissste", "enganche". Evita "piso", "habitación".' },
+  CO: { country: 'Colombia', currency: 'COP ($)', modismos: 'Términos: "apartamento", "habitación", "subsidio MiCasaYa", "cuota inicial". Evita "departamento".' },
+  PE: { country: 'Perú', currency: 'PEN (S/)', modismos: 'Términos: "departamento", "dormitorio", "crédito Mivivienda".' },
+  AR: { country: 'Argentina', currency: 'ARS ($)', modismos: 'Términos: "departamento", "ambientes", "expensas". Trato con "vos" si aplica.' },
+  CL: { country: 'Chile', currency: 'CLP ($)', modismos: 'Términos: "departamento", "dormitorio", "UF", "pie".' },
+  ES: { country: 'España', currency: 'EUR (€)', modismos: 'Términos: "piso", "habitación", "hipoteca", "comunidad", "IBI", "arras".' },
+  US: { country: 'Estados Unidos (hispano)', currency: 'USD ($)', modismos: 'Términos bilingües si aplica.' },
+};
+
+const FORMALITY_TEXT: Record<string, string> = {
+  tu: 'Trata al cliente de "tú" (informal cercano).',
+  usted: 'Trata al cliente de "usted" (formal y respetuoso). Nunca uses "tú".',
+  vos: 'Trata al cliente de "vos" (informal rioplatense).',
+};
+
+const LANGUAGE_TEXT: Record<string, string> = {
+  es: 'Responde SIEMPRE en español.',
+  en: 'Responde SIEMPRE en inglés.',
+  pt: 'Responde SIEMPRE en portugués.',
+};
+
+function stripEmojis(text: string): string {
+  return text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}]/gu, '').replace(/\s+/g, ' ').trim();
+}
+
+function enforceMaxLength(text: string, maxLen: number): string {
+  if (!maxLen || text.length <= maxLen) return text;
+  const cut = text.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > maxLen * 0.7 ? cut.slice(0, lastSpace) : cut).trim() + '…';
+}
+
+function isWithinBusinessHours(bh: any): { open: boolean; configured: boolean } {
+  if (!bh || !bh.enabled) return { open: true, configured: false };
+  try {
+    const tz = bh.timezone || 'America/Mexico_City';
+    const now = new Date();
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+    const parts = fmt.formatToParts(now);
+    const wd = parts.find(p => p.type === 'weekday')?.value?.toLowerCase().slice(0,3) || '';
+    const hh = parts.find(p => p.type === 'hour')?.value || '00';
+    const mm = parts.find(p => p.type === 'minute')?.value || '00';
+    const dayKey: Record<string,string> = { mon:'mon', tue:'tue', wed:'wed', thu:'thu', fri:'fri', sat:'sat', sun:'sun' };
+    const day = bh.days?.[dayKey[wd]];
+    if (!day || !day.open || !day.close) return { open: false, configured: true };
+    const cur = `${hh}:${mm}`;
+    return { open: cur >= day.open && cur <= day.close, configured: true };
+  } catch (e) {
+    console.warn('business hours check failed', e);
+    return { open: true, configured: false };
+  }
 }
 
 serve(async (req) => {
@@ -183,6 +246,33 @@ serve(async (req) => {
 
     const aiSettings = settings;
 
+    // ===== Business hours check =====
+    const bhCheck = isWithinBusinessHours(aiSettings.business_hours);
+    const handoffTriggers = aiSettings.handoff_triggers || {};
+    if (bhCheck.configured && !bhCheck.open && handoffTriggers.on_after_hours !== false) {
+      console.log('⏰ Out of business hours, sending OOH message');
+      const oohMsg = aiSettings.out_of_hours_message
+        || 'Gracias por escribirnos. Te responderemos en cuanto abramos.';
+      const customerOoh = aiSettings.use_customer_name && contact_name
+        ? `Hola ${contact_name}. ${oohMsg}`
+        : oohMsg;
+      await supabase.from('conversations').update({
+        ai_state: 'paused',
+        needs_human: true,
+        ai_pause_reason: 'after_hours',
+        ai_paused_at: new Date().toISOString(),
+      }).eq('id', conversation_id);
+      await supabase.from('ai_interaction_logs').insert({
+        tenant_id, conversation_id, contact_id, inbound_message,
+        was_escalated: true, escalation_reason: 'after_hours',
+      });
+      return new Response(JSON.stringify({
+        action: 'respond',
+        response: customerOoh,
+        delay_seconds: aiSettings.response_delay_seconds,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     // Check if tenant can send using centralized function
     const { data: canSendResult } = await supabase.rpc('can_send_message', { p_tenant_id: tenant_id });
 
@@ -275,6 +365,35 @@ serve(async (req) => {
         role: m.direction === 'inbound' ? 'user' as const : 'assistant' as const,
         content: m.body!,
       }));
+
+    // ===== Max AI turns handoff =====
+    const maxTurns = aiSettings.max_ai_turns_before_handoff || 8;
+    if (handoffTriggers.on_max_turns !== false) {
+      const aiTurns = conversationHistory.filter(m => m.role === 'assistant').length;
+      if (aiTurns >= maxTurns) {
+        console.log(`🤝 Max AI turns reached (${aiTurns}/${maxTurns}), escalating`);
+        await supabase.from('conversations').update({
+          ai_enabled: false,
+          ai_state: 'escalated',
+          needs_human: true,
+          ai_pause_reason: 'max_turns',
+          ai_paused_at: new Date().toISOString(),
+        }).eq('id', conversation_id);
+        await triggerAssignment(supabase, conversation_id, 'max_turns');
+        await supabase.from('ai_interaction_logs').insert({
+          tenant_id, conversation_id, contact_id, inbound_message,
+          was_escalated: true, escalation_reason: 'max_turns',
+        });
+        const fallbackText = aiSettings.fallback_message || 'Enseguida te atiende un asesor.';
+        const customerMsg = aiSettings.use_customer_name && contact_name
+          ? `Hola ${contact_name}. ${fallbackText}`
+          : fallbackText;
+        return new Response(JSON.stringify({
+          action: 'escalate', reason: 'max_turns', message: customerMsg,
+          delay_seconds: aiSettings.response_delay_seconds,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
 
     // Build properties context for AI
     let propertiesContext = '';
@@ -486,8 +605,8 @@ serve(async (req) => {
     };
 
     const emojiInstruction = aiSettings.use_emojis 
-      ? `Puedes usar hasta ${aiSettings.max_emojis_per_message} emoji(s) por mensaje.`
-      : 'No uses emojis.';
+      ? `Puedes usar hasta ${aiSettings.max_emojis_per_message} emoji(s) por mensaje. NUNCA superes ese límite.`
+      : 'PROHIBIDO usar emojis. No incluyas ningún emoji en tu respuesta bajo ninguna circunstancia.';
 
     const nameInstruction = aiSettings.use_customer_name && contact_name
       ? `El nombre del cliente es ${contact_name}. Úsalo cuando sea natural.`
@@ -505,7 +624,21 @@ serve(async (req) => {
       ? `\nCOMPORTAMIENTO DEL NEGOCIO:\n${aiSettings.behavior_prompt}`
       : '';
 
+    // Regional context block
+    const regionInfo = REGION_CONTEXT[(aiSettings.region_code || 'MX').toUpperCase()] || REGION_CONTEXT.MX;
+    const formalityInstr = FORMALITY_TEXT[aiSettings.formality || 'tu'] || FORMALITY_TEXT.tu;
+    const languageInstr = LANGUAGE_TEXT[aiSettings.language || 'es'] || LANGUAGE_TEXT.es;
+    const maxLen = aiSettings.max_message_length || 320;
+    const regionalBlock = `\nCONTEXTO REGIONAL (OBLIGATORIO):
+- País del cliente: ${regionInfo.country}
+- Moneda local: ${regionInfo.currency}
+- ${regionInfo.modismos}
+- ${formalityInstr}
+- ${languageInstr}
+- LONGITUD MÁXIMA: cada mensaje debe tener máximo ${maxLen} caracteres. Sé breve, claro y directo.`;
+
     const systemPrompt = `Eres ${aiSettings.agent_name}, asistente de ${aiSettings.company_name || 'la empresa'}.
+${regionalBlock}
 
 REGLA CRÍTICA: NUNCA inventes, supongas o alucines información que no esté EXACTAMENTE en los datos proporcionados abajo. Si un dato no aparece explícitamente (como metros cuadrados, número de recámaras, precio, amenidades), NO lo menciones. Solo comparte la información que aparece textualmente en este prompt.
 
@@ -754,6 +887,12 @@ ${propertiesContext}`;
 
     // Remove internal markers from response
     cleanResponse = cleanResponse.replace(/\[SEGUIMIENTO_HUMANO\]/g, '').trim();
+
+    // Enforce style settings post-LLM
+    if (!aiSettings.use_emojis) {
+      cleanResponse = stripEmojis(cleanResponse);
+    }
+    cleanResponse = enforceMaxLength(cleanResponse, aiSettings.max_message_length || 320);
 
     // If handoff is needed, send the AI's final message AND escalate
     if (needsHandoff) {

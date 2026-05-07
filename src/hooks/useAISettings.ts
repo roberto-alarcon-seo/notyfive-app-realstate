@@ -24,8 +24,39 @@ export interface AISettings {
   escalate_on_human_request: boolean;
   behavior_prompt: string | null;
   fallback_message: string | null;
+  region_code: string;
+  language: 'es' | 'en' | 'pt';
+  formality: 'tu' | 'usted' | 'vos';
+  max_message_length: number;
+  max_ai_turns_before_handoff: number;
+  business_hours: BusinessHours;
+  out_of_hours_message: string | null;
+  handoff_triggers: HandoffTriggers;
   created_at: string;
   updated_at: string;
+}
+
+export interface BusinessHoursDay { open: string; close: string; }
+export interface BusinessHours {
+  enabled: boolean;
+  timezone: string;
+  days: {
+    mon: BusinessHoursDay | null;
+    tue: BusinessHoursDay | null;
+    wed: BusinessHoursDay | null;
+    thu: BusinessHoursDay | null;
+    fri: BusinessHoursDay | null;
+    sat: BusinessHoursDay | null;
+    sun: BusinessHoursDay | null;
+  };
+}
+
+export interface HandoffTriggers {
+  on_price_negotiation: boolean;
+  on_legal_question: boolean;
+  on_schedule_visit: boolean;
+  on_after_hours: boolean;
+  on_max_turns: boolean;
 }
 
 export function useAISettings() {
@@ -43,7 +74,7 @@ export function useAISettings() {
         .maybeSingle();
 
       if (error) throw error;
-      return data as AISettings | null;
+      return data as unknown as AISettings | null;
     },
     enabled: !!tenantId,
   });
@@ -67,7 +98,7 @@ export function useUpdateAISettings() {
       if (existing) {
         const { data, error } = await supabase
           .from('tenant_ai_settings')
-          .update(settings)
+          .update(settings as any)
           .eq('tenant_id', tenantId)
           .select()
           .single();
@@ -78,7 +109,7 @@ export function useUpdateAISettings() {
 
       const { data, error } = await supabase
         .from('tenant_ai_settings')
-        .insert({ ...settings, tenant_id: tenantId })
+        .insert({ ...settings, tenant_id: tenantId } as any)
         .select()
         .single();
 

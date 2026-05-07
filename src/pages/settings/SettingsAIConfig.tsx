@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Bot, Sparkles, Clock, MessageSquare, Shield, AlertTriangle, Settings2, Wand2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Bot, Sparkles, Clock, MessageSquare, Shield, AlertTriangle, Settings2, Wand2, Globe, UserCog } from 'lucide-react';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -11,7 +12,8 @@ import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAISettings, useUpdateAISettings, useToggleAI, AITone } from '@/hooks/useAISettings';
+import { useAISettings, useUpdateAISettings, useToggleAI, AITone, BusinessHours, HandoffTriggers } from '@/hooks/useAISettings';
+import { supabase } from '@/integrations/supabase/client';
 
 const TONE_OPTIONS: { value: AITone; label: string; description: string }[] = [
   { value: 'cordial', label: 'Cordial', description: 'Amable y respetuoso' },
@@ -20,81 +22,65 @@ const TONE_OPTIONS: { value: AITone; label: string; description: string }[] = [
   { value: 'adaptive', label: 'Adaptable', description: 'Se adapta al cliente' },
 ];
 
-const SUGGESTED_REAL_ESTATE_PROMPT = `ROLES Y PERSONALIDAD:
-Eres un asesor inmobiliario experto y empático. Tu objetivo es calificar leads, presentar propiedades, resolver dudas y agendar visitas. Actúas como un consultor que guía al cliente en su proceso de compra, no como un vendedor agresivo.
-
-FLUJO PRINCIPAL — LEAD DE ANUNCIO (80% de los casos):
-El cliente llega preguntando por una propiedad específica que vio en redes sociales o Google Ads.
-1. Confirma interés → Saluda cálidamente y confirma la propiedad de interés: "¡Hola! Veo que te interesa [nombre de la propiedad]. Con gusto te comparto los detalles."
-2. Comparte información → Presenta SOLO los datos disponibles de esa propiedad. Si tiene instrucciones especiales (ai_prompt), úsalas como guía principal de la conversación.
-3. Si el cliente pide fotos y la propiedad las tiene, compártelas. Si no tiene fotos, ofrece agendar una visita para que conozca la propiedad en persona.
-4. Califica al lead → Extrae información de forma natural durante la conversación, NO hagas preguntas de calificación directas si el cliente ya mostró interés en una propiedad específica. En su lugar:
-   - Si el cliente pregunta por precio o crédito, aprovecha para preguntar qué tipo de crédito maneja.
-   - Si el cliente pregunta por recámaras o características, ya tienes esa información.
-   - Si el cliente quiere agendar visita, pregunta su nombre completo (así lo calificas sin que lo sienta).
-   - Solo haz preguntas de calificación si NO hay suficiente información para validar compatibilidad con la propiedad.
-5. Valida compatibilidad → Si el crédito del cliente no es aceptado por la propiedad, infórmalo con empatía y sugiere alternativas compatibles de las propiedades disponibles.
-6. Agenda visita → Si hay interés, ofrece agendar visita según la disponibilidad de la propiedad. Solicita:
-   - Nombre completo
-   - Día y horario preferido
-   - Si vendrá acompañado
-
-FLUJO SECUNDARIO — LEAD ORGÁNICO:
-El cliente llega sin una propiedad específica en mente.
-1. Saludo → Preséntate y pregunta qué tipo de propiedad busca.
-2. Calificación → Identifica necesidades gradualmente:
-   - ¿Compra o renta?
-   - Zona de interés
-   - Presupuesto aproximado o monto de crédito pre-aprobado
-   - Tipo de crédito
-   - Recámaras, baños y características importantes (estacionamiento, mascotas)
-3. Recomendación → Presenta máximo 2-3 propiedades que coincidan. Destaca por qué cada una se ajusta a sus criterios.
-4. Agenda visita → Igual que en el flujo principal.
-
-MANEJO DE OBJECIONES FRECUENTES:
-- "Es muy caro" → Menciona opciones de crédito aceptadas y sugiere propiedades en rango similar. No negocies precio.
-- "Necesito pensarlo" → Respeta su tiempo, ofrece enviar un resumen y pregunta si puede contactarlo en unos días.
-- "¿Tienen algo más barato/grande/en otra zona?" → Busca alternativas en las propiedades disponibles que se ajusten.
-- "¿Cuánto quedarían las mensualidades?" → Indica que un asesor financiero puede hacer una simulación personalizada y ofrece conectarlo.
-- "¿Tienen fotos?" → Si la propiedad tiene fotos disponibles, compártelas. Si no, ofrece agendar una visita.
-
-REGLAS DE NEGOCIO:
-- Siempre valida el tipo de crédito del cliente contra los créditos aceptados por la propiedad antes de confirmar compatibilidad.
-- Si el cliente pide costos de escrituración, trámites legales, simulación de crédito o financiamiento detallado, indica que un asesor especializado lo contactará con esa información.
-- No negocies precios, no ofrezcas descuentos ni promociones que no estén en los datos.
-- Si una propiedad está "reservada" o "vendida", infórmalo amablemente y sugiere alternativas similares.
-- Las visitas se agendan según la disponibilidad indicada en cada propiedad.
-- No hagas más de una pregunta de calificación por mensaje; mantén la conversación natural y fluida.
-- Si el cliente ya proporcionó información (nombre, crédito, etc.), no la vuelvas a pedir.
-- Si el cliente envía mensajes cortos como "ok", "sí", "va", interprétalos como confirmación y avanza en el flujo.
-
-SITUACIONES ESPECIALES:
-- Si el cliente pregunta por horarios de oficina, ubicación de la empresa o contacto directo, indica que un asesor le proporcionará esa información.
-- Si el cliente muestra frustración o enojo, responde con empatía, discúlpate por cualquier inconveniente y ofrece conectarlo con un asesor humano.
-- Si el cliente pregunta por temas no relacionados con inmuebles (política, clima, etc.), redirige amablemente la conversación hacia sus necesidades inmobiliarias.
-- Si el cliente envía ubicación, foto o documento, confirma que lo recibiste e indica que un asesor lo revisará.
-
-ESTILO DE RESPUESTA:
-- Respuestas cortas y directas (máximo 3-4 oraciones por mensaje de WhatsApp).
-- Usa viñetas solo cuando presentes características de una propiedad (máximo 5 puntos).
-- Siempre termina con una pregunta o llamado a la acción claro.
-- Haz las preguntas de calificación de forma gradual y conversacional, nunca en bloque.
-- Usa un lenguaje cercano pero profesional, como hablaría un asesor inmobiliario mexicano.`;
+const REGION_OPTIONS = [
+  { value: 'MX', label: 'México 🇲🇽' },
+  { value: 'CO', label: 'Colombia 🇨🇴' },
+  { value: 'PE', label: 'Perú 🇵🇪' },
+  { value: 'AR', label: 'Argentina 🇦🇷' },
+  { value: 'CL', label: 'Chile 🇨🇱' },
+  { value: 'ES', label: 'España 🇪🇸' },
+  { value: 'US', label: 'EE.UU. (hispano) 🇺🇸' },
+];
 
 const TIMEZONE_OPTIONS = [
-  'America/Mexico_City',
-  'America/Bogota',
-  'America/Lima',
-  'America/Santiago',
-  'America/Buenos_Aires',
-  'America/Sao_Paulo',
-  'Europe/Madrid',
+  'America/Mexico_City', 'America/Bogota', 'America/Lima', 'America/Santiago',
+  'America/Buenos_Aires', 'America/Sao_Paulo', 'Europe/Madrid',
 ];
+
+const DAYS: { key: keyof BusinessHours['days']; label: string }[] = [
+  { key: 'mon', label: 'Lun' }, { key: 'tue', label: 'Mar' }, { key: 'wed', label: 'Mié' },
+  { key: 'thu', label: 'Jue' }, { key: 'fri', label: 'Vie' }, { key: 'sat', label: 'Sáb' },
+  { key: 'sun', label: 'Dom' },
+];
+
+const DEFAULT_BH: BusinessHours = {
+  enabled: false,
+  timezone: 'America/Mexico_City',
+  days: {
+    mon: { open: '09:00', close: '19:00' }, tue: { open: '09:00', close: '19:00' },
+    wed: { open: '09:00', close: '19:00' }, thu: { open: '09:00', close: '19:00' },
+    fri: { open: '09:00', close: '19:00' }, sat: { open: '10:00', close: '14:00' },
+    sun: null,
+  },
+};
+
+const DEFAULT_TRIGGERS: HandoffTriggers = {
+  on_price_negotiation: true,
+  on_legal_question: true,
+  on_schedule_visit: false,
+  on_after_hours: true,
+  on_max_turns: true,
+};
+
+function usePromptPresets() {
+  return useQuery({
+    queryKey: ['ai-prompt-presets'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ai_prompt_presets' as any)
+        .select('id, region_code, name, description, prompt')
+        .order('region_code', { ascending: true });
+      if (error) throw error;
+      return ((data || []) as unknown) as Array<{ id: string; region_code: string; name: string; description: string | null; prompt: string }>;
+    },
+  });
+}
 
 export default function SettingsAIConfig() {
   const { data: settings, isLoading } = useAISettings();
   const updateSettings = useUpdateAISettings();
   const toggleAI = useToggleAI();
+  const { data: presets = [] } = usePromptPresets();
 
   const [formData, setFormData] = useState({
     agent_name: 'Asistente',
@@ -106,11 +92,18 @@ export default function SettingsAIConfig() {
     max_emojis_per_message: 2,
     never_reveal_ai: true,
     use_customer_name: true,
-    escalate_on_frustration: true,
     escalate_on_no_answer: true,
     escalate_on_human_request: true,
     behavior_prompt: '',
     fallback_message: 'Enseguida te atiende un asesor.',
+    region_code: 'MX',
+    language: 'es' as 'es' | 'en' | 'pt',
+    formality: 'tu' as 'tu' | 'usted' | 'vos',
+    max_message_length: 320,
+    max_ai_turns_before_handoff: 8,
+    business_hours: DEFAULT_BH as BusinessHours,
+    out_of_hours_message: 'Gracias por escribirnos. Nuestro horario es L-V 9am-7pm. Te respondemos en cuanto abramos.',
+    handoff_triggers: DEFAULT_TRIGGERS as HandoffTriggers,
   });
 
   useEffect(() => {
@@ -125,22 +118,38 @@ export default function SettingsAIConfig() {
         max_emojis_per_message: settings.max_emojis_per_message,
         never_reveal_ai: settings.never_reveal_ai,
         use_customer_name: settings.use_customer_name,
-        escalate_on_frustration: settings.escalate_on_frustration,
         escalate_on_no_answer: settings.escalate_on_no_answer,
         escalate_on_human_request: settings.escalate_on_human_request,
         behavior_prompt: settings.behavior_prompt || '',
         fallback_message: settings.fallback_message || 'Enseguida te atiende un asesor.',
+        region_code: settings.region_code || 'MX',
+        language: (settings.language || 'es') as any,
+        formality: (settings.formality || 'tu') as any,
+        max_message_length: settings.max_message_length || 320,
+        max_ai_turns_before_handoff: settings.max_ai_turns_before_handoff || 8,
+        business_hours: (settings.business_hours as BusinessHours) || DEFAULT_BH,
+        out_of_hours_message: settings.out_of_hours_message || '',
+        handoff_triggers: (settings.handoff_triggers as HandoffTriggers) || DEFAULT_TRIGGERS,
       });
     }
   }, [settings]);
 
   const handleSave = () => {
-    updateSettings.mutate(formData);
+    updateSettings.mutate(formData as any);
   };
+
+  const setBH = (patch: Partial<BusinessHours>) =>
+    setFormData(p => ({ ...p, business_hours: { ...p.business_hours, ...patch } }));
+  const setBHDay = (day: keyof BusinessHours['days'], v: { open: string; close: string } | null) =>
+    setFormData(p => ({ ...p, business_hours: { ...p.business_hours, days: { ...p.business_hours.days, [day]: v } } }));
+  const setTrigger = (key: keyof HandoffTriggers, val: boolean) =>
+    setFormData(p => ({ ...p, handoff_triggers: { ...p.handoff_triggers, [key]: val } }));
+
+  const filteredPresets = presets.filter(p => p.region_code === formData.region_code);
 
   if (isLoading) {
     return (
-      <SettingsLayout title="Configuración IA" description="Configura el comportamiento y capacidades de tu agente inteligente" icon={Bot}>
+      <SettingsLayout title="Configuración IA" description="Configura el comportamiento de tu agente inteligente" icon={Bot}>
         <div className="space-y-4">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-48 w-full" />
@@ -150,216 +159,209 @@ export default function SettingsAIConfig() {
   }
 
   return (
-    <SettingsLayout title="Configuración IA" description="Configura el comportamiento y capacidades de tu agente inteligente" icon={Bot}>
+    <SettingsLayout title="Configuración IA" description="Configura el comportamiento de tu agente inteligente" icon={Bot}>
       <div className="space-y-6 max-w-4xl">
-        {/* Tabs Navigation */}
-        <Tabs defaultValue="configuracion" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="configuracion">Configuración</TabsTrigger>
-            <TabsTrigger value="estilo">Estilo</TabsTrigger>
-            <TabsTrigger value="reglas">Reglas</TabsTrigger>
+        {/* Master toggle always visible */}
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Asistente IA</CardTitle>
+                  <CardDescription>
+                    {settings?.enabled ? 'El asistente está activo y respondiendo mensajes' : 'El asistente está desactivado'}
+                  </CardDescription>
+                </div>
+              </div>
+              <Switch
+                checked={settings?.enabled ?? false}
+                onCheckedChange={(enabled) => toggleAI.mutate(enabled)}
+                disabled={toggleAI.isPending}
+              />
+            </div>
+          </CardHeader>
+        </Card>
+
+        <Tabs defaultValue="identidad" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="identidad"><UserCog className="h-4 w-4 mr-1" />Identidad</TabsTrigger>
+            <TabsTrigger value="instrucciones"><Settings2 className="h-4 w-4 mr-1" />Instrucciones</TabsTrigger>
+            <TabsTrigger value="estilo"><MessageSquare className="h-4 w-4 mr-1" />Estilo</TabsTrigger>
+            <TabsTrigger value="handoff"><AlertTriangle className="h-4 w-4 mr-1" />Handoff</TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Configuración */}
-          <TabsContent value="configuracion" className="space-y-6">
-            {/* Enable/Disable + Identity Row */}
+          {/* TAB 1: Identidad */}
+          <TabsContent value="identidad" className="space-y-6">
             <Card>
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Asistente IA</CardTitle>
-                      <CardDescription>
-                        {settings?.enabled ? 'El asistente está activo y respondiendo mensajes' : 'El asistente está desactivado'}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={settings?.enabled ?? false}
-                    onCheckedChange={(enabled) => toggleAI.mutate(enabled)}
-                    disabled={toggleAI.isPending}
-                  />
-                </div>
+              <CardHeader>
+                <CardTitle>Identidad del agente</CardTitle>
+                <CardDescription>Cómo se presenta tu agente al cliente</CardDescription>
               </CardHeader>
-              <CardContent className="border-t pt-4">
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Nombre del Agente</Label>
-                    <Input
-                      value={formData.agent_name}
-                      onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })}
-                      placeholder="Ej: Sofía Castellanos"
-                    />
+                    <Label>Nombre del agente</Label>
+                    <Input value={formData.agent_name} onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })} placeholder="Ej: Sofía" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Nombre de la Empresa</Label>
-                    <Input
-                      value={formData.company_name}
-                      onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                      placeholder="Tu empresa"
-                    />
+                    <Label>Nombre de la empresa</Label>
+                    <Input value={formData.company_name} onChange={(e) => setFormData({ ...formData, company_name: e.target.value })} placeholder="Tu empresa" />
                   </div>
+                </div>
+                <div className="flex items-center justify-between p-4 rounded-lg border">
+                  <div>
+                    <Label>Nunca revelar que es IA</Label>
+                    <p className="text-sm text-muted-foreground">El agente actuará como una persona real</p>
+                  </div>
+                  <Switch checked={formData.never_reveal_ai} onCheckedChange={(c) => setFormData({ ...formData, never_reveal_ai: c })} />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Behavior Prompt - Main Section */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings2 className="h-5 w-5 text-muted-foreground" />
-                  Instrucciones del Agente
-                </CardTitle>
-                <CardDescription>
-                  Define toda la personalidad, comportamiento y reglas de tu agente de IA en un solo lugar
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5 text-muted-foreground" />Región e idioma</CardTitle>
+                <CardDescription>La IA usará modismos, moneda y trato apropiados para esta región</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Zona Horaria</Label>
-                  <Select
-                    value={formData.timezone}
-                    onValueChange={(value) => setFormData({ ...formData, timezone: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIMEZONE_OPTIONS.map((tz) => (
-                        <SelectItem key={tz} value={tz}>{tz}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    La IA usará esta zona horaria para mostrar fechas y horas correctas a tus clientes
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Instrucciones de Comportamiento</Label>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="text-xs gap-1.5"
-                        onClick={() => setFormData({ ...formData, behavior_prompt: SUGGESTED_REAL_ESTATE_PROMPT })}
-                      >
-                        <Wand2 className="h-3.5 w-3.5" />
-                        Usar prompt sugerido
-                      </Button>
-                      <span className="text-xs text-muted-foreground">
-                        {formData.behavior_prompt.length} caracteres
-                      </span>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Región</Label>
+                    <Select value={formData.region_code} onValueChange={(v) => setFormData({ ...formData, region_code: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{REGION_OPTIONS.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
+                    </Select>
                   </div>
-                  <Textarea
-                    value={formData.behavior_prompt}
-                    onChange={(e) => setFormData({ ...formData, behavior_prompt: e.target.value })}
-                    placeholder={`Ejemplo:
-
-INFORMACIÓN DEL NEGOCIO:
-- Somos un restaurante de comida mexicana
-- Horario: Lunes a Sábado 12pm - 10pm
-- Dirección: Av. Reforma 123, CDMX
-
-SERVICIOS:
-- Reservaciones para grupos de hasta 20 personas
-- Servicio a domicilio en zona centro
-- Eventos privados
-
-ESPECIALIDADES:
-- Tacos al pastor
-- Enchiladas suizas
-- Margaritas artesanales
-
-PROMOCIONES VIGENTES:
-- Martes: 2x1 en margaritas
-- Jueves: 15% descuento en cenas familiares`}
-                    rows={12}
-                    className="font-mono text-sm"
-                  />
+                  <div className="space-y-2">
+                    <Label>Idioma de respuesta</Label>
+                    <Select value={formData.language} onValueChange={(v: any) => setFormData({ ...formData, language: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="es">Español</SelectItem>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="pt">Português</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Trato al cliente</Label>
+                    <Select value={formData.formality} onValueChange={(v: any) => setFormData({ ...formData, formality: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tu">Tú (informal)</SelectItem>
+                        <SelectItem value="usted">Usted (formal)</SelectItem>
+                        <SelectItem value="vos">Vos (rioplatense)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-
                 <div className="space-y-2">
-                  <Label>Mensaje de Escalamiento</Label>
-                  <Input
-                    value={formData.fallback_message}
-                    onChange={(e) => setFormData({ ...formData, fallback_message: e.target.value })}
-                    placeholder="Enseguida te atiende un asesor."
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Este mensaje se envía cuando la IA no puede responder y necesita escalar a un humano
-                  </p>
+                  <Label>Zona horaria</Label>
+                  <Select value={formData.timezone} onValueChange={(v) => setFormData({ ...formData, timezone: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{TIMEZONE_OPTIONS.map(tz => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}</SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Tab 2: Estilo */}
+          {/* TAB 2: Instrucciones */}
+          <TabsContent value="instrucciones" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Instrucciones del agente</CardTitle>
+                <CardDescription>El núcleo del comportamiento. Describe el negocio, el flujo y las reglas.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {filteredPresets.length > 0 && (
+                  <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Wand2 className="h-4 w-4" />
+                      Plantillas para {REGION_OPTIONS.find(r => r.value === formData.region_code)?.label}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {filteredPresets.map(p => (
+                        <Button key={p.id} type="button" variant="outline" size="sm"
+                          onClick={() => setFormData(s => ({ ...s, behavior_prompt: p.prompt }))}>
+                          {p.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Instrucciones de comportamiento</Label>
+                    <span className="text-xs text-muted-foreground">{formData.behavior_prompt.length} caracteres</span>
+                  </div>
+                  <Textarea
+                    value={formData.behavior_prompt}
+                    onChange={(e) => setFormData({ ...formData, behavior_prompt: e.target.value })}
+                    placeholder="Describe el negocio, el flujo de atención, las reglas y el manejo de objeciones..."
+                    rows={16}
+                    className="font-mono text-sm"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* TAB 3: Estilo */}
           <TabsContent value="estilo" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                  Estilo de Comunicación
-                </CardTitle>
-                <CardDescription>
-                  Define cómo se comunica tu agente con los clientes
-                </CardDescription>
+                <CardTitle>Estilo de comunicación</CardTitle>
+                <CardDescription>Tono, longitud y ritmo de los mensajes</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label>Tono de Comunicación</Label>
-                  <Select
-                    value={formData.tone}
-                    onValueChange={(value: AITone) => setFormData({ ...formData, tone: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Label>Tono</Label>
+                  <Select value={formData.tone} onValueChange={(v: AITone) => setFormData({ ...formData, tone: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {TONE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          <span className="font-medium">{opt.label}</span>
-                          <span className="text-muted-foreground ml-2">— {opt.description}</span>
+                      {TONE_OPTIONS.map(o => (
+                        <SelectItem key={o.value} value={o.value}>
+                          <span className="font-medium">{o.label}</span>
+                          <span className="text-muted-foreground ml-2">— {o.description}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label>Largo máximo del mensaje</Label>
+                    <span className="text-sm font-medium">{formData.max_message_length} caracteres</span>
+                  </div>
+                  <Slider
+                    value={[formData.max_message_length]}
+                    onValueChange={([v]) => setFormData({ ...formData, max_message_length: v })}
+                    min={120} max={800} step={20}
+                  />
+                  <p className="text-xs text-muted-foreground">Recomendado para WhatsApp: 280–400 caracteres.</p>
+                </div>
+
                 <div className="flex items-center justify-between p-4 rounded-lg border">
                   <div>
                     <Label>Usar nombre del cliente</Label>
-                    <p className="text-sm text-muted-foreground">
-                      El agente llamará al cliente por su nombre cuando esté disponible
-                    </p>
+                    <p className="text-sm text-muted-foreground">El agente llamará al cliente por su nombre cuando lo tenga</p>
                   </div>
-                  <Switch
-                    checked={formData.use_customer_name}
-                    onCheckedChange={(checked) => setFormData({ ...formData, use_customer_name: checked })}
-                  />
+                  <Switch checked={formData.use_customer_name} onCheckedChange={(c) => setFormData({ ...formData, use_customer_name: c })} />
                 </div>
 
                 <div className="p-4 rounded-lg border space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Usar Emojis</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Incluir emojis en las respuestas para hacerlas más amigables
-                      </p>
+                      <Label>Usar emojis</Label>
+                      <p className="text-sm text-muted-foreground">Si lo desactivas, los emojis se eliminan automáticamente del mensaje</p>
                     </div>
-                    <Switch
-                      checked={formData.use_emojis}
-                      onCheckedChange={(checked) => setFormData({ ...formData, use_emojis: checked })}
-                    />
+                    <Switch checked={formData.use_emojis} onCheckedChange={(c) => setFormData({ ...formData, use_emojis: c })} />
                   </div>
-
                   {formData.use_emojis && (
                     <div className="space-y-2 pt-2 border-t">
                       <div className="flex justify-between items-center">
@@ -368,142 +370,160 @@ PROMOCIONES VIGENTES:
                       </div>
                       <Slider
                         value={[formData.max_emojis_per_message]}
-                        onValueChange={([value]) => setFormData({ ...formData, max_emojis_per_message: value })}
-                        min={1}
-                        max={5}
-                        step={1}
+                        onValueChange={([v]) => setFormData({ ...formData, max_emojis_per_message: v })}
+                        min={1} max={5} step={1}
                       />
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
-                  Tiempo de Respuesta
-                </CardTitle>
-                <CardDescription>
-                  Configura el tiempo de espera antes de responder
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <Label>Retraso simulado</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Simula tiempo de escritura para respuestas más naturales
-                      </p>
+                <div className="p-4 rounded-lg border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <Label>Retraso antes de responder</Label>
                     </div>
                     <span className="text-2xl font-bold text-primary">{formData.response_delay_seconds}s</span>
                   </div>
                   <Slider
                     value={[formData.response_delay_seconds]}
-                    onValueChange={([value]) => setFormData({ ...formData, response_delay_seconds: value })}
-                    min={1}
-                    max={10}
-                    step={1}
+                    onValueChange={([v]) => setFormData({ ...formData, response_delay_seconds: v })}
+                    min={1} max={10} step={1}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Un retraso de 2-4 segundos hace que las respuestas parezcan más humanas
-                  </p>
+                  <p className="text-xs text-muted-foreground">2–4 segundos suele sentirse más natural.</p>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Tab 3: Reglas */}
-          <TabsContent value="reglas" className="space-y-6">
+          {/* TAB 4: Handoff */}
+          <TabsContent value="handoff" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
-                  Reglas de Identidad
-                </CardTitle>
-                <CardDescription>
-                  Configura cómo el agente maneja su identidad
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-muted-foreground" />Cuándo escalar a humano</CardTitle>
+                <CardDescription>Define automáticamente cuándo la IA pasa la conversación a un asesor</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between p-4 rounded-lg border">
-                  <div>
-                    <Label>Nunca revelar que es IA</Label>
-                    <p className="text-sm text-muted-foreground">
-                      El agente siempre actuará como si fuera una persona real
-                    </p>
+              <CardContent className="space-y-3">
+                <ToggleRow label="Cliente pide hablar con humano" desc='Detecta "asesor", "agente", "persona real"…'
+                  checked={formData.escalate_on_human_request}
+                  onChange={(c) => setFormData({ ...formData, escalate_on_human_request: c })} />
+                <ToggleRow label="Cliente pide negociar precio" desc="Pasa la negociación al equipo comercial"
+                  checked={formData.handoff_triggers.on_price_negotiation}
+                  onChange={(c) => setTrigger('on_price_negotiation', c)} />
+                <ToggleRow label="Pregunta legal o financiera específica" desc="Trámites notariales, simulación de crédito, escrituras"
+                  checked={formData.handoff_triggers.on_legal_question}
+                  onChange={(c) => setTrigger('on_legal_question', c)} />
+                <ToggleRow label="Cliente pide agendar visita" desc="Si lo activas, la IA escala apenas se mencione una visita"
+                  checked={formData.handoff_triggers.on_schedule_visit}
+                  onChange={(c) => setTrigger('on_schedule_visit', c)} />
+                <ToggleRow label="Sin respuesta en base de conocimiento" desc="Si la IA no encuentra el dato, escala con [ESCALAR]"
+                  checked={formData.escalate_on_no_answer}
+                  onChange={(c) => setFormData({ ...formData, escalate_on_no_answer: c })} />
+
+                <div className="p-4 rounded-lg border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Escalar tras N turnos sin avance</Label>
+                      <p className="text-sm text-muted-foreground">Evita que la IA se quede atrapada en bucle</p>
+                    </div>
+                    <Switch checked={formData.handoff_triggers.on_max_turns} onCheckedChange={(c) => setTrigger('on_max_turns', c)} />
                   </div>
-                  <Switch
-                    checked={formData.never_reveal_ai}
-                    onCheckedChange={(checked) => setFormData({ ...formData, never_reveal_ai: checked })}
-                  />
+                  {formData.handoff_triggers.on_max_turns && (
+                    <div className="pt-2 border-t space-y-2">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-sm">Máximo de turnos</Label>
+                        <span className="text-sm font-medium">{formData.max_ai_turns_before_handoff}</span>
+                      </div>
+                      <Slider
+                        value={[formData.max_ai_turns_before_handoff]}
+                        onValueChange={([v]) => setFormData({ ...formData, max_ai_turns_before_handoff: v })}
+                        min={3} max={20} step={1}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Mensaje de escalamiento</Label>
+                  <Input value={formData.fallback_message} onChange={(e) => setFormData({ ...formData, fallback_message: e.target.value })} />
+                  <p className="text-xs text-muted-foreground">Se envía cuando la IA pasa al asesor humano.</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-                  Reglas de Escalamiento
-                </CardTitle>
-                <CardDescription>
-                  Define cuándo el agente debe transferir la conversación a un humano
-                </CardDescription>
+                <CardTitle>Horario de atención humano</CardTitle>
+                <CardDescription>Fuera de este horario la IA enviará el mensaje configurado</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between p-4 rounded-lg border">
                   <div>
-                    <Label>Escalar por frustración</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Detecta cuando el cliente está molesto o frustrado y escala automáticamente
-                    </p>
+                    <Label>Activar horario de atención</Label>
+                    <p className="text-sm text-muted-foreground">Si está apagado, la IA responde 24/7</p>
                   </div>
-                  <Switch
-                    checked={formData.escalate_on_frustration}
-                    onCheckedChange={(checked) => setFormData({ ...formData, escalate_on_frustration: checked })}
-                  />
+                  <Switch checked={formData.business_hours.enabled} onCheckedChange={(c) => setBH({ enabled: c })} />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border">
-                  <div>
-                    <Label>Escalar sin respuesta</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Cuando no encuentra información en la base de conocimiento
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.escalate_on_no_answer}
-                    onCheckedChange={(checked) => setFormData({ ...formData, escalate_on_no_answer: checked })}
-                  />
-                </div>
+                {formData.business_hours.enabled && (
+                  <>
+                    <div className="space-y-2">
+                      {DAYS.map(d => {
+                        const v = formData.business_hours.days[d.key];
+                        return (
+                          <div key={d.key} className="flex items-center gap-3 p-2 rounded border">
+                            <div className="w-10 text-sm font-medium">{d.label}</div>
+                            <Switch
+                              checked={!!v}
+                              onCheckedChange={(c) => setBHDay(d.key, c ? { open: '09:00', close: '19:00' } : null)}
+                            />
+                            {v ? (
+                              <div className="flex items-center gap-2 flex-1">
+                                <Input type="time" value={v.open} onChange={(e) => setBHDay(d.key, { ...v, open: e.target.value })} className="w-32" />
+                                <span className="text-muted-foreground">–</span>
+                                <Input type="time" value={v.close} onChange={(e) => setBHDay(d.key, { ...v, close: e.target.value })} className="w-32" />
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground flex-1">Cerrado</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border">
-                  <div>
-                    <Label>Escalar por solicitud</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Cuando el cliente pide explícitamente hablar con una persona
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.escalate_on_human_request}
-                    onCheckedChange={(checked) => setFormData({ ...formData, escalate_on_human_request: checked })}
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label>Mensaje fuera de horario</Label>
+                      <Textarea
+                        value={formData.out_of_hours_message}
+                        onChange={(e) => setFormData({ ...formData, out_of_hours_message: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
-        {/* Save Button - Always visible */}
-        <div className="flex justify-end pt-4 border-t">
+        <div className="flex justify-end pt-4 border-t sticky bottom-0 bg-background py-3">
           <Button onClick={handleSave} disabled={updateSettings.isPending} size="lg">
-            {updateSettings.isPending ? 'Guardando...' : 'Guardar Configuración'}
+            {updateSettings.isPending ? 'Guardando...' : 'Guardar configuración'}
           </Button>
         </div>
       </div>
     </SettingsLayout>
+  );
+}
+
+function ToggleRow({ label, desc, checked, onChange }: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-lg border">
+      <div className="pr-4">
+        <Label>{label}</Label>
+        <p className="text-sm text-muted-foreground">{desc}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
   );
 }
