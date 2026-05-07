@@ -3,12 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Send, Bot, User, AlertTriangle, Sparkles, RotateCcw } from 'lucide-react';
+import { Send, Bot, User, AlertTriangle, Sparkles, RotateCcw, Bug } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-interface Msg { role: 'user' | 'assistant'; content: string; flags?: { escalar?: boolean; seguimiento?: boolean } }
+interface Msg { role: 'user' | 'assistant'; content: string; flags?: { escalar?: boolean; seguimiento?: boolean }; raw?: string }
 
 interface Props {
   open: boolean;
@@ -20,10 +20,17 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState<string>('');
+  const [lastDebug, setLastDebug] = useState<{ raw: string; clean: string; flags: any; chars: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) setMessages([]);
+    if (open) {
+      setMessages([]);
+      setLastDebug(null);
+      setSystemPrompt('');
+    }
   }, [open]);
 
   useEffect(() => {
@@ -46,11 +53,20 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
+      const d = data as any;
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: (data as any).response || '(sin respuesta)',
-        flags: (data as any).detected,
+        content: d.response || '(sin respuesta)',
+        flags: d.detected,
+        raw: d.raw,
       }]);
+      if (d.system_prompt_preview) setSystemPrompt(d.system_prompt_preview);
+      setLastDebug({
+        raw: d.raw || '',
+        clean: d.response || '',
+        flags: d.detected || {},
+        chars: (d.response || '').length,
+      });
     } catch (e: any) {
       toast.error(e.message || 'Error en el sandbox');
     } finally {
@@ -60,18 +76,31 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className={cn('h-[85vh] flex flex-col p-0 gap-0 transition-[max-width]', debugOpen ? 'max-w-5xl' : 'max-w-2xl')}>
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Probar conversación
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Probar conversación
+            </DialogTitle>
+            <Button
+              variant={debugOpen ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setDebugOpen(v => !v)}
+              className="gap-1"
+            >
+              <Bug className="h-3.5 w-3.5" />
+              Debug
+            </Button>
+          </div>
           <DialogDescription>
             Simula un chat con la configuración actual sin afectar a clientes reales. Los cambios sin guardar también se aplican.
           </DialogDescription>
         </DialogHeader>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-muted/20">
+        <div className="flex-1 flex min-h-0">
+          <div className={cn('flex flex-col min-h-0', debugOpen ? 'flex-1 border-r' : 'flex-1')}>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-muted/20">
           {messages.length === 0 && (
             <div className="text-center text-sm text-muted-foreground py-12">
               <Bot className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -116,9 +145,9 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
               </div>
             </div>
           )}
-        </div>
+            </div>
 
-        <div className="border-t p-4 flex gap-2 items-center">
+            <div className="border-t p-4 flex gap-2 items-center">
           <Button variant="ghost" size="icon" onClick={() => setMessages([])} disabled={loading || messages.length === 0} title="Reiniciar">
             <RotateCcw className="h-4 w-4" />
           </Button>
@@ -133,8 +162,71 @@ export function AISandboxDialog({ open, onOpenChange, settings }: Props) {
           <Button onClick={send} disabled={loading || !input.trim()} size="icon">
             <Send className="h-4 w-4" />
           </Button>
+            </div>
+          </div>
+
+          {debugOpen && (
+            <aside className="w-80 shrink-0 overflow-y-auto bg-muted/30 p-4 space-y-4 text-xs">
+              <DebugSection title="System Prompt (preview)">
+                <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed">
+                  {systemPrompt || '— Envía un mensaje para generar el prompt —'}
+                </pre>
+              </DebugSection>
+
+              {lastDebug && (
+                <>
+                  <DebugSection title="Última respuesta (cruda)">
+                    <pre className="whitespace-pre-wrap font-mono text-[11px]">{lastDebug.raw || '—'}</pre>
+                  </DebugSection>
+                  <DebugSection title="Procesada (mostrada al cliente)">
+                    <pre className="whitespace-pre-wrap font-mono text-[11px]">{lastDebug.clean || '—'}</pre>
+                    <p className="mt-1 text-muted-foreground">{lastDebug.chars} chars (límite {settings.max_message_length || 320})</p>
+                  </DebugSection>
+                  <DebugSection title="Marcadores detectados">
+                    <div className="flex flex-wrap gap-1">
+                      {lastDebug.flags.escalar && <Badge variant="destructive" className="text-[10px]">ESCALAR</Badge>}
+                      {lastDebug.flags.seguimiento && <Badge variant="secondary" className="text-[10px]">SEGUIMIENTO_HUMANO</Badge>}
+                      {!lastDebug.flags.escalar && !lastDebug.flags.seguimiento && (
+                        <span className="text-muted-foreground">Ninguno</span>
+                      )}
+                    </div>
+                  </DebugSection>
+                </>
+              )}
+
+              <DebugSection title="Configuración aplicada">
+                <ul className="space-y-1">
+                  <DebugRow k="Región" v={settings.region_code} />
+                  <DebugRow k="Idioma" v={settings.language} />
+                  <DebugRow k="Trato" v={settings.formality} />
+                  <DebugRow k="Tono" v={settings.tone} />
+                  <DebugRow k="Emojis" v={settings.use_emojis ? `Sí (≤${settings.max_emojis_per_message})` : 'No'} />
+                  <DebugRow k="Max chars" v={String(settings.max_message_length)} />
+                  <DebugRow k="Oculta IA" v={settings.never_reveal_ai ? 'Sí' : 'No'} />
+                </ul>
+              </DebugSection>
+            </aside>
+          )}
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DebugSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-1.5">
+      <h4 className="font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">{title}</h4>
+      <div className="rounded-md border bg-background p-2">{children}</div>
+    </section>
+  );
+}
+
+function DebugRow({ k, v }: { k: string; v: any }) {
+  return (
+    <li className="flex justify-between gap-2">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-mono">{v ?? '—'}</span>
+    </li>
   );
 }
