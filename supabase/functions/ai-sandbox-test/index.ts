@@ -29,6 +29,58 @@ const LANGUAGE_TEXT: Record<string, string> = {
   pt: "Responde SIEMPRE en portugués.",
 };
 
+// === Trigger lists (must match ai-chat-response) ===
+const HUMAN_REQUEST_TRIGGERS = [
+  "hablar con persona", "agente humano", "representante", "persona real",
+  "no quiero bot", "quiero hablar con alguien", "asesor", "ejecutivo",
+  "hablar con humano", "hablar con un humano", "una persona", "con una persona",
+  "eres una maquina", "eres una máquina", "eres un bot", "eres robot",
+  "quiero un humano", "pasame con", "pásame con", "comunicame con", "comunícame con",
+  "me atienda alguien", "que me atienda", "alguien que me atienda",
+];
+const FRUSTRATION_TRIGGERS = [
+  "esto no sirve", "no me ayudas", "eres inutil", "eres inútil", "incompetente",
+  "urgente", "es una emergencia", "llevo horas", "llevo días", "llevo dias",
+  "estoy enojado", "estoy enojada", "estoy molesto", "estoy molesta",
+  "estoy harto", "estoy harta", "estoy furioso", "estoy furiosa",
+  "estoy cabreado", "estoy cabreada", "qué frustrante", "que frustrante",
+  "me tienen harto", "me tienen harta", "esto es ridículo", "esto es ridiculo",
+  "pésimo servicio", "pesimo servicio", "mal servicio", "una vergüenza", "una verguenza",
+  "no me sirve", "estoy frustrado", "estoy frustrada", "no entiendes nada",
+  "coño", "joder", "mierda", "estafa", "estafadores",
+];
+const VISIT_TRIGGERS = [
+  "agendar visita", "agendar cita", "quiero visitar", "quiero ver el", "quiero ver la",
+  "puedo ir a ver", "puedo verla", "puedo verlo", "ir a verla", "ir a verlo",
+  "visitar el inmueble", "visitar la propiedad", "ver la casa", "ver el departamento",
+  "cuando puedo ir", "cuándo puedo ir", "horario para visita", "programar visita",
+];
+const PRICE_NEGOTIATION_TRIGGERS = [
+  "descuento", "rebaja", "negociar precio", "negociable", "mejor precio",
+  "más barato", "mas barato", "bajar el precio", "reducir el precio",
+];
+const LEGAL_TRIGGERS = [
+  "escritura", "notario", "notaría", "notaria", "impuestos", "fiscal",
+  "simulación de crédito", "simulacion de credito", "trámite legal", "tramite legal",
+];
+
+function isWithinBusinessHours(bh: any): { open: boolean; configured: boolean } {
+  if (!bh || !bh.enabled) return { open: true, configured: false };
+  try {
+    const tz = bh.timezone || "America/Mexico_City";
+    const now = new Date();
+    const fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+    const parts = fmt.formatToParts(now);
+    const wd = parts.find(p => p.type === "weekday")?.value?.toLowerCase().slice(0, 3) || "";
+    const hh = parts.find(p => p.type === "hour")?.value || "00";
+    const mm = parts.find(p => p.type === "minute")?.value || "00";
+    const day = bh.days?.[wd];
+    if (!day || !day.open || !day.close) return { open: false, configured: true };
+    const cur = `${hh}:${mm}`;
+    return { open: cur >= day.open && cur <= day.close, configured: true };
+  } catch { return { open: true, configured: false }; }
+}
+
 function stripEmojis(text: string): string {
   return text
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}]/gu, "")
