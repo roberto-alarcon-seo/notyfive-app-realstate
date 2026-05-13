@@ -720,20 +720,40 @@ const AdminTenants = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!tenantToDelete} onOpenChange={(open) => !open && setTenantToDelete(null)}>
+      <AlertDialog
+        open={!!tenantToDelete}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTenantToDelete(null);
+            setDeleteConfirmText('');
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive">Eliminar tenant permanentemente</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro de que deseas eliminar "{tenantToDelete?.name}" <strong>permanentemente</strong>?
-              Esta acción no se puede deshacer.
+              Vas a eliminar <strong>"{tenantToDelete?.name}"</strong> de forma permanente.
+              Esta acción no se puede deshacer y borrará todos sus datos asociados.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2 py-2">
+            <p className="text-sm text-muted-foreground">
+              Para confirmar, escribe <span className="font-mono font-semibold text-destructive">eliminar</span> en el campo:
+            </p>
+            <Input
+              autoFocus
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="eliminar"
+              disabled={isProcessing}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => tenantToDelete && handleDeleteTenant(tenantToDelete)}
-              disabled={isProcessing}
+              disabled={isProcessing || deleteConfirmText.trim().toLowerCase() !== 'eliminar'}
               className="bg-destructive hover:bg-destructive/90"
             >
               {isProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
