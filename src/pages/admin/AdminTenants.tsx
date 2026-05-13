@@ -93,6 +93,7 @@ const AdminTenants = () => {
   const [selectedTenantForTwilio, setSelectedTenantForTwilio] = useState<Tenant | null>(null);
   const [tenantToSuspend, setTenantToSuspend] = useState<Tenant | null>(null);
   const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [formData, setFormData] = useState({ name: '', ownerName: '', ownerEmail: '' });
