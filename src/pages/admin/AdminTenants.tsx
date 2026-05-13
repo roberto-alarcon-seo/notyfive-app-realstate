@@ -381,6 +381,7 @@ const AdminTenants = () => {
       if (error) throw error;
       toast.success('Tenant eliminado permanentemente');
       setTenantToDelete(null);
+      setDeleteConfirmText('');
       fetchTenants();
     } catch (error: any) {
       toast.error('Error al eliminar el tenant: ' + (error.message || 'Error desconocido'));
