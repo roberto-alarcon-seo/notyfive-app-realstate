@@ -363,21 +363,7 @@ const AdminTenants = () => {
   const handleDeleteTenant = async (tenant: Tenant) => {
     setIsProcessing(true);
     try {
-      const { data: profiles } = await supabase.from('profiles').select('id').eq('tenant_id', tenant.id);
-      if (profiles && profiles.length > 0) {
-        const userIds = profiles.map((p) => p.id);
-        await supabase.from('user_roles').delete().in('user_id', userIds);
-      }
-      await supabase.from('security_events').delete().eq('tenant_id', tenant.id);
-      await supabase.from('password_resets').delete().eq('tenant_id', tenant.id);
-      await supabase.from('tenant_ai_settings').delete().eq('tenant_id', tenant.id);
-      await supabase.from('tenant_integrations').delete().eq('tenant_id', tenant.id);
-      await supabase.from('wallets').delete().eq('tenant_id', tenant.id);
-      if (profiles && profiles.length > 0) {
-        const userIds = profiles.map((p) => p.id);
-        await supabase.from('profiles').delete().in('id', userIds);
-      }
-      const { error } = await supabase.from('tenants').delete().eq('id', tenant.id);
+      const { error } = await supabase.rpc('admin_delete_tenant' as any, { p_tenant_id: tenant.id });
       if (error) throw error;
       toast.success('Tenant eliminado permanentemente');
       setTenantToDelete(null);
