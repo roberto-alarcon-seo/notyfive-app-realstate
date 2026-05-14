@@ -4251,6 +4251,7 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: boolean
       }
+      admin_delete_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
       can_access_conversation: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
