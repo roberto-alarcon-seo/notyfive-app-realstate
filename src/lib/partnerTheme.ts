@@ -27,6 +27,11 @@ export interface PartnerTheme {
   mode?: "dark" | "light";
   /** Optional preset key the user picked, for UX recall. */
   theme_preset?: string;
+  /**
+   * Optional horizontal logo shown when the sidebar is expanded.
+   * Falls back to `partners.logo_url` (square/icon logo) when null.
+   */
+  sidebar_logo_expanded_url?: string | null;
 }
 
 /** Convert "#RRGGBB" to "H S% L%" string used in CSS variables */
