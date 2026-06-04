@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ImpersonateUserModal } from './ImpersonateUserModal';
 import { TenantOverviewTab } from './TenantOverviewTab';
 import { TenantWalletTab } from './TenantWalletTab';
 import { TenantWhatsAppTab } from './TenantWhatsAppTab';
@@ -11,9 +12,6 @@ import { TenantAutomationTab } from './TenantAutomationTab';
 import { TenantSupportTab } from './TenantSupportTab';
 import { TenantSuperWalletTab } from './TenantSuperWalletTab';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { extractEdgeFunctionError } from '@/lib/edgeFunctionError';
 
 interface Tenant {
   id: string;
@@ -38,43 +36,7 @@ interface TenantDetailPanelProps {
 
 export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDetailPanelProps) {
   const { isSuperAdmin } = useAuth();
-  const [isImpersonating, setIsImpersonating] = useState(false);
-
-  const handleStartSupportMode = async () => {
-    setIsImpersonating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        'admin-impersonate-sso',
-        { body: { tenant_id: tenant.id } },
-      );
-      if (error) {
-        const detail = await extractEdgeFunctionError(
-          error,
-          'No se pudo generar el acceso SSO.',
-        );
-        toast.error('Error al iniciar impersonación', { description: detail });
-        return;
-      }
-      if (!data?.sso_path) {
-        const detail = (data as { error?: string } | null)?.error
-          ?? 'No se pudo generar el acceso SSO.';
-        toast.error('Error al iniciar impersonación', { description: detail });
-        return;
-      }
-      sessionStorage.setItem('noty5_admin_impersonation', '1');
-      toast.success(`Accediendo como ${data.target_email}`);
-      window.location.assign(data.sso_path as string);
-    } catch (err) {
-      console.error(err);
-      const detail = await extractEdgeFunctionError(
-        err,
-        'Error inesperado al generar SSO',
-      );
-      toast.error('Error al iniciar impersonación', { description: detail });
-    } finally {
-      setIsImpersonating(false);
-    }
-  };
+  const [impersonateModalOpen, setImpersonateModalOpen] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
@@ -93,12 +55,11 @@ export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDet
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={handleStartSupportMode}
-                    disabled={isImpersonating}
+                    onClick={() => setImpersonateModalOpen(true)}
                     className="gap-2"
                   >
                     <Shield className="h-4 w-4" />
-                    {isImpersonating ? 'Generando…' : 'Acceder como Tenant'}
+                    Acceder como Tenant
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
@@ -189,6 +150,12 @@ export function TenantDetailPanel({ tenant, onClose, onTenantUpdate }: TenantDet
           </div>
         </Tabs>
       </div>
+      <ImpersonateUserModal
+        open={impersonateModalOpen}
+        onClose={() => setImpersonateModalOpen(false)}
+        tenantId={tenant.id}
+        tenantName={tenant.name}
+      />
     </div>
   );
 }

@@ -200,6 +200,12 @@ export default function TenantAdminDetail() {
           <TenantLogsTab tenantId={tenant.id} />
         </TabsContent>
       </Tabs>
+      <ImpersonateUserModal
+        open={impersonateModalOpen}
+        onClose={() => setImpersonateModalOpen(false)}
+        tenantId={tenant.id}
+        tenantName={tenant.name}
+      />
     </AdminLayout>
   );
 }
