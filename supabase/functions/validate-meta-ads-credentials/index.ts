@@ -164,29 +164,45 @@ serve(async (req) => {
       const encrypted = encryptToken(body.access_token);
       const now = new Date().toISOString();
 
-      const { error: upsertErr } = await admin
-        .from("meta_ads_connections")
-        .upsert(
-          {
-            tenant_id: tenantId,
-            access_token_encrypted: encrypted,
-            ad_account_id: body.ad_account_id,
-            ad_account_name: body.ad_account_name,
-            pixel_id: body.pixel_id ?? null,
-            pixel_name: body.pixel_name ?? null,
-            status: "connected",
-            meta_user_id: meData.id,
-            meta_user_name: meData.name,
-            connected_by: userId,
-            connected_at: now,
-            last_validated_at: now,
-            error_message: null,
-          },
-          { onConflict: "tenant_id" },
-        );
+      const payload = {
+        tenant_id: tenantId,
+        access_token_encrypted: encrypted,
+        ad_account_id: body.ad_account_id,
+        ad_account_name: body.ad_account_name,
+        pixel_id: body.pixel_id ?? null,
+        pixel_name: body.pixel_name ?? null,
+        status: "connected" as const,
+        meta_user_id: meData.id,
+        meta_user_name: meData.name,
+        connected_by: userId,
+        connected_at: now,
+        last_validated_at: now,
+        error_message: null,
+      };
 
-      if (upsertErr) {
-        return json({ success: false, error: upsertErr.message }, 500);
+      const { data: existing } = await admin
+        .from("meta_ads_connections")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .neq("status", "disconnected")
+        .maybeSingle();
+
+      let writeErr: { message: string } | null = null;
+      if (existing?.id) {
+        const { error } = await admin
+          .from("meta_ads_connections")
+          .update(payload)
+          .eq("id", existing.id);
+        writeErr = error;
+      } else {
+        const { error } = await admin
+          .from("meta_ads_connections")
+          .insert(payload);
+        writeErr = error;
+      }
+
+      if (writeErr) {
+        return json({ success: false, error: writeErr.message }, 500);
       }
 
       await admin.from("security_events").insert({
