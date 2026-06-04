@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SupportModeProvider } from "@/contexts/SupportModeContext";
 import { PartnerBrandingProvider } from "@/contexts/PartnerBrandingContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { FeatureFlagGuard } from "@/components/auth/FeatureFlagGuard";
 import { PartnerThemeSync } from "@/components/PartnerThemeSync";
@@ -150,6 +151,7 @@ const App = () => (
           <RecoveryHashRedirector />
           <AuthProvider>
             <PartnerThemeSync />
+            <ThemeProvider>
             <SupportModeProvider>
             <MobileRouteGuard>
             <Suspense fallback={<RouteFallback />}>
@@ -240,6 +242,7 @@ const App = () => (
             </Suspense>
             </MobileRouteGuard>
             </SupportModeProvider>
+            </ThemeProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

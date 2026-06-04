@@ -1,7 +1,10 @@
-import { LogOut, User, Shield, Building2, LifeBuoy } from 'lucide-react';
+import { LogOut, User, Shield, Building2, LifeBuoy, Sun, Moon, Palette, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSignOutRedirect } from '@/hooks/useSignOutRedirect';
+import { useTheme, type Theme } from '@/contexts/ThemeContext';
+import { usePartnerBranding } from '@/contexts/PartnerBrandingContext';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +20,17 @@ export const UserMenu = () => {
   const navigate = useNavigate();
   const { profile, tenant, isSuperAdmin, tenantRole } = useAuth();
   const handleSignOut = useSignOutRedirect();
+  const { theme, setTheme, isLoading: themeLoading } = useTheme();
+  const { partner } = usePartnerBranding();
+  const hasPartnerBranding = Boolean(partner?.theme);
+
+  const themeOptions: { value: Theme; label: string; icon: typeof Sun }[] = [
+    { value: 'light', label: 'Claro', icon: Sun },
+    ...(hasPartnerBranding
+      ? [{ value: 'partner' as Theme, label: 'Partner', icon: Palette }]
+      : []),
+    { value: 'dark', label: 'Oscuro', icon: Moon },
+  ];
 
   const getInitials = (name: string) => {
     return name
@@ -73,9 +87,47 @@ export const UserMenu = () => {
             {getRoleLabel()}
           </Badge>
         </div>
-        
+
         <DropdownMenuSeparator />
-        
+
+        <div className="px-2 py-2">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Modo</span>
+            {themeLoading && (
+              <Loader2 className="h-3 w-3 text-muted-foreground animate-spin" />
+            )}
+          </div>
+          <div className="flex items-center gap-1 rounded-md bg-muted/50 p-1">
+            {themeOptions.map((opt) => {
+              const Icon = opt.icon;
+              const active = theme === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setTheme(opt.value);
+                  }}
+                  className={cn(
+                    'flex-1 inline-flex items-center justify-center gap-1 rounded-sm px-2 py-1 text-xs font-medium transition-colors',
+                    active
+                      ? 'bg-primary/20 text-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                  )}
+                  aria-pressed={active}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <DropdownMenuSeparator />
+
         {isSuperAdmin && (
           <>
             <DropdownMenuItem onClick={() => navigate('/admin')}>

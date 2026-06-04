@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState } from "react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { UserMenu } from "@/components/layout/UserMenu";
@@ -19,6 +19,7 @@ import {
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
 import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
 import { useSignOutRedirect } from "@/hooks/useSignOutRedirect";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const mobileMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -34,21 +35,14 @@ interface MobileLayoutProps {
 
 export function MobileLayout({ children }: MobileLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<string>(() => 
-    localStorage.getItem("brokia-theme") || "dark"
-  );
   const navigate = useNavigate();
   const totalUnread = useTotalUnreadCount();
   const { partner } = usePartnerBranding();
   const signOutRedirect = useSignOutRedirect();
+  const { theme, setTheme } = useTheme();
 
   const toggleTheme = () => {
-    const next = currentTheme === "dark" ? "light" : "dark";
-    setCurrentTheme(next);
-    localStorage.setItem("brokia-theme", next);
-    document.documentElement.classList.remove("dark", "light", "blue");
-    document.body.classList.remove("dark", "light", "blue");
-    document.documentElement.classList.add(next);
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   const handleLogout = async () => {
@@ -138,7 +132,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                   className="w-10 h-10 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   aria-label="Cambiar tema"
                 >
-                  {currentTheme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                 </button>
               </div>
               <button
