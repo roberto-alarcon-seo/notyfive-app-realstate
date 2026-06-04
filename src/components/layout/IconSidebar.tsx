@@ -19,6 +19,11 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  LayoutGrid,
+  MessagesSquare,
+  Megaphone,
+  Eye,
+  LifeBuoy,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
@@ -41,6 +46,7 @@ type NavItem = {
 type NavGroup = {
   key: string;
   label: string;
+  icon?: React.ComponentType<{ className?: string }>;
   items: NavItem[];
 };
 
@@ -100,6 +106,7 @@ export function IconSidebar() {
     groups.push({
       key: "general",
       label: "General",
+      icon: LayoutGrid,
       items: [{ icon: LayoutDashboard, label: "Dashboard", path: "/" }],
     });
   }
@@ -107,6 +114,7 @@ export function IconSidebar() {
   groups.push({
     key: "comunicacion",
     label: "Comunicación",
+    icon: MessagesSquare,
     items: [
       { icon: MessageSquare, label: "Inbox", path: "/inbox", badgeKey: "inbox" },
       { icon: Kanban, label: "Pipeline", path: "/pipeline" },
@@ -125,7 +133,7 @@ export function IconSidebar() {
       { icon: FileText, label: "Plantillas", path: "/templates", feature: "templates_library" },
     ]);
     if (marketingItems.length > 0) {
-      groups.push({ key: "marketing", label: "Marketing", items: marketingItems });
+      groups.push({ key: "marketing", label: "Marketing", icon: Megaphone, items: marketingItems });
     }
 
     const supervisionItems = filterByFlag([
@@ -134,7 +142,7 @@ export function IconSidebar() {
       { icon: ShieldCheck, label: "Supervisión de leads", path: "/admin-leads", badgeKey: "atRisk" },
     ]);
     if (supervisionItems.length > 0) {
-      groups.push({ key: "supervision", label: "Supervisión", items: supervisionItems });
+      groups.push({ key: "supervision", label: "Supervisión", icon: Eye, items: supervisionItems });
     }
   }
 
@@ -142,6 +150,7 @@ export function IconSidebar() {
     groups.push({
       key: "soporte",
       label: "Soporte",
+      icon: LifeBuoy,
       items: [{ icon: Headphones, label: "Soporte", path: "/support" }],
     });
   }
@@ -155,12 +164,12 @@ export function IconSidebar() {
         to={item.path}
         end={item.path === "/"}
         className={cn(
-          "flex items-center rounded-lg text-[#6b7280] hover:text-primary hover:bg-primary/10 transition-colors relative",
-          collapsed ? "w-10 h-10 justify-center mx-auto" : "w-full h-10 px-3 gap-3"
+          "flex items-center rounded-md text-sm text-[#9ca3af] hover:text-primary hover:bg-primary/10 transition-colors relative",
+          collapsed ? "w-9 h-9 justify-center mx-auto" : "w-full px-2 py-1.5 gap-2"
         )}
-        activeClassName="bg-[#242424] text-primary"
+        activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
       >
-        <item.icon className="w-5 h-5 shrink-0" />
+        <item.icon className="w-4 h-4 shrink-0" />
         {!collapsed && (
           <span className="text-sm truncate flex-1 transition-opacity duration-200">{item.label}</span>
         )}
@@ -193,7 +202,7 @@ export function IconSidebar() {
     <aside
       className={cn(
         "flex flex-col h-screen bg-[#141414] border-r border-[#2b2b2b] transition-all duration-200 ease-linear",
-        collapsed ? "w-14" : "w-[220px]"
+        collapsed ? "w-14" : "w-[224px]"
       )}
     >
       {/* Logo + collapse toggle */}
@@ -223,18 +232,21 @@ export function IconSidebar() {
       </div>
 
       {/* Groups */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 flex flex-col gap-1">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 flex flex-col">
         {groups.map((group, idx) => (
           <div
             key={group.key}
             className={cn(
               "flex flex-col",
-              collapsed ? "gap-1 px-2 mt-1" : "gap-0.5 px-2 mt-2"
+              collapsed ? "gap-1 px-2 mt-1" : "gap-0.5 px-2 mt-3"
             )}
           >
             {!collapsed && (
-              <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider text-[#6b7280] transition-opacity duration-200">
-                {group.label}
+              <div className="px-2 mb-1 flex items-center gap-1.5 transition-opacity duration-200">
+                {group.icon && <group.icon className="h-3 w-3 text-[#6b7280]" />}
+                <p className="text-[10px] font-medium uppercase tracking-wider text-[#6b7280]">
+                  {group.label}
+                </p>
               </div>
             )}
             {group.items.map(renderItem)}
@@ -247,7 +259,7 @@ export function IconSidebar() {
 
       {/* Settings (admin only) */}
       {isAdministrador && (
-        <div className="border-t border-[#2b2b2b] py-3 px-2">
+        <div className="border-t border-[#2b2b2b] py-2 px-2">
           {renderItem({
             icon: Settings,
             label: "Configuración",
