@@ -312,6 +312,92 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
         .eq("id", campaign.id);
 
       try {
+        if (campaign.campaign_objective === "MESSAGES") {
+          if (!campaign.facebook_page_id) {
+            throw new Error("Falta Página de Facebook para campaña de Mensajes");
+          }
+          if (!campaign.whatsapp_phone_number) {
+            throw new Error("Falta número de WhatsApp para campaña de Mensajes");
+          }
+
+          const campaignRes = await metaPost(`/${adAccountId}/campaigns`, {
+            name: campaign.name,
+            objective: "MESSAGES",
+            status: "ACTIVE",
+            special_ad_categories: "[]",
+            access_token: token,
+          });
+          const metaCampaignId = campaignRes.id as string;
+
+          const adSetRes = await metaPost(`/${adAccountId}/adsets`, {
+            name: `AdSet - ${campaign.name}`.slice(0, 100),
+            campaign_id: metaCampaignId,
+            billing_event: "IMPRESSIONS",
+            optimization_goal: "CONVERSATIONS",
+            destination_type: "WHATSAPP",
+            daily_budget: String(campaign.daily_budget_cents ?? 25000),
+            targeting: JSON.stringify({
+              age_min: campaign.age_min,
+              age_max: campaign.age_max,
+              genders: (campaign.genders ?? []).map((g: string) => Number(g)),
+              geo_locations: campaign.geo_locations ?? { countries: ["MX"] },
+              interests: campaign.interests ?? [],
+            }),
+            status: "ACTIVE",
+            access_token: token,
+          });
+          const metaAdSetId = adSetRes.id as string;
+
+          let metaAdId: string | null = null;
+          if (campaign.image_url) {
+            const creativeRes = await metaPost(`/${adAccountId}/adcreatives`, {
+              name: `Creative - ${campaign.name}`.slice(0, 100),
+              object_story_spec: JSON.stringify({
+                page_id: campaign.facebook_page_id,
+                link_data: {
+                  image_url: campaign.image_url,
+                  message: campaign.primary_text,
+                  name: campaign.headline,
+                  description: campaign.description ?? "",
+                  call_to_action: {
+                    type: "WHATSAPP_MESSAGE",
+                    value: {
+                      app_destination: "WHATSAPP",
+                      whatsapp_number: campaign.whatsapp_phone_number,
+                    },
+                  },
+                },
+              }),
+              access_token: token,
+            });
+            const creativeId = creativeRes.id as string;
+
+            const adRes = await metaPost(`/${adAccountId}/ads`, {
+              name: `Ad - ${campaign.name}`.slice(0, 100),
+              adset_id: metaAdSetId,
+              creative: JSON.stringify({ creative_id: creativeId }),
+              status: "ACTIVE",
+              access_token: token,
+            });
+            metaAdId = adRes.id as string;
+          }
+
+          await admin
+            .from("meta_ads_campaigns")
+            .update({
+              meta_campaign_id: metaCampaignId,
+              meta_adset_id: metaAdSetId,
+              meta_ad_id: metaAdId,
+              meta_form_id: null,
+              status: "active",
+              published_at: new Date().toISOString(),
+              publish_error: null,
+            })
+            .eq("id", campaign.id);
+
+          return json({ success: true });
+        }
+
         const campaignRes = await metaPost(`/${adAccountId}/campaigns`, {
           name: campaign.name,
           objective: "LEAD_GENERATION",
