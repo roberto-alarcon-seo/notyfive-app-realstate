@@ -11,6 +11,7 @@ import {
   Kanban,
   ShieldCheck,
   Building2,
+  Megaphone,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTotalUnreadCount } from "@/hooks/useTotalUnreadCount";
@@ -37,6 +38,7 @@ const menuItems: MenuItem[] = [
   { icon: Users, label: "Contactos", path: "/contacts", badgeKey: null },
   { icon: Filter, label: "Segmentos", path: "/segments", badgeKey: null, feature: "segments" },
   { icon: Send, label: "Campañas", path: "/campaigns", badgeKey: null, feature: "campaigns" },
+  { icon: Megaphone, label: "Meta Ads", path: "/meta-ads", badgeKey: null, feature: "meta_ads" },
 ];
 
 const bottomItems = [
@@ -54,6 +56,7 @@ export function IconSidebar() {
   const { enabled: segmentsEnabled } = useFeatureFlag("segments");
   const { enabled: automationsEnabled } = useFeatureFlag("automations_builder");
   const { enabled: inventoryEnabled } = useFeatureFlag("inventory_management");
+  const { enabled: metaAdsEnabled } = useFeatureFlag("meta_ads");
   
   const badgeCounts: Record<string, number> = {
     inbox: totalUnread,
@@ -71,6 +74,7 @@ export function IconSidebar() {
     conversions_capi: false,
     custom_templates_management: false,
     inventory_management: inventoryEnabled,
+    meta_ads: metaAdsEnabled,
   };
 
   // Filtrado estricto: si el flag no está presente en enabled_features,

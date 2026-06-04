@@ -34,6 +34,7 @@ import Pipeline from "./pages/Pipeline";
 const Properties = lazy(() => import("./pages/Properties"));
 const PropertyEditor = lazy(() => import("./pages/PropertyEditor"));
 const InventoryAssignments = lazy(() => import("./pages/InventoryAssignments"));
+const MetaAds = lazy(() => import("./pages/MetaAds"));
 import { toast } from "sonner";
 import SettingsWhatsAppStatus from "./pages/settings/SettingsWhatsAppStatus";
 import SettingsContactFieldsPage from "./pages/settings/SettingsContactFieldsPage";
@@ -188,6 +189,7 @@ const App = () => (
               <Route path="/campaigns" element={<ProtectedRoute><FeatureFlagGuard feature="campaigns"><MainLayout><Campaigns /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/campaigns/new/assistant" element={<ProtectedRoute><FeatureFlagGuard feature="campaigns"><CampaignAssistantBuilder /></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/campaigns/:id" element={<ProtectedRoute><FeatureFlagGuard feature="campaigns"><MainLayout><CampaignDetail /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
+              <Route path="/meta-ads" element={<ProtectedRoute><FeatureFlagGuard feature="meta_ads"><MainLayout><MetaAds /></MainLayout></FeatureFlagGuard></ProtectedRoute>} />
               <Route path="/assistant" element={<ProtectedRoute><MainLayout><Assistant /></MainLayout></ProtectedRoute>} />
               {/* Followups route */}
               <Route path="/followups" element={<ProtectedRoute><Followups /></ProtectedRoute>} />

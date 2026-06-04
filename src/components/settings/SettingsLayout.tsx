@@ -147,6 +147,7 @@ export function SettingsLayout({ children, title, description, icon: Icon }: Set
     conversions_capi: false,
     custom_templates_management: false,
     inventory_management: false,
+    meta_ads: false,
   };
   const isItemUnlocked = (item: MenuItem) =>
     !item.unlockFlags || item.unlockFlags.some((f) => flagState[f]);
