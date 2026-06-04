@@ -100,6 +100,28 @@ serve(async (req) => {
       if (!body?.property_id) return json({ error: "property_id requerido" }, 400);
       if (!lovableKey) return json({ error: "LOVABLE_API_KEY no configurado" }, 500);
 
+      const objective: "LEAD_GENERATION" | "MESSAGES" =
+        body?.objective === "MESSAGES" ? "MESSAGES" : "LEAD_GENERATION";
+      const facebookPageId = body?.facebook_page_id
+        ? String(body.facebook_page_id).trim()
+        : null;
+      if (objective === "MESSAGES" && !facebookPageId) {
+        return json({ error: "Página de Facebook requerida para objetivo MESSAGES" }, 400);
+      }
+
+      let whatsappNumber: string | null = null;
+      if (objective === "MESSAGES") {
+        const { data: integ } = await admin
+          .from("tenant_integrations")
+          .select("phone_number")
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        whatsappNumber = integ?.phone_number ?? null;
+        if (!whatsappNumber) {
+          return json({ error: "Configura tu número de WhatsApp en Integraciones antes de crear una campaña de Mensajes" }, 400);
+        }
+      }
+
       const { data: property, error: propErr } = await admin
         .from("properties")
         .select(
@@ -122,8 +144,16 @@ serve(async (req) => {
         return json({ error: "Conecta tu cuenta de Meta Ads primero" }, 400);
       }
 
+      const objectiveContext = objective === "MESSAGES"
+        ? `El objetivo es que el lead haga clic y abra WhatsApp directamente para preguntar por la propiedad. El mensaje pre-llenado de WhatsApp mencionará el nombre e ID de la propiedad. El copy debe invitar a escribir por WhatsApp para obtener más información, precio y disponibilidad.`
+        : `El objetivo es que el lead llene un formulario nativo de Meta con su nombre, teléfono y email para ser contactado por un asesor. El copy debe generar urgencia y destacar los beneficios de la propiedad.`;
+      const ctaForObjective = objective === "MESSAGES" ? "WHATSAPP_MESSAGE" : "LEARN_MORE";
+
       const prompt = `Eres un experto en publicidad inmobiliaria en Meta Ads.
 Genera la configuración completa para una campaña de captación de leads para la siguiente propiedad inmobiliaria en México.
+
+OBJETIVO DE LA CAMPAÑA:
+${objectiveContext}
 
 PROPIEDAD:
 - Título: ${property.title}
@@ -141,7 +171,7 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
   "headline": "título del anuncio máximo 40 caracteres",
   "primary_text": "texto principal máximo 125 caracteres, orientado a generar interés y acción",
   "description": "descripción máximo 30 caracteres",
-  "cta_type": "LEARN_MORE",
+  "cta_type": "${ctaForObjective}",
   "age_min": 28,
   "age_max": 60,
   "genders": ["1", "2"],
@@ -196,12 +226,15 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
       const insertPayload = {
         tenant_id: tenantId,
         property_id: property.id,
-        objective: "LEAD_GENERATION",
+        objective: objective,
+        campaign_objective: objective,
+        whatsapp_phone_number: whatsappNumber,
+        facebook_page_id: facebookPageId,
         name: String(parsed.name ?? `Campaña ${property.title}`).slice(0, 200),
         headline: String(parsed.headline ?? property.title).slice(0, 40),
         primary_text: String(parsed.primary_text ?? "").slice(0, 125),
         description: parsed.description ? String(parsed.description).slice(0, 30) : null,
-        cta_type: (parsed.cta_type as string) ?? "LEARN_MORE",
+        cta_type: (parsed.cta_type as string) ?? ctaForObjective,
         age_min: Number(parsed.age_min ?? 25),
         age_max: Number(parsed.age_max ?? 65),
         genders: Array.isArray(parsed.genders) ? (parsed.genders as string[]) : ["1", "2"],
