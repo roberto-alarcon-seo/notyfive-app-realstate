@@ -8,6 +8,7 @@ import {
   Loader2,
   AlertCircle,
   Plug,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMetaAdsConnection } from "@/hooks/useMetaAdsConnection";
+import { useMetaAdsCampaigns } from "@/hooks/useMetaAdsCampaigns";
+import { CampaignsList } from "@/components/meta-ads/CampaignsList";
+import { CreateCampaignWizard } from "@/components/meta-ads/CreateCampaignWizard";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { cn } from "@/lib/utils";
 
@@ -60,32 +64,69 @@ export default function MetaAds() {
   const canManage =
     isSuperAdmin || tenantRole === "administrador" || tenantRole === "manager";
   const { data: connection, isLoading } = useMetaAdsConnection();
+  const { data: campaigns = [], isLoading: loadingCampaigns } =
+    useMetaAdsCampaigns();
+  const [wizardOpen, setWizardOpen] = useState(false);
+
+  const isConnected = connection?.status === "connected";
 
   return (
     <div className="flex flex-col h-full">
-      <header className="px-6 py-5 border-b border-border">
-        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-primary" />
-          Meta Ads
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gestión de campañas publicitarias
-        </p>
+      <header className="px-6 py-5 border-b border-border flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            Meta Ads
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gestión de campañas publicitarias
+          </p>
+        </div>
+        {isConnected && canManage && (
+          <Button onClick={() => setWizardOpen(true)}>
+            <Plus className="h-4 w-4" /> Nueva campaña
+          </Button>
+        )}
       </header>
 
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-3xl mx-auto space-y-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : connection && connection.status === "connected" ? (
-            <ConnectedCard connection={connection} canManage={canManage} />
+          ) : isConnected ? (
+            <>
+              <ConnectedCard connection={connection!} canManage={canManage} />
+              <section className="space-y-3">
+                <h2 className="text-lg font-semibold">Campañas</h2>
+                {loadingCampaigns ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : campaigns.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-border p-10 text-center space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Aún no has creado campañas.
+                    </p>
+                    {canManage && (
+                      <Button onClick={() => setWizardOpen(true)}>
+                        <Plus className="h-4 w-4" /> Nueva campaña
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <CampaignsList campaigns={campaigns} canManage={canManage} />
+                )}
+              </section>
+            </>
           ) : (
             <ConnectWizard canManage={canManage} initialError={connection?.error_message ?? null} />
           )}
         </div>
       </div>
+
+      <CreateCampaignWizard open={wizardOpen} onOpenChange={setWizardOpen} />
     </div>
   );
 }

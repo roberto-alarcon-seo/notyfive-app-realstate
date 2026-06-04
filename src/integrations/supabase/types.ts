@@ -2240,6 +2240,114 @@ export type Database = {
           },
         ]
       }
+      meta_ads_campaigns: {
+        Row: {
+          age_max: number | null
+          age_min: number | null
+          ai_generated_at: string | null
+          created_at: string
+          created_by: string | null
+          cta_type: string | null
+          daily_budget_cents: number | null
+          description: string | null
+          genders: string[] | null
+          geo_locations: Json | null
+          headline: string
+          id: string
+          image_url: string | null
+          interests: Json | null
+          lead_form_fields: Json | null
+          meta_ad_id: string | null
+          meta_adset_id: string | null
+          meta_campaign_id: string | null
+          meta_form_id: string | null
+          name: string
+          objective: string
+          primary_text: string
+          property_id: string | null
+          publish_error: string | null
+          published_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          age_max?: number | null
+          age_min?: number | null
+          ai_generated_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_type?: string | null
+          daily_budget_cents?: number | null
+          description?: string | null
+          genders?: string[] | null
+          geo_locations?: Json | null
+          headline: string
+          id?: string
+          image_url?: string | null
+          interests?: Json | null
+          lead_form_fields?: Json | null
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          meta_form_id?: string | null
+          name: string
+          objective?: string
+          primary_text: string
+          property_id?: string | null
+          publish_error?: string | null
+          published_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          age_max?: number | null
+          age_min?: number | null
+          ai_generated_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_type?: string | null
+          daily_budget_cents?: number | null
+          description?: string | null
+          genders?: string[] | null
+          geo_locations?: Json | null
+          headline?: string
+          id?: string
+          image_url?: string | null
+          interests?: Json | null
+          lead_form_fields?: Json | null
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          meta_form_id?: string | null
+          name?: string
+          objective?: string
+          primary_text?: string
+          property_id?: string | null
+          publish_error?: string | null
+          published_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ads_campaigns_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_ads_campaigns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_ads_connections: {
         Row: {
           access_token_encrypted: string
