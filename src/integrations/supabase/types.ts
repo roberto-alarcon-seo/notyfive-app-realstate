@@ -2240,6 +2240,74 @@ export type Database = {
           },
         ]
       }
+      meta_ads_connections: {
+        Row: {
+          access_token_encrypted: string
+          ad_account_id: string | null
+          ad_account_name: string | null
+          app_id: string | null
+          connected_at: string | null
+          connected_by: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          last_validated_at: string | null
+          meta_user_id: string | null
+          meta_user_name: string | null
+          pixel_id: string | null
+          pixel_name: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_token_encrypted: string
+          ad_account_id?: string | null
+          ad_account_name?: string | null
+          app_id?: string | null
+          connected_at?: string | null
+          connected_by?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          last_validated_at?: string | null
+          meta_user_id?: string | null
+          meta_user_name?: string | null
+          pixel_id?: string | null
+          pixel_name?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_token_encrypted?: string
+          ad_account_id?: string | null
+          ad_account_name?: string | null
+          app_id?: string | null
+          connected_at?: string | null
+          connected_by?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          last_validated_at?: string | null
+          meta_user_id?: string | null
+          meta_user_name?: string | null
+          pixel_id?: string | null
+          pixel_name?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ads_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_event_mappings: {
         Row: {
           created_at: string
