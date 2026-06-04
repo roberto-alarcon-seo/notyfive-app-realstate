@@ -119,8 +119,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (user?.id) {
         void supabase
           .from("profiles")
-          // @ts-expect-error - column added via migration; types may lag
-          .update({ theme_preference: next })
+          .update({ theme_preference: next } as never)
           .eq("id", user.id)
           .then(({ error }) => {
             if (error) {
