@@ -123,6 +123,9 @@ export function CampaignsList({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm truncate">{c.name}</p>
+                  <Badge variant="secondary" className="text-[10px] shrink-0">
+                    {c.campaign_objective === "MESSAGES" ? "💬 WhatsApp" : "📋 Formulario"}
+                  </Badge>
                   <Badge variant="outline" className={cn("text-xs", statusClass(c.status))}>
                     {c.status === "publishing" && (
                       <Loader2 className="h-3 w-3 animate-spin mr-1" />
