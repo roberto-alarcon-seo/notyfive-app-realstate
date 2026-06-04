@@ -9,7 +9,8 @@ export type FeatureName =
   | "api_access"
   | "conversions_capi"
   | "custom_templates_management"
-  | "inventory_management";
+  | "inventory_management"
+  | "meta_ads";
 
 /**
  * Returns true if the current tenant has the given feature flag enabled.
