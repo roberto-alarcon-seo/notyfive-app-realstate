@@ -109,9 +109,16 @@ Deno.serve(async (req) => {
     const partnerScope: string | null = roleRow?.partner_scope ?? null;
 
     // 3. Parse body
-    const { tenant_id } = await req.json().catch(() => ({}));
+    const { tenant_id, target_user_id } = await req.json().catch(() => ({}));
     if (!tenant_id || typeof tenant_id !== 'string') {
       return json({ error: 'Falta el parámetro tenant_id.' }, 400);
+    }
+    if (
+      target_user_id !== undefined &&
+      target_user_id !== null &&
+      typeof target_user_id !== 'string'
+    ) {
+      return json({ error: 'target_user_id inválido.' }, 400);
     }
 
     // 4. Resolve tenant (incluye partner_id para validación multi-tenant)
@@ -156,14 +163,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 5. Pick a target user. Strategy (in order):
-    //    a) owner role with any status
-    //    b) administrador role with any status
-    //    c) any profile in the tenant (active first, then inactive/invited)
+    // 5. Pick a target user.
+    // If the caller provided an explicit target_user_id, validate it belongs
+    // to this tenant and use it directly. Otherwise fall back to the
+    // hierarchical strategy (owner → administrador → any profile).
     let targetEmail: string | null = null;
     let targetUserId: string | null = null;
+    let manualSelection = false;
+
+    if (target_user_id) {
+      const { data: targetProfile, error: targetErr } = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, tenant_id')
+        .eq('id', target_user_id)
+        .eq('tenant_id', tenant.id)
+        .maybeSingle();
+
+      if (targetErr) {
+        console.error('admin-impersonate-sso: target profile lookup failed', targetErr);
+        return json({ error: 'No se pudo validar el usuario seleccionado.' }, 500);
+      }
+      if (!targetProfile?.email) {
+        return json({ error: 'Usuario no encontrado en este tenant.' }, 404);
+      }
+      targetEmail = targetProfile.email;
+      targetUserId = targetProfile.id;
+      manualSelection = true;
+    }
 
     for (const role of ['owner', 'administrador'] as const) {
+      if (targetEmail) break;
       const { data: roleProfile } = await supabaseAdmin
         .from('user_roles')
         .select('user_id, profiles!inner(id, email, status, tenant_id)')
@@ -226,6 +255,7 @@ Deno.serve(async (req) => {
           target_email: targetEmail,
           target_user_id: targetUserId,
           actor_email: caller.email,
+        manual_selection: manualSelection,
         },
       });
     } catch (err) {

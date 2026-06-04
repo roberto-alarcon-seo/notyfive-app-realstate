@@ -17,6 +17,7 @@ import { TenantFeatureFlagsCard } from '@/components/admin/TenantFeatureFlagsCar
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { extractEdgeFunctionError } from '@/lib/edgeFunctionError';
+import { ImpersonateUserModal } from '@/components/admin/ImpersonateUserModal';
 
 interface TenantRecord {
   id: string;
@@ -36,7 +37,7 @@ export default function TenantAdminDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
-  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [impersonateModalOpen, setImpersonateModalOpen] = useState(false);
 
   const [tenant, setTenant] = useState<TenantRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,46 +71,6 @@ export default function TenantAdminDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const handleStartSupportMode = async () => {
-    if (!tenant) return;
-    setIsImpersonating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        'admin-impersonate-sso',
-        { body: { tenant_id: tenant.id } },
-      );
-      if (error) {
-        const detail = await extractEdgeFunctionError(
-          error,
-          'No se pudo generar el acceso SSO.',
-        );
-        toast.error('Error al iniciar impersonación', { description: detail });
-        return;
-      }
-      if (!data?.sso_path) {
-        const detail = (data as { error?: string } | null)?.error
-          ?? 'No se pudo generar el acceso SSO.';
-        toast.error('Error al iniciar impersonación', { description: detail });
-        return;
-      }
-      // Activate support-mode flag BEFORE the navigation so the new session
-      // boots into impersonation mode immediately.
-      sessionStorage.setItem('noty5_admin_impersonation', '1');
-      toast.success(`Accediendo como ${data.target_email}`);
-      // Full-page navigation so the new session replaces the current one.
-      window.location.assign(data.sso_path as string);
-    } catch (err) {
-      console.error(err);
-      const detail = await extractEdgeFunctionError(
-        err,
-        'Error inesperado al generar SSO',
-      );
-      toast.error('Error al iniciar impersonación', { description: detail });
-    } finally {
-      setIsImpersonating(false);
-    }
-  };
-
   if (loading || !tenant) {
     return (
       <AdminLayout title="Tenant" description="Cargando…">
@@ -130,12 +91,11 @@ export default function TenantAdminDetail() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleStartSupportMode}
-              disabled={isImpersonating}
+              onClick={() => setImpersonateModalOpen(true)}
               className="gap-2"
             >
               <Shield className="h-4 w-4" />
-              {isImpersonating ? 'Generando acceso…' : 'Acceder como Tenant'}
+              Acceder como Tenant
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-xs">
@@ -240,6 +200,12 @@ export default function TenantAdminDetail() {
           <TenantLogsTab tenantId={tenant.id} />
         </TabsContent>
       </Tabs>
+      <ImpersonateUserModal
+        open={impersonateModalOpen}
+        onClose={() => setImpersonateModalOpen(false)}
+        tenantId={tenant.id}
+        tenantName={tenant.name}
+      />
     </AdminLayout>
   );
 }
