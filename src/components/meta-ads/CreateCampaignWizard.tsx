@@ -407,8 +407,8 @@ export function CreateCampaignWizard({
                 )}
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                  Cancelar
+                <Button variant="ghost" onClick={() => setStep(0)}>
+                  Atrás
                 </Button>
                 <Button onClick={goToStep2} disabled={!selectedProperty}>
                   Siguiente
