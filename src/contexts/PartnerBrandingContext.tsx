@@ -201,6 +201,9 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
             countryCode: match.country_code,
             logoUrl: match.logo_url,
             logoMarkUrl: match.logo_mark_url,
+            sidebarLogoExpandedUrl:
+              (mergedTheme as { sidebar_logo_expanded_url?: string | null })
+                .sidebar_logo_expanded_url ?? null,
             primaryColorHex: match.primary_color_hex,
             primaryColorHsl: match.primary_color_hsl,
             accentColorHex: match.accent_color_hex,
