@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Megaphone, Filter, Workflow, Save, Loader2, ToggleLeft, KeyRound, Target, FileText, Building2 } from 'lucide-react';
+import { Megaphone, Filter, Workflow, Save, Loader2, ToggleLeft, KeyRound, Target, FileText, Building2, Sparkles } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,7 +32,8 @@ type FeatureKey =
   | 'api_access'
   | 'conversions_capi'
   | 'custom_templates_management'
-  | 'inventory_management';
+  | 'inventory_management'
+  | 'meta_ads';
 
 interface FeatureOption {
   key: FeatureKey;
@@ -97,6 +98,15 @@ const FEATURE_OPTIONS: FeatureOption[] = [
     value:
       'Ideal para partners que NO sincronizan inventario desde un sistema externo y necesitan capturar propiedades directamente. Solo visible para Manager y Administrador.',
     icon: Building2,
+  },
+  {
+    key: 'meta_ads',
+    label: 'Meta Ads',
+    description:
+      'Creación de campañas en Meta Ads asistida por IA con seguimiento de resultados y captura automática de leads.',
+    value:
+      'Conecta tu cuenta publicitaria y deja que la IA genere copies, audiencias y presupuestos basados en tu inventario.',
+    icon: Sparkles,
   },
 ];
 
