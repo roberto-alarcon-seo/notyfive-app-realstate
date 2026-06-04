@@ -210,19 +210,11 @@ export function IconSidebar() {
             className="h-9 w-9 object-contain"
           />
         )}
-        {collapsed && !isMobile && (
-          <img
-            src={partner.logoUrl}
-            alt={`${partner.name} Logo`}
-            className="h-8 w-8 object-contain absolute"
-            style={{ opacity: 0 }}
-          />
-        )}
         {!isMobile && (
           <button
             type="button"
             onClick={() => setCollapsedPref((v) => !v)}
-            className="w-7 h-7 flex items-center justify-center rounded-md text-[#6b7280] hover:text-primary hover:bg-primary/10 transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-md text-[#6b7280] hover:text-primary hover:bg-primary/10 transition-colors relative z-10"
             aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
