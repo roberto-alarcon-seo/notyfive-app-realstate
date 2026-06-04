@@ -328,6 +328,16 @@ export function applyPartnerTheme(
     // sidebar looks like a separate panel rather than blending with cards).
     sidebarBg = shiftLightness(theme.sidebar_bg, isLight ? -2 : -3);
   }
+  // Clamp: never let the sidebar go darker than #141414 (HSL L=8%) so it
+  // stays consistent with the dark theme baseline.
+  {
+    const m = sidebarBg.trim().match(
+      /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/,
+    );
+    if (m && parseFloat(m[3]) < 8) {
+      sidebarBg = `${Math.round(parseFloat(m[1]))} ${Math.round(parseFloat(m[2]))}% 8%`;
+    }
+  }
   // Detect a light sidebar so accent/border shift downwards instead of up
   // (otherwise white + lighten = invisible).
   const sidebarLightnessMatch = sidebarBg.trim().match(/(\d+(?:\.\d+)?)%\s*$/);
