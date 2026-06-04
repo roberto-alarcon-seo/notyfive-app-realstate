@@ -80,10 +80,12 @@ export function PartnerSettingsPanels({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingExpanded, setUploadingExpanded] = useState(false);
   const [testing, setTesting] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputExpandedRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -307,6 +309,31 @@ export function PartnerSettingsPanels({
     }
   };
 
+  const handleExpandedLogoUpload = async (file: File) => {
+    if (!partner) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("El logo no puede superar 2 MB");
+      return;
+    }
+    setUploadingExpanded(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${partner.id}/logo-expanded-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("partner-logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("partner-logos").getPublicUrl(path);
+      updateBranding({ sidebar_logo_expanded_url: data.publicUrl });
+      toast.success("Logo expandido subido. Recuerda guardar los cambios.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error desconocido";
+      toast.error(`No se pudo subir el logo: ${msg}`);
+    } finally {
+      setUploadingExpanded(false);
+    }
+  };
+
   const handleTestEmail = async () => {
     if (!partner) return;
     if (!testEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail)) {
@@ -523,7 +550,10 @@ export function PartnerSettingsPanels({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Logotipo</Label>
+                  <Label>Logo colapsado</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Se muestra cuando el sidebar está contraído. Usa un ícono cuadrado o isotipo de tu marca.
+                  </p>
                   <div className="flex items-center gap-4">
                     <div className="h-16 w-16 rounded border border-border bg-muted flex items-center justify-center overflow-hidden">
                       {partner.logo_url ? (
@@ -543,7 +573,7 @@ export function PartnerSettingsPanels({
                       ) : (
                         <Upload className="h-4 w-4 mr-2" />
                       )}
-                      Subir nuevo logo
+                      Subir logo colapsado
                     </Button>
                     <input
                       ref={fileInputRef}
@@ -563,6 +593,61 @@ export function PartnerSettingsPanels({
                   <Input
                     value={partner.logo_url}
                     onChange={(e) => handleFieldChange("logo_url", e.target.value)}
+                    placeholder="https://..."
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Logo expandido</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Se muestra cuando el sidebar está abierto. Usa el logotipo completo con el nombre de tu marca.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-40 rounded border border-border bg-muted flex items-center justify-center overflow-hidden">
+                      {partner.branding.sidebar_logo_expanded_url ? (
+                        <img
+                          src={partner.branding.sidebar_logo_expanded_url}
+                          alt="Logo expandido actual"
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sin logo</span>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputExpandedRef.current?.click()}
+                      disabled={uploadingExpanded}
+                    >
+                      {uploadingExpanded ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
+                      Subir logo expandido
+                    </Button>
+                    <input
+                      ref={fileInputExpandedRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleExpandedLogoUpload(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Recomendado: PNG o SVG horizontal, mínimo 200×60 px (máx. 2 MB).
+                  </p>
+                  <Input
+                    value={partner.branding.sidebar_logo_expanded_url ?? ""}
+                    onChange={(e) =>
+                      updateBranding({ sidebar_logo_expanded_url: e.target.value || null })
+                    }
                     placeholder="https://..."
                     className="font-mono text-xs"
                   />

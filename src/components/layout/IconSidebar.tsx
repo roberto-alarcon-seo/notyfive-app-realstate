@@ -214,9 +214,15 @@ export function IconSidebar() {
       >
         {!collapsed && (
           <img
-            src={partner.logoUrl}
+            key={partner.sidebarLogoExpandedUrl ? "expanded" : "square"}
+            src={partner.sidebarLogoExpandedUrl ?? partner.logoUrl}
             alt={`${partner.name} Logo`}
-            className="h-9 w-9 object-contain"
+            className={cn(
+              "object-contain transition-opacity duration-200 opacity-100",
+              partner.sidebarLogoExpandedUrl
+                ? "max-h-10 w-auto"
+                : "h-9 w-9"
+            )}
           />
         )}
         {!isMobile && (

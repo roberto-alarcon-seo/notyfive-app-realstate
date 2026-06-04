@@ -27,6 +27,12 @@ export interface PartnerBranding {
   countryCode: string;
   logoUrl: string;
   logoMarkUrl: string | null;
+  /**
+   * Horizontal/full logo shown when the sidebar is expanded.
+   * Stored inside `partners.branding.sidebar_logo_expanded_url`.
+   * Null → fallback to `logoUrl`.
+   */
+  sidebarLogoExpandedUrl: string | null;
   primaryColorHex: string;
   primaryColorHsl: string;
   accentColorHex: string | null;
@@ -77,6 +83,7 @@ function staticToBranding(p: PartnerStaticConfig): PartnerBranding {
     countryCode: p.countryCode,
     logoUrl: p.logoUrl,
     logoMarkUrl: p.logoMarkUrl ?? null,
+    sidebarLogoExpandedUrl: null,
     primaryColorHex: p.primaryColorHex,
     primaryColorHsl: p.primaryColorHsl,
     accentColorHex: p.accentColorHex ?? null,
@@ -194,6 +201,9 @@ export function PartnerBrandingProvider({ children }: { children: ReactNode }) {
             countryCode: match.country_code,
             logoUrl: match.logo_url,
             logoMarkUrl: match.logo_mark_url,
+            sidebarLogoExpandedUrl:
+              (mergedTheme as { sidebar_logo_expanded_url?: string | null })
+                .sidebar_logo_expanded_url ?? null,
             primaryColorHex: match.primary_color_hex,
             primaryColorHsl: match.primary_color_hsl,
             accentColorHex: match.accent_color_hex,
