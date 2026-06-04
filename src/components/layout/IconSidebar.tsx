@@ -209,7 +209,7 @@ export function IconSidebar() {
       <div
         className={cn(
           "flex items-center h-16 border-b border-[#2b2b2b] shrink-0",
-          collapsed ? "justify-center px-0" : "justify-between px-3"
+          collapsed ? "justify-center px-0" : "justify-between gap-2 pl-4 pr-2 py-2"
         )}
       >
         {!collapsed && (
@@ -218,9 +218,9 @@ export function IconSidebar() {
             src={partner.sidebarLogoExpandedUrl ?? partner.logoUrl}
             alt={`${partner.name} Logo`}
             className={cn(
-              "object-contain transition-opacity duration-200 opacity-100",
+              "object-contain transition-opacity duration-200 opacity-100 min-w-0",
               partner.sidebarLogoExpandedUrl
-                ? "max-h-10 w-auto"
+                ? "max-h-9 w-auto max-w-[150px]"
                 : "h-9 w-9"
             )}
           />
