@@ -621,6 +621,14 @@ export function CreateCampaignWizard({
             <div className="space-y-4">
               <h3 className="font-medium">Revisión final</h3>
               <div className="rounded-md border p-4 space-y-2 text-sm">
+                <Row
+                  label="Objetivo"
+                  value={
+                    campaign.campaign_objective === "MESSAGES"
+                      ? "💬 Mensajes por WhatsApp"
+                      : "📋 Formulario de leads"
+                  }
+                />
                 <Row label="Nombre" value={campaign.name} />
                 <Row label="Título" value={campaign.headline} />
                 <Row label="Texto" value={campaign.primary_text} />
