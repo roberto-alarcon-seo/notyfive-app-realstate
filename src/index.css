@@ -164,13 +164,13 @@
     --main-sidebar-border: 0 0% 17%;
 
     /* Secondary Sidebar - Light theme (white/light background) */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 9% 40%;
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 220 9% 46%;
     --sidebar-primary: 279 65% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 220 13% 90%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 17%;
     --sidebar-ring: 279 65% 49%;
 
     /* Messages */
