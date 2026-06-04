@@ -100,6 +100,28 @@ serve(async (req) => {
       if (!body?.property_id) return json({ error: "property_id requerido" }, 400);
       if (!lovableKey) return json({ error: "LOVABLE_API_KEY no configurado" }, 500);
 
+      const objective: "LEAD_GENERATION" | "MESSAGES" =
+        body?.objective === "MESSAGES" ? "MESSAGES" : "LEAD_GENERATION";
+      const facebookPageId = body?.facebook_page_id
+        ? String(body.facebook_page_id).trim()
+        : null;
+      if (objective === "MESSAGES" && !facebookPageId) {
+        return json({ error: "Página de Facebook requerida para objetivo MESSAGES" }, 400);
+      }
+
+      let whatsappNumber: string | null = null;
+      if (objective === "MESSAGES") {
+        const { data: integ } = await admin
+          .from("tenant_integrations")
+          .select("phone_number")
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        whatsappNumber = integ?.phone_number ?? null;
+        if (!whatsappNumber) {
+          return json({ error: "Configura tu número de WhatsApp en Integraciones antes de crear una campaña de Mensajes" }, 400);
+        }
+      }
+
       const { data: property, error: propErr } = await admin
         .from("properties")
         .select(
@@ -122,8 +144,16 @@ serve(async (req) => {
         return json({ error: "Conecta tu cuenta de Meta Ads primero" }, 400);
       }
 
+      const objectiveContext = objective === "MESSAGES"
+        ? `El objetivo es que el lead haga clic y abra WhatsApp directamente para preguntar por la propiedad. El mensaje pre-llenado de WhatsApp mencionará el nombre e ID de la propiedad. El copy debe invitar a escribir por WhatsApp para obtener más información, precio y disponibilidad.`
+        : `El objetivo es que el lead llene un formulario nativo de Meta con su nombre, teléfono y email para ser contactado por un asesor. El copy debe generar urgencia y destacar los beneficios de la propiedad.`;
+      const ctaForObjective = objective === "MESSAGES" ? "WHATSAPP_MESSAGE" : "LEARN_MORE";
+
       const prompt = `Eres un experto en publicidad inmobiliaria en Meta Ads.
 Genera la configuración completa para una campaña de captación de leads para la siguiente propiedad inmobiliaria en México.
+
+OBJETIVO DE LA CAMPAÑA:
+${objectiveContext}
 
 PROPIEDAD:
 - Título: ${property.title}
@@ -141,7 +171,7 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
   "headline": "título del anuncio máximo 40 caracteres",
   "primary_text": "texto principal máximo 125 caracteres, orientado a generar interés y acción",
   "description": "descripción máximo 30 caracteres",
-  "cta_type": "LEARN_MORE",
+  "cta_type": "${ctaForObjective}",
   "age_min": 28,
   "age_max": 60,
   "genders": ["1", "2"],
@@ -196,12 +226,15 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
       const insertPayload = {
         tenant_id: tenantId,
         property_id: property.id,
-        objective: "LEAD_GENERATION",
+        objective: objective,
+        campaign_objective: objective,
+        whatsapp_phone_number: whatsappNumber,
+        facebook_page_id: facebookPageId,
         name: String(parsed.name ?? `Campaña ${property.title}`).slice(0, 200),
         headline: String(parsed.headline ?? property.title).slice(0, 40),
         primary_text: String(parsed.primary_text ?? "").slice(0, 125),
         description: parsed.description ? String(parsed.description).slice(0, 30) : null,
-        cta_type: (parsed.cta_type as string) ?? "LEARN_MORE",
+        cta_type: (parsed.cta_type as string) ?? ctaForObjective,
         age_min: Number(parsed.age_min ?? 25),
         age_max: Number(parsed.age_max ?? 65),
         genders: Array.isArray(parsed.genders) ? (parsed.genders as string[]) : ["1", "2"],
@@ -279,6 +312,92 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
         .eq("id", campaign.id);
 
       try {
+        if (campaign.campaign_objective === "MESSAGES") {
+          if (!campaign.facebook_page_id) {
+            throw new Error("Falta Página de Facebook para campaña de Mensajes");
+          }
+          if (!campaign.whatsapp_phone_number) {
+            throw new Error("Falta número de WhatsApp para campaña de Mensajes");
+          }
+
+          const campaignRes = await metaPost(`/${adAccountId}/campaigns`, {
+            name: campaign.name,
+            objective: "MESSAGES",
+            status: "ACTIVE",
+            special_ad_categories: "[]",
+            access_token: token,
+          });
+          const metaCampaignId = campaignRes.id as string;
+
+          const adSetRes = await metaPost(`/${adAccountId}/adsets`, {
+            name: `AdSet - ${campaign.name}`.slice(0, 100),
+            campaign_id: metaCampaignId,
+            billing_event: "IMPRESSIONS",
+            optimization_goal: "CONVERSATIONS",
+            destination_type: "WHATSAPP",
+            daily_budget: String(campaign.daily_budget_cents ?? 25000),
+            targeting: JSON.stringify({
+              age_min: campaign.age_min,
+              age_max: campaign.age_max,
+              genders: (campaign.genders ?? []).map((g: string) => Number(g)),
+              geo_locations: campaign.geo_locations ?? { countries: ["MX"] },
+              interests: campaign.interests ?? [],
+            }),
+            status: "ACTIVE",
+            access_token: token,
+          });
+          const metaAdSetId = adSetRes.id as string;
+
+          let metaAdId: string | null = null;
+          if (campaign.image_url) {
+            const creativeRes = await metaPost(`/${adAccountId}/adcreatives`, {
+              name: `Creative - ${campaign.name}`.slice(0, 100),
+              object_story_spec: JSON.stringify({
+                page_id: campaign.facebook_page_id,
+                link_data: {
+                  image_url: campaign.image_url,
+                  message: campaign.primary_text,
+                  name: campaign.headline,
+                  description: campaign.description ?? "",
+                  call_to_action: {
+                    type: "WHATSAPP_MESSAGE",
+                    value: {
+                      app_destination: "WHATSAPP",
+                      whatsapp_number: campaign.whatsapp_phone_number,
+                    },
+                  },
+                },
+              }),
+              access_token: token,
+            });
+            const creativeId = creativeRes.id as string;
+
+            const adRes = await metaPost(`/${adAccountId}/ads`, {
+              name: `Ad - ${campaign.name}`.slice(0, 100),
+              adset_id: metaAdSetId,
+              creative: JSON.stringify({ creative_id: creativeId }),
+              status: "ACTIVE",
+              access_token: token,
+            });
+            metaAdId = adRes.id as string;
+          }
+
+          await admin
+            .from("meta_ads_campaigns")
+            .update({
+              meta_campaign_id: metaCampaignId,
+              meta_adset_id: metaAdSetId,
+              meta_ad_id: metaAdId,
+              meta_form_id: null,
+              status: "active",
+              published_at: new Date().toISOString(),
+              publish_error: null,
+            })
+            .eq("id", campaign.id);
+
+          return json({ success: true });
+        }
+
         const campaignRes = await metaPost(`/${adAccountId}/campaigns`, {
           name: campaign.name,
           objective: "LEAD_GENERATION",

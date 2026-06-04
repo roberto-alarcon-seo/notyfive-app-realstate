@@ -2245,11 +2245,13 @@ export type Database = {
           age_max: number | null
           age_min: number | null
           ai_generated_at: string | null
+          campaign_objective: string
           created_at: string
           created_by: string | null
           cta_type: string | null
           daily_budget_cents: number | null
           description: string | null
+          facebook_page_id: string | null
           genders: string[] | null
           geo_locations: Json | null
           headline: string
@@ -2270,16 +2272,19 @@ export type Database = {
           status: string
           tenant_id: string
           updated_at: string
+          whatsapp_phone_number: string | null
         }
         Insert: {
           age_max?: number | null
           age_min?: number | null
           ai_generated_at?: string | null
+          campaign_objective?: string
           created_at?: string
           created_by?: string | null
           cta_type?: string | null
           daily_budget_cents?: number | null
           description?: string | null
+          facebook_page_id?: string | null
           genders?: string[] | null
           geo_locations?: Json | null
           headline: string
@@ -2300,16 +2305,19 @@ export type Database = {
           status?: string
           tenant_id: string
           updated_at?: string
+          whatsapp_phone_number?: string | null
         }
         Update: {
           age_max?: number | null
           age_min?: number | null
           ai_generated_at?: string | null
+          campaign_objective?: string
           created_at?: string
           created_by?: string | null
           cta_type?: string | null
           daily_budget_cents?: number | null
           description?: string | null
+          facebook_page_id?: string | null
           genders?: string[] | null
           geo_locations?: Json | null
           headline?: string
@@ -2330,6 +2338,7 @@ export type Database = {
           status?: string
           tenant_id?: string
           updated_at?: string
+          whatsapp_phone_number?: string | null
         }
         Relationships: [
           {

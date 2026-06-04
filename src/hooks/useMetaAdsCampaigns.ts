@@ -11,6 +11,9 @@ export interface MetaAdsCampaign {
   meta_form_id: string | null;
   name: string;
   objective: string;
+  campaign_objective: "LEAD_GENERATION" | "MESSAGES";
+  whatsapp_phone_number: string | null;
+  facebook_page_id: string | null;
   headline: string;
   primary_text: string;
   description: string | null;

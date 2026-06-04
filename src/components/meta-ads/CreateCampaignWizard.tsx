@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Search, Sparkles, ImageIcon, Check } from "lucide-react";
+import { Loader2, Search, Sparkles, ImageIcon, Check, MessageCircle, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
@@ -57,7 +57,9 @@ export function CreateCampaignWizard({
   onOpenChange: (v: boolean) => void;
 }) {
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
+  const [objective, setObjective] = useState<"MESSAGES" | "LEAD_GENERATION" | null>(null);
+  const [facebookPageId, setFacebookPageId] = useState("");
   const [search, setSearch] = useState("");
   const [selectedProperty, setSelectedProperty] = useState<PropertyOption | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -77,7 +79,9 @@ export function CreateCampaignWizard({
 
   useEffect(() => {
     if (!open) {
-      setStep(1);
+      setStep(0);
+      setObjective(null);
+      setFacebookPageId("");
       setSearch("");
       setSelectedProperty(null);
       setCampaign(null);
@@ -120,7 +124,14 @@ export function CreateCampaignWizard({
     try {
       const { data, error } = await supabase.functions.invoke(
         "ai-meta-campaign-builder",
-        { body: { action: "generate", property_id: selectedProperty.id } },
+        {
+          body: {
+            action: "generate",
+            property_id: selectedProperty.id,
+            objective: objective ?? "LEAD_GENERATION",
+            facebook_page_id: objective === "MESSAGES" ? facebookPageId.trim() : null,
+          },
+        },
       );
       if (error) {
         const msg = await extractEdgeFunctionError(error);
@@ -212,23 +223,23 @@ export function CreateCampaignWizard({
             <Sparkles className="h-5 w-5 text-primary" /> Nueva campaña
           </SheetTitle>
           <div className="flex items-center gap-2 pt-2">
-            {[1, 2, 3].map((n) => (
+            {[0, 1, 2, 3].map((n) => (
               <div key={n} className="flex items-center gap-2 flex-1">
                 <div
                   className={cn(
                     "h-7 w-7 rounded-full flex items-center justify-center text-xs font-medium",
-                    step >= (n as 1 | 2 | 3)
+                    step >= (n as 0 | 1 | 2 | 3)
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {n}
+                  {n + 1}
                 </div>
                 {n < 3 && (
                   <div
                     className={cn(
                       "flex-1 h-0.5 rounded",
-                      step > (n as 1 | 2 | 3) ? "bg-primary" : "bg-muted",
+                      step > (n as 0 | 1 | 2 | 3) ? "bg-primary" : "bg-muted",
                     )}
                   />
                 )}
@@ -238,6 +249,84 @@ export function CreateCampaignWizard({
         </SheetHeader>
 
         <div className="mt-6">
+          {step === 0 && (
+            <div className="space-y-4">
+              <h3 className="font-medium">¿Qué resultado buscas?</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setObjective("MESSAGES")}
+                  className={cn(
+                    "text-left rounded-lg border p-4 transition-colors relative",
+                    objective === "MESSAGES"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-accent",
+                  )}
+                >
+                  <Badge className="absolute top-2 right-2 text-[10px]">Recomendado</Badge>
+                  <MessageCircle className="h-6 w-6 text-primary mb-2" />
+                  <p className="font-medium text-sm">Mensajes por WhatsApp</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    El lead abre WhatsApp y pregunta directamente. La IA responde automáticamente.
+                  </p>
+                  <ul className="text-xs text-muted-foreground mt-2 space-y-0.5">
+                    <li>✓ Flujo automático completo</li>
+                    <li>✓ Sin pasos extra</li>
+                  </ul>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setObjective("LEAD_GENERATION")}
+                  className={cn(
+                    "text-left rounded-lg border p-4 transition-colors",
+                    objective === "LEAD_GENERATION"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-accent",
+                  )}
+                >
+                  <ClipboardList className="h-6 w-6 text-primary mb-2" />
+                  <p className="font-medium text-sm">Formulario de leads</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Meta captura nombre, teléfono y email del lead. Llegan al CRM automáticamente.
+                  </p>
+                  <ul className="text-xs text-muted-foreground mt-2 space-y-0.5">
+                    <li>Útil si no tienes Página de Facebook vinculada</li>
+                  </ul>
+                </button>
+              </div>
+
+              {objective === "MESSAGES" && (
+                <div className="space-y-2 rounded-md border p-3 bg-muted/30">
+                  <Label htmlFor="fb-page">ID de tu Página de Facebook</Label>
+                  <Input
+                    id="fb-page"
+                    value={facebookPageId}
+                    onChange={(e) => setFacebookPageId(e.target.value.replace(/\D/g, ""))}
+                    placeholder="123456789012345"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Encuéntralo en Configuración de tu Página → Acerca de → ID de página.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => setStep(1)}
+                  disabled={
+                    !objective ||
+                    (objective === "MESSAGES" && facebookPageId.trim().length < 5)
+                  }
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
+
           {step === 1 && (
             <div className="space-y-4">
               <h3 className="font-medium">
@@ -318,8 +407,8 @@ export function CreateCampaignWizard({
                 )}
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                  Cancelar
+                <Button variant="ghost" onClick={() => setStep(0)}>
+                  Atrás
                 </Button>
                 <Button onClick={goToStep2} disabled={!selectedProperty}>
                   Siguiente
@@ -532,6 +621,14 @@ export function CreateCampaignWizard({
             <div className="space-y-4">
               <h3 className="font-medium">Revisión final</h3>
               <div className="rounded-md border p-4 space-y-2 text-sm">
+                <Row
+                  label="Objetivo"
+                  value={
+                    campaign.campaign_objective === "MESSAGES"
+                      ? "💬 Mensajes por WhatsApp"
+                      : "📋 Formulario de leads"
+                  }
+                />
                 <Row label="Nombre" value={campaign.name} />
                 <Row label="Título" value={campaign.headline} />
                 <Row label="Texto" value={campaign.primary_text} />
