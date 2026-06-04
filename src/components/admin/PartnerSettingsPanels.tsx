@@ -80,10 +80,12 @@ export function PartnerSettingsPanels({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingExpanded, setUploadingExpanded] = useState(false);
   const [testing, setTesting] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputExpandedRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -304,6 +306,31 @@ export function PartnerSettingsPanels({
       toast.error(`No se pudo subir el logo: ${msg}`);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleExpandedLogoUpload = async (file: File) => {
+    if (!partner) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("El logo no puede superar 2 MB");
+      return;
+    }
+    setUploadingExpanded(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${partner.id}/logo-expanded-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("partner-logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("partner-logos").getPublicUrl(path);
+      updateBranding({ sidebar_logo_expanded_url: data.publicUrl });
+      toast.success("Logo expandido subido. Recuerda guardar los cambios.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error desconocido";
+      toast.error(`No se pudo subir el logo: ${msg}`);
+    } finally {
+      setUploadingExpanded(false);
     }
   };
 
