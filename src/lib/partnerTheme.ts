@@ -204,8 +204,18 @@ export function buildDefaultTheme(primaryHsl?: string | null): PartnerTheme {
 /**
  * Apply a partner theme to the document root by writing CSS variables.
  * Safe to call from React effects; idempotent.
+ *
+ * When `options.userTheme` is provided ("dark" | "light"), surface tokens
+ * (background, card, foreground, secondary, muted, border, input, accent…)
+ * are NOT written so they fall back to the `.dark`/`.light` class in
+ * `index.css` — letting the user's chosen theme win. Brand tokens
+ * (primary, ring, sidebar, gradients, shadows) are always applied so the
+ * partner identity persists across modes.
  */
-export function applyPartnerTheme(theme: PartnerTheme): void {
+export function applyPartnerTheme(
+  theme: PartnerTheme,
+  options?: { userTheme?: "dark" | "light" },
+): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
 
@@ -217,47 +227,77 @@ export function applyPartnerTheme(theme: PartnerTheme): void {
     !!lightnessMatch && parseFloat(lightnessMatch[1]) >= 50;
   const isLight = explicitMode ? explicitMode === "light" : inferredLight;
 
-  // Core surfaces
-  root.style.setProperty("--background", theme.app_bg);
-  root.style.setProperty("--card", theme.card_bg);
-  root.style.setProperty("--popover", theme.card_bg);
+  // Surface tokens — only applied in "partner" mode (no userTheme override).
+  // When the user pinned dark/light, these are left to the CSS class so the
+  // user's choice wins over partner branding.
+  const surfaceTokenNames = [
+    "--background",
+    "--card",
+    "--popover",
+    "--foreground",
+    "--card-foreground",
+    "--popover-foreground",
+    "--secondary",
+    "--secondary-foreground",
+    "--muted",
+    "--muted-foreground",
+    "--accent",
+    "--accent-foreground",
+    "--border",
+    "--input",
+    "--message-incoming",
+  ] as const;
 
-  // Text + ancillary tokens that flip with the surface mode
-  if (isLight) {
-    // Light mode — derive warm neutrals from the app background's hue so
-    // borders/secondary surfaces feel cohesive with the brand (per MLS spec
-    // they're slightly tinted vs pure gray).
-    const bgMatch = theme.app_bg.trim().match(
-      /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/,
-    );
-    const bgHue = bgMatch ? Math.round(parseFloat(bgMatch[1])) : 340;
-    root.style.setProperty("--foreground", "220 26% 14%");
-    root.style.setProperty("--card-foreground", "220 26% 14%");
-    root.style.setProperty("--popover-foreground", "220 26% 14%");
-    root.style.setProperty("--secondary", `${bgHue} 20% 95%`);
-    root.style.setProperty("--secondary-foreground", "220 26% 14%");
-    root.style.setProperty("--muted", `${bgHue} 15% 93%`);
-    root.style.setProperty("--muted-foreground", "220 9% 46%");
-    // In light mode the accent matches the brand primary (per spec).
-    root.style.setProperty("--accent", theme.primary_color);
-    root.style.setProperty("--accent-foreground", "0 0% 100%");
-    root.style.setProperty("--border", `${bgHue} 15% 90%`);
-    root.style.setProperty("--input", "0 0% 100%");
-    root.style.setProperty("--message-incoming", `${bgHue} 15% 93%`);
+  if (options?.userTheme) {
+    // Clear any previously-set inline surface tokens so the .dark/.light
+    // class in index.css takes effect again.
+    for (const name of surfaceTokenNames) root.style.removeProperty(name);
   } else {
-    root.style.setProperty("--foreground", "0 0% 100%");
-    root.style.setProperty("--card-foreground", "0 0% 100%");
-    root.style.setProperty("--popover-foreground", "0 0% 100%");
-    root.style.setProperty("--secondary", "0 0% 16%");
-    root.style.setProperty("--secondary-foreground", "0 0% 100%");
-    root.style.setProperty("--muted", "0 0% 16%");
-    root.style.setProperty("--muted-foreground", "220 9% 60%");
-    root.style.setProperty("--accent", "217 91% 60%");
-    root.style.setProperty("--accent-foreground", "0 0% 100%");
-    root.style.setProperty("--border", "0 0% 17%");
-    root.style.setProperty("--input", "0 0% 17%");
-    root.style.setProperty("--message-incoming", "0 0% 16%");
+    // Core surfaces
+    root.style.setProperty("--background", theme.app_bg);
+    root.style.setProperty("--card", theme.card_bg);
+    root.style.setProperty("--popover", theme.card_bg);
+
+    // Text + ancillary tokens that flip with the surface mode
+    if (isLight) {
+      // Light mode — derive warm neutrals from the app background's hue so
+      // borders/secondary surfaces feel cohesive with the brand (per MLS spec
+      // they're slightly tinted vs pure gray).
+      const bgMatch = theme.app_bg.trim().match(
+        /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/,
+      );
+      const bgHue = bgMatch ? Math.round(parseFloat(bgMatch[1])) : 340;
+      root.style.setProperty("--foreground", "220 26% 14%");
+      root.style.setProperty("--card-foreground", "220 26% 14%");
+      root.style.setProperty("--popover-foreground", "220 26% 14%");
+      root.style.setProperty("--secondary", `${bgHue} 20% 95%`);
+      root.style.setProperty("--secondary-foreground", "220 26% 14%");
+      root.style.setProperty("--muted", `${bgHue} 15% 93%`);
+      root.style.setProperty("--muted-foreground", "220 9% 46%");
+      // In light mode the accent matches the brand primary (per spec).
+      root.style.setProperty("--accent", theme.primary_color);
+      root.style.setProperty("--accent-foreground", "0 0% 100%");
+      root.style.setProperty("--border", `${bgHue} 15% 90%`);
+      root.style.setProperty("--input", "0 0% 100%");
+      root.style.setProperty("--message-incoming", `${bgHue} 15% 93%`);
+    } else {
+      root.style.setProperty("--foreground", "0 0% 100%");
+      root.style.setProperty("--card-foreground", "0 0% 100%");
+      root.style.setProperty("--popover-foreground", "0 0% 100%");
+      root.style.setProperty("--secondary", "0 0% 16%");
+      root.style.setProperty("--secondary-foreground", "0 0% 100%");
+      root.style.setProperty("--muted", "0 0% 16%");
+      root.style.setProperty("--muted-foreground", "220 9% 60%");
+      root.style.setProperty("--accent", "217 91% 60%");
+      root.style.setProperty("--accent-foreground", "0 0% 100%");
+      root.style.setProperty("--border", "0 0% 17%");
+      root.style.setProperty("--input", "0 0% 17%");
+      root.style.setProperty("--message-incoming", "0 0% 16%");
+    }
   }
+
+  // Suppress unused-variable when surface block is skipped.
+  void isLight;
 
   // Primary / accent
   root.style.setProperty("--primary", theme.primary_color);
