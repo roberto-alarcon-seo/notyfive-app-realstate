@@ -2654,6 +2654,7 @@ export type Database = {
           provisioned_via: string | null
           status: string
           tenant_id: string | null
+          theme_preference: string | null
           updated_at: string
         }
         Insert: {
@@ -2670,6 +2671,7 @@ export type Database = {
           provisioned_via?: string | null
           status?: string
           tenant_id?: string | null
+          theme_preference?: string | null
           updated_at?: string
         }
         Update: {
@@ -2686,6 +2688,7 @@ export type Database = {
           provisioned_via?: string | null
           status?: string
           tenant_id?: string | null
+          theme_preference?: string | null
           updated_at?: string
         }
         Relationships: [
