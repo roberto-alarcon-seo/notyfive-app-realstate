@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Lightbulb,
   Building2,
+  Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,11 @@ import { cn } from "@/lib/utils";
 import type { Property } from "@/hooks/useProperties";
 import type { MetaAdsCampaign } from "@/hooks/useMetaAdsCampaigns";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface CopyVariant {
   headline: string;
@@ -111,7 +117,6 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
   // Auto-generate when opening or when objective changes
   useEffect(() => {
     if (!open || !property) return;
-    if (objective === "MESSAGES" && !facebookPageId.trim()) return;
     let cancelled = false;
 
     const run = async () => {
@@ -176,7 +181,7 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, property?.id, objective, facebookPageId === "" ? "" : "set"]);
+  }, [open, property?.id, objective]);
 
   const coverImageUrl = useMemo(() => {
     if (!property) return null;
@@ -264,11 +269,8 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
     }
   };
 
-  const canPublish =
-    !!campaign &&
-    !publishing &&
-    (objective === "LEAD_GENERATION" ||
-      (objective === "MESSAGES" && facebookPageId.trim().length >= 5));
+  const missingPageId =
+    objective === "MESSAGES" && facebookPageId.trim().length < 5;
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -278,72 +280,105 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
       >
         {/* Header */}
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border space-y-3">
-          <SheetTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Campaña Meta Ads con IA
-          </SheetTitle>
-          {property && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Building2 className="h-4 w-4 shrink-0" />
-              <span className="truncate">{property.title}</span>
-              {property.zone && <span className="shrink-0">· {property.zone}</span>}
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2 min-w-0">
+              <SheetTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Campaña Meta Ads con IA
+              </SheetTitle>
+              {property && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Building2 className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{property.title}</span>
+                  {property.zone && (
+                    <span className="shrink-0">· {property.zone}</span>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setObjective("MESSAGES")}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-sm border transition-all flex items-center gap-1.5",
-                objective === "MESSAGES"
-                  ? "border-primary bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground border-border hover:bg-accent",
-              )}
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              Mensajes WhatsApp
-            </button>
-            <button
-              type="button"
-              onClick={() => setObjective("LEAD_GENERATION")}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-sm border transition-all flex items-center gap-1.5",
-                objective === "LEAD_GENERATION"
-                  ? "border-primary bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground border-border hover:bg-accent",
-              )}
-            >
-              <ClipboardList className="h-3.5 w-3.5" />
-              Formulario de leads
-            </button>
-          </div>
-          {objective === "MESSAGES" && (
-            <div className="space-y-1.5 rounded-md border border-border p-3 bg-muted/30">
-              <Label htmlFor="fb-page" className="text-xs">
-                ID de tu Página de Facebook
-              </Label>
-              <Input
-                id="fb-page"
-                value={facebookPageId}
-                onChange={(e) =>
-                  setFacebookPageId(e.target.value.replace(/\D/g, ""))
-                }
-                placeholder="123456789012345"
-                className="h-9"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Lo encuentras en Configuración de tu Página → Acerca de → ID.{" "}
-                <a
-                  href="https://developers.facebook.com/tools/explorer/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary underline"
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0 relative"
+                  aria-label="Configuración de campaña"
                 >
-                  Graph API Explorer
-                </a>
-              </p>
-            </div>
-          )}
+                  <Settings2 className="h-4 w-4" />
+                  {missingPageId && (
+                    <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Tipo de campaña</Label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setObjective("MESSAGES")}
+                      className={cn(
+                        "flex-1 py-2 px-3 rounded-md border text-sm transition-all flex items-center justify-center gap-1.5",
+                        objective === "MESSAGES"
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-border text-muted-foreground hover:border-primary/50",
+                      )}
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setObjective("LEAD_GENERATION")}
+                      className={cn(
+                        "flex-1 py-2 px-3 rounded-md border text-sm transition-all flex items-center justify-center gap-1.5",
+                        objective === "LEAD_GENERATION"
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-border text-muted-foreground hover:border-primary/50",
+                      )}
+                    >
+                      <ClipboardList className="h-3.5 w-3.5" />
+                      Formulario
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {objective === "MESSAGES"
+                      ? "El lead abre WhatsApp y la IA responde automáticamente."
+                      : "Meta captura nombre, teléfono y email del lead."}
+                  </p>
+                </div>
+
+                {objective === "MESSAGES" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="fb-page" className="text-xs flex items-center gap-1">
+                      ID de tu Página de Facebook
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="fb-page"
+                      value={facebookPageId}
+                      onChange={(e) =>
+                        setFacebookPageId(e.target.value.replace(/\D/g, ""))
+                      }
+                      placeholder="123456789012345"
+                      className="h-9 text-sm"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Requerido para publicar campañas de WhatsApp.{" "}
+                      <a
+                        href="https://developers.facebook.com/tools/explorer/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline"
+                      >
+                        Obtener ID
+                      </a>
+                    </p>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
         </SheetHeader>
 
         {/* Body */}
@@ -577,8 +612,16 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
                 <Button
                   className="w-full"
                   size="lg"
-                  onClick={handlePublish}
-                  disabled={!canPublish}
+                  onClick={() => {
+                    if (missingPageId) {
+                      toast.error(
+                        "Configura el ID de tu Página de Facebook en el engrane ⚙ antes de publicar.",
+                      );
+                      return;
+                    }
+                    handlePublish();
+                  }}
+                  disabled={!campaign || publishing}
                 >
                   {publishing ? (
                     <>
@@ -592,6 +635,11 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
                     </>
                   )}
                 </Button>
+                {missingPageId && campaign && (
+                  <p className="text-[11px] text-destructive text-center">
+                    Configura el ID de tu Página de Facebook en el engrane ⚙ antes de publicar.
+                  </p>
+                )}
 
                 <Button
                   variant="ghost"
