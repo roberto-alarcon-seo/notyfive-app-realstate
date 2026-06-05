@@ -18,6 +18,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useProperties, usePropertyZones, PropertyFilters } from "@/hooks/useProperties";
 import PropertyTable from "@/components/properties/PropertyTable";
+import type { Property } from "@/hooks/useProperties";
+import { CampaignAIPanel } from "@/components/meta-ads/CampaignAIPanel";
 
 const STATUS_OPTIONS = [
   { value: "available", label: "Disponible" },
@@ -36,7 +38,8 @@ export default function Properties() {
   const navigate = useNavigate();
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<PropertyFilters>({});
-  
+  const [campaignProperty, setCampaignProperty] = useState<Property | null>(null);
+
   const { data: properties, isLoading } = useProperties(filters);
   const { data: zones } = usePropertyZones();
 
@@ -281,8 +284,17 @@ export default function Properties() {
         </div>
 
         {/* Table */}
-        <PropertyTable properties={properties || []} isLoading={isLoading} />
+        <PropertyTable
+          properties={properties || []}
+          isLoading={isLoading}
+          onCreateCampaign={(p) => setCampaignProperty(p)}
+        />
       </div>
+      <CampaignAIPanel
+        open={!!campaignProperty}
+        property={campaignProperty}
+        onClose={() => setCampaignProperty(null)}
+      />
     </div>
   );
 }
