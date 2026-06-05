@@ -12,13 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
  * lands on the public `/welcome` page.
  */
 export function useSignOutRedirect() {
-  const { signOut, isSuperAdmin } = useAuth();
-  const { partner } = usePartnerBranding();
-  const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   return useCallback(async () => {
-    const externalUrl = partner.logoutRedirectUrl?.trim() || null;
-
     try {
       await signOut();
     } catch {
@@ -29,15 +25,6 @@ export function useSignOutRedirect() {
       }
     }
 
-    if (externalUrl) {
-      window.location.href = externalUrl;
-      return;
-    }
-
-    if (isSuperAdmin) {
-      navigate("/rs_admin");
-    } else {
-      navigate("/welcome");
-    }
-  }, [signOut, partner.logoutRedirectUrl, isSuperAdmin, navigate]);
+    window.location.href = "https://auth.brokia24.com/login?signout=1";
+  }, [signOut]);
 }
