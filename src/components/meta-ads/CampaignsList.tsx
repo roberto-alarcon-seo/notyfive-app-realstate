@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Loader2, Pause, Play, Trash2, MoreHorizontal, ImageIcon, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import type { MetaAdsCampaign } from "@/hooks/useMetaAdsCampaigns";
+import type { CampaignInsights } from "@/hooks/useMetaAdsInsights";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<MetaAdsCampaign["status"], string> = {
@@ -52,11 +54,14 @@ function statusClass(s: MetaAdsCampaign["status"]) {
 export function CampaignsList({
   campaigns,
   canManage,
+  insightsByCampaign,
 }: {
   campaigns: MetaAdsCampaign[];
   canManage: boolean;
+  insightsByCampaign?: Record<string, CampaignInsights | null>;
 }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -111,7 +116,16 @@ export function CampaignsList({
           return (
             <div
               key={c.id}
-              className="flex items-center gap-3 rounded-md border border-border p-3 bg-card"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/meta-ads/${c.id}`)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigate(`/meta-ads/${c.id}`);
+                }
+              }}
+              className="flex items-center gap-3 rounded-md border border-border p-3 bg-card cursor-pointer hover:bg-accent/40 transition-colors"
             >
               <div className="w-14 h-14 rounded bg-muted overflow-hidden flex items-center justify-center shrink-0">
                 {cover ? (
@@ -143,6 +157,26 @@ export function CampaignsList({
                     <> · Publicada {new Date(c.published_at).toLocaleDateString("es-MX")}</>
                   )}
                 </div>
+                {c.meta_campaign_id &&
+                  (c.status === "active" || c.status === "paused") &&
+                  insightsByCampaign &&
+                  (() => {
+                    const ins = insightsByCampaign[c.id];
+                    if (!ins) return null;
+                    const result =
+                      c.campaign_objective === "MESSAGES"
+                        ? ins.messages_started
+                        : ins.leads;
+                    const resultLabel =
+                      c.campaign_objective === "MESSAGES" ? "Conv" : "Leads";
+                    return (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Impresiones: {ins.impressions.toLocaleString("es-MX")} · Clics:{" "}
+                        {ins.clicks.toLocaleString("es-MX")} · {resultLabel}: {result} · Gastado: $
+                        {ins.spend.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN
+                      </p>
+                    );
+                  })()}
                 {c.status === "error" && c.publish_error && (
                   <p className="text-xs text-destructive flex items-center gap-1 mt-1">
                     <AlertCircle className="h-3 w-3" /> {c.publish_error}
@@ -152,7 +186,12 @@ export function CampaignsList({
               {canManage && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" disabled={isPending}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={isPending}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
@@ -160,7 +199,7 @@ export function CampaignsList({
                       )}
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                     {canPauseResume && (
                       <DropdownMenuItem onClick={() => togglePause(c)}>
                         {c.status === "active" ? (
