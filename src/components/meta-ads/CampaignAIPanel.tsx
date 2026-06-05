@@ -390,12 +390,35 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
             <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
               {generationError}
             </div>
+          ) : generating && !campaign ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <div className="relative">
+                <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  Generando tu campaña con IA
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Analizando la propiedad y creando copies personalizados...
+                </p>
+              </div>
+              <div className="flex gap-1.5 mt-2">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-1.5 w-8 rounded-full bg-primary/30 animate-pulse"
+                    style={{ animationDelay: `${i * 0.2}s` }}
+                  />
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Column 1: Copies */}
               <section className="space-y-3">
                 <h3 className="text-sm font-semibold">Copies generados</h3>
-                {generating || !campaign ? (
+                {!campaign ? (
                   <div className="space-y-2">
                     <Skeleton className="h-20 w-full" />
                     <Skeleton className="h-20 w-full" />
@@ -409,22 +432,25 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
                         type="button"
                         onClick={() => selectCopy(i)}
                         className={cn(
-                          "w-full text-left border rounded-lg p-3 cursor-pointer transition-all",
+                          "w-full text-left border rounded-xl p-4 cursor-pointer transition-all",
                           "hover:border-primary/50 hover:bg-primary/5",
                           selectedCopyIndex === i &&
-                            "border-primary bg-primary/10",
+                            "border-primary bg-primary/10 ring-1 ring-primary/20",
                         )}
                       >
-                        <p className="text-sm font-medium line-clamp-2">
+                        <p className="text-sm font-semibold leading-snug">
                           {copy.headline}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
+                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-3">
                           {copy.primary_text}
                         </p>
                       </button>
                     ))}
 
-                    <div className="space-y-3 pt-2 border-t border-border">
+                    <div className="pt-4 mt-2 border-t-2 border-border space-y-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Editar copy seleccionado
+                      </p>
                       <div className="space-y-1.5">
                         <div className="flex justify-between">
                           <Label htmlFor="copy-headline" className="text-xs">
@@ -456,7 +482,8 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
                           value={editedText}
                           maxLength={125}
                           onChange={(e) => setEditedText(e.target.value)}
-                          rows={4}
+                          rows={5}
+                          className="resize-none text-sm leading-relaxed"
                         />
                       </div>
                     </div>
@@ -549,7 +576,7 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
               </section>
 
               {/* Column 3: Preview + Launch */}
-              <section className="space-y-4">
+              <section className="flex flex-col gap-4">
                 <h3 className="text-sm font-semibold">Vista previa</h3>
 
                 <div className="border border-border rounded-xl overflow-hidden bg-card">
@@ -564,9 +591,25 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
                       <p className="text-[10px] text-muted-foreground">Patrocinado</p>
                     </div>
                   </div>
-                  <p className="text-xs px-3 py-2 whitespace-pre-wrap">
-                    {editedText || "Texto del anuncio…"}
-                  </p>
+                  <div className="px-3 py-2">
+                    <p
+                      className={cn(
+                        "text-xs leading-relaxed whitespace-pre-wrap",
+                        !previewExpanded && "line-clamp-3",
+                      )}
+                    >
+                      {editedText || "Texto del anuncio…"}
+                    </p>
+                    {editedText && editedText.length > 80 && (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewExpanded((v) => !v)}
+                        className="text-[10px] text-primary mt-1 hover:underline"
+                      >
+                        {previewExpanded ? "Ver menos" : "Ver más"}
+                      </button>
+                    )}
+                  </div>
                   {coverImageUrl ? (
                     <img
                       src={coverImageUrl}
@@ -591,70 +634,92 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold flex items-center gap-1.5">
-                    <Lightbulb className="h-3.5 w-3.5 text-primary" />
-                    Recomendaciones IA
-                  </p>
-                  <ul className="space-y-1.5">
-                    {(recommendations.length > 0
-                      ? recommendations
-                      : DEFAULT_RECOMMENDATIONS
-                    ).map((rec, i) => (
-                      <li
-                        key={i}
-                        className="text-xs text-muted-foreground flex items-start gap-1.5"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                        <span>{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 text-xs text-primary hover:underline w-full justify-center py-1"
+                    >
+                      <Lightbulb className="h-3.5 w-3.5" />
+                      Ver recomendaciones IA (
+                      {(recommendations.length > 0
+                        ? recommendations
+                        : DEFAULT_RECOMMENDATIONS
+                      ).length}
+                      )
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="center" side="top" className="w-80">
+                    <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                      <Lightbulb className="h-3.5 w-3.5 text-primary" />
+                      Recomendaciones IA
+                    </p>
+                    <ul className="space-y-2">
+                      {(recommendations.length > 0
+                        ? recommendations
+                        : DEFAULT_RECOMMENDATIONS
+                      ).map((rec, i) => (
+                        <li
+                          key={i}
+                          className="text-xs text-muted-foreground flex items-start gap-1.5"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                          <span>{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </PopoverContent>
+                </Popover>
+
+                <div className="mt-auto space-y-2">
+                  {missingPageId && campaign && (
+                    <p className="text-xs text-destructive text-center flex items-center justify-center gap-1">
+                      <Settings2 className="h-3 w-3" />
+                      Configura el ID de Página en ⚙ antes de publicar
+                    </p>
+                  )}
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={() => {
+                      if (missingPageId) {
+                        toast.error(
+                          "Configura el ID de tu Página de Facebook en el engrane ⚙ antes de publicar.",
+                        );
+                        return;
+                      }
+                      handlePublish();
+                    }}
+                    disabled={!canPublish || publishing}
+                  >
+                    {publishing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Publicando...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="h-4 w-4 mr-2" />
+                        Lanzar en Meta Ads
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-muted-foreground"
+                    onClick={handleSaveDraft}
+                    disabled={savingDraft || !campaign}
+                  >
+                    {savingDraft ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Guardando...
+                      </>
+                    ) : (
+                      "Guardar como borrador"
+                    )}
+                  </Button>
                 </div>
-
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={() => {
-                    if (missingPageId) {
-                      toast.error(
-                        "Configura el ID de tu Página de Facebook en el engrane ⚙ antes de publicar.",
-                      );
-                      return;
-                    }
-                    handlePublish();
-                  }}
-                  disabled={!campaign || publishing}
-                >
-                  {publishing ? (
-                    <>
-                      <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                      Publicando...
-                    </>
-                  ) : (
-                    <>
-                      <Rocket className="mr-2 h-4 w-4" />
-                      Lanzar en Meta Ads
-                    </>
-                  )}
-                </Button>
-                {missingPageId && campaign && (
-                  <p className="text-[11px] text-destructive text-center">
-                    Configura el ID de tu Página de Facebook en el engrane ⚙ antes de publicar.
-                  </p>
-                )}
-
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={handleSaveDraft}
-                  disabled={!campaign || savingDraft || publishing}
-                >
-                  {savingDraft && (
-                    <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                  )}
-                  Guardar como borrador
-                </Button>
               </section>
             </div>
           )}
