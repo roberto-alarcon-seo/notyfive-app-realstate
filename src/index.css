@@ -364,3 +364,135 @@
     opacity: 0.7;
   }
 }
+
+/* =====================================================================
+ * Dark theme — depth & gradient upgrade
+ * Adds ambient gradient background, layered surfaces, gradient primary
+ * buttons with glow, and refined borders. Light/blue themes untouched.
+ * ===================================================================== */
+@layer base {
+  .dark body {
+    background-color: hsl(0 0% 4%);
+    background-image:
+      radial-gradient(ellipse 70% 50% at 15% -10%, hsl(279 70% 22% / 0.45), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 110% 110%, hsl(245 70% 25% / 0.35), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 50%, hsl(279 50% 10% / 0.25), transparent 70%);
+    background-attachment: fixed;
+  }
+
+  /* Subtle dotted texture overlay for depth */
+  .dark body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle at 1px 1px, hsl(0 0% 100% / 0.025) 1px, transparent 0);
+    background-size: 32px 32px;
+    z-index: 0;
+  }
+}
+
+@layer components {
+  /* Layered card surfaces with vertical gradient & top highlight */
+  .dark .bg-card {
+    background-image: linear-gradient(180deg, hsl(0 0% 12%) 0%, hsl(0 0% 8%) 100%);
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.04),
+      0 1px 2px 0 hsl(0 0% 0% / 0.4);
+  }
+  .dark .bg-popover {
+    background-image: linear-gradient(180deg, hsl(0 0% 13%) 0%, hsl(0 0% 9%) 100%);
+  }
+  .dark .bg-secondary,
+  .dark .bg-muted {
+    background-image: linear-gradient(180deg, hsl(0 0% 17%) 0%, hsl(0 0% 13%) 100%);
+  }
+
+  /* Sidebar — subtle vertical depth gradient */
+  .dark [data-sidebar="sidebar"],
+  .dark .bg-sidebar {
+    background-image: linear-gradient(180deg, hsl(0 0% 9%) 0%, hsl(0 0% 6%) 100%);
+    border-right: 1px solid hsl(0 0% 100% / 0.06);
+  }
+
+  /* Gradient primary buttons with glow — targets shadcn default variant */
+  .dark button.bg-primary,
+  .dark a.bg-primary,
+  .dark [role="button"].bg-primary {
+    background-image: linear-gradient(135deg, hsl(279 72% 55%) 0%, hsl(258 78% 58%) 100%);
+    background-color: transparent;
+    box-shadow:
+      0 8px 22px -8px hsl(279 72% 55% / 0.55),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.18);
+    transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  }
+  .dark button.bg-primary:hover,
+  .dark a.bg-primary:hover,
+  .dark [role="button"].bg-primary:hover {
+    filter: brightness(1.08);
+    box-shadow:
+      0 10px 30px -8px hsl(279 75% 60% / 0.7),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.22);
+  }
+  .dark button.bg-primary:active {
+    transform: translateY(0.5px) scale(0.99);
+  }
+
+  /* Subtle gradient borders */
+  .dark .border,
+  .dark .border-border {
+    border-color: hsl(0 0% 100% / 0.08);
+  }
+
+  /* Lift hover for interactive cards/rows */
+  .dark .bg-card:hover {
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.06),
+      0 8px 24px -12px hsl(279 70% 40% / 0.25);
+  }
+}
+
+@layer utilities {
+  /* Reusable gradient surface utility for hero/feature cards */
+  .surface-gradient {
+    background-image:
+      linear-gradient(135deg, hsl(279 60% 14% / 0.6) 0%, hsl(245 60% 12% / 0.4) 100%),
+      linear-gradient(180deg, hsl(0 0% 11%) 0%, hsl(0 0% 8%) 100%);
+    border: 1px solid hsl(0 0% 100% / 0.08);
+  }
+
+  .gradient-border {
+    position: relative;
+    background-clip: padding-box;
+    border: 1px solid transparent;
+  }
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(279 65% 49% / 0.5), hsl(245 65% 55% / 0.2), transparent 70%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+/* Keep app content above the textured ::before overlay */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Richer scrollbar in dark mode */
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(279 50% 35% / 0.4), hsl(245 50% 35% / 0.3));
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, hsl(279 60% 45% / 0.6), hsl(245 60% 45% / 0.5));
+}
