@@ -185,6 +185,26 @@ REGLAS PARA LOS COPIES:
 5. Máximo estricto: headline 40 chars, primary_text 125 chars,
    description 30 chars
 
+REGLAS ADICIONALES DE FORMATO:
+- SIEMPRE incluye 1-2 emojis relevantes en cada copy
+  (🏠 casa/depto, 🌟 lujo, 💰 precio, 📍 ubicación, 🔑 entrega,
+   🏊 amenidades, 🚗 estacionamiento, 🌳 jardín, etc.)
+- El precio SIEMPRE debe aparecer formateado en el copy cuando sea
+  relevante: "$${priceFormatted} ${property.currency}"
+- Menciona SIEMPRE al menos un dato numérico concreto:
+  m², recámaras, baños o precio
+- Los emojis van al INICIO del headline o intercalados en el texto,
+  nunca al final
+- Ejemplo de headline bueno: "🏠 Penthouse 210m² en Chico Reservado"
+- Ejemplo de headline malo: "Hermosa propiedad disponible"
+
+EJEMPLO DE COPY COMPLETO ESPERADO:
+{
+  "headline": "🏠 ${property.bedrooms ?? "N"} Rec · ${property.sq_meters ?? "N"}m² en ${property.zone ?? "zona"}",
+  "primary_text": "📍 Exclusivo ${property.property_type ?? "inmueble"} en ${property.zone ?? "zona privilegiada"}. ${property.bedrooms ?? "N"} recámaras, ${property.bathrooms ?? "N"} baños, ${property.sq_meters ?? "N"}m² de diseño. Precio: $${priceFormatted} ${property.currency}. ¡Escríbenos ahora! 🔑",
+  "description": "Agenda tu visita hoy"
+}
+
 INTERESES SUGERIDOS: elige los más relevantes según el tipo de
 propiedad y precio. Para propiedades de lujo (>$3M MXN) incluye
 intereses de inversión. Para propiedades medias incluye primera
