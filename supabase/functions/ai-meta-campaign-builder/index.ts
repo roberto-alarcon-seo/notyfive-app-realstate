@@ -322,6 +322,18 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
             throw new Error("Falta número de WhatsApp para campaña de Mensajes");
           }
 
+          // Construir mensaje pre-llenado con título e ID de propiedad
+          const { data: propertyForMsg } = await admin
+            .from("properties")
+            .select("title, code")
+            .eq("id", campaign.property_id)
+            .maybeSingle();
+          const propertyIdentifier = propertyForMsg?.code ?? campaign.property_id;
+          const prefilledMessage =
+            `Hola, me interesa la propiedad ` +
+            `${propertyForMsg?.title ?? campaign.name} ` +
+            `ID:${propertyIdentifier}`;
+
           const campaignRes = await metaPost(`/${adAccountId}/campaigns`, {
             name: campaign.name,
             objective: "MESSAGES",
@@ -366,6 +378,7 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
                     value: {
                       app_destination: "WHATSAPP",
                       whatsapp_number: campaign.whatsapp_phone_number,
+                      user_message_prompt: prefilledMessage,
                     },
                   },
                 },
