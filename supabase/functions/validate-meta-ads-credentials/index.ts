@@ -11,7 +11,7 @@ const META_API = "https://graph.facebook.com/v21.0";
 
 interface RequestBody {
   access_token: string;
-  action: "validate" | "connect";
+  action: "validate" | "connect" | "list_accounts";
   ad_account_id?: string;
   ad_account_name?: string;
   pixel_id?: string | null;
@@ -104,14 +104,52 @@ serve(async (req) => {
     const tenantId = profile.tenant_id;
     const body = (await req.json()) as RequestBody;
 
-    if (!body?.access_token || typeof body.access_token !== "string") {
+    if (body?.action !== "list_accounts" && (!body?.access_token || typeof body.access_token !== "string")) {
       return json({ valid: false, error: "Access token requerido" }, 400);
+    }
+
+    if (body.action === "list_accounts") {
+      const { data: conn } = await admin
+        .from("meta_ads_connections")
+        .select("access_token_encrypted")
+        .eq("tenant_id", tenantId)
+        .eq("status", "connected")
+        .maybeSingle();
+      if (!conn?.access_token_encrypted) {
+        return json({ error: "No hay cuenta conectada" }, 400);
+      }
+      const salt = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").slice(0, 16);
+      const decrypted = atob(conn.access_token_encrypted);
+      const accessToken = decrypted.replace(`${salt}::`, "");
+      let adAccounts: any[] = [];
+      try {
+        const accounts = await metaGet(
+          "/me/adaccounts",
+          accessToken,
+          "id,name,account_status,currency,timezone_name",
+        );
+        adAccounts = (accounts?.data || []).map((a: any) => ({
+          id: a.id,
+          name: a.name,
+          status: a.account_status,
+          currency: a.currency,
+          timezone: a.timezone_name,
+        }));
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return json({ error: mapMetaError(msg) }, 400);
+      }
+      return json({ ad_accounts: adAccounts });
     }
 
     // Validate token via /me
     let meData: { id: string; name: string };
     try {
-      meData = await metaGet("/me", body.access_token, "id,name");
+      if (body.action === "connect" && body.access_token === "__use_stored__") {
+        meData = { id: "", name: "" };
+      } else {
+        meData = await metaGet("/me", body.access_token, "id,name");
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return json({ valid: false, error: mapMetaError(msg) }, 200);
@@ -156,6 +194,39 @@ serve(async (req) => {
     if (body.action === "connect") {
       if (!body.ad_account_id || !body.ad_account_name) {
         return json({ success: false, error: "Cuenta publicitaria requerida" }, 400);
+      }
+
+      if (body.access_token === "__use_stored__") {
+        const { data: conn } = await admin
+          .from("meta_ads_connections")
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .neq("status", "disconnected")
+          .maybeSingle();
+        if (!conn?.id) {
+          return json({ success: false, error: "No hay token guardado" }, 400);
+        }
+        const { error: updateErr } = await admin
+          .from("meta_ads_connections")
+          .update({
+            ad_account_id: body.ad_account_id,
+            ad_account_name: body.ad_account_name,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", conn.id);
+        if (updateErr) {
+          return json({ success: false, error: updateErr.message }, 500);
+        }
+        await admin.from("security_events").insert({
+          event_type: "meta_ads_account_changed",
+          user_id: userId,
+          tenant_id: tenantId,
+          metadata: {
+            new_account_id: body.ad_account_id,
+            new_account_name: body.ad_account_name,
+          },
+        });
+        return json({ success: true });
       }
 
       const encrypted = encryptToken(body.access_token);
