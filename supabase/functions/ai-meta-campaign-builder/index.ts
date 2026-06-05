@@ -105,9 +105,6 @@ serve(async (req) => {
       const facebookPageId = body?.facebook_page_id
         ? String(body.facebook_page_id).trim()
         : null;
-      if (objective === "MESSAGES" && !facebookPageId) {
-        return json({ error: "Página de Facebook requerida para objetivo MESSAGES" }, 400);
-      }
 
       let whatsappNumber: string | null = null;
       if (objective === "MESSAGES") {
