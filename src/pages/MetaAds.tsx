@@ -41,6 +41,8 @@ import { useMetaAdsConnection } from "@/hooks/useMetaAdsConnection";
 import { useMetaAdsCampaigns } from "@/hooks/useMetaAdsCampaigns";
 import { CampaignsList } from "@/components/meta-ads/CampaignsList";
 import { CreateCampaignWizard } from "@/components/meta-ads/CreateCampaignWizard";
+import { DateRangePicker } from "@/components/meta-ads/DateRangePicker";
+import { useSummaryInsights, type DateRange } from "@/hooks/useMetaAdsInsights";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { cn } from "@/lib/utils";
 
@@ -67,8 +69,17 @@ export default function MetaAds() {
   const { data: campaigns = [], isLoading: loadingCampaigns } =
     useMetaAdsCampaigns();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange>({ preset: "last_7d" });
 
   const isConnected = connection?.status === "connected";
+  const { data: summary } = useSummaryInsights(dateRange);
+  const insightsByCampaign = (summary?.campaigns ?? []).reduce(
+    (acc, s) => {
+      acc[s.campaign_id] = s.insights;
+      return acc;
+    },
+    {} as Record<string, ReturnType<typeof Object> | any>,
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -99,7 +110,10 @@ export default function MetaAds() {
             <>
               <ConnectedCard connection={connection!} canManage={canManage} />
               <section className="space-y-3">
-                <h2 className="text-lg font-semibold">Campañas</h2>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <h2 className="text-lg font-semibold">Campañas</h2>
+                  <DateRangePicker value={dateRange} onChange={setDateRange} />
+                </div>
                 {loadingCampaigns ? (
                   <div className="flex justify-center py-10">
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -116,7 +130,11 @@ export default function MetaAds() {
                     )}
                   </div>
                 ) : (
-                  <CampaignsList campaigns={campaigns} canManage={canManage} />
+                  <CampaignsList
+                    campaigns={campaigns}
+                    canManage={canManage}
+                    insightsByCampaign={insightsByCampaign}
+                  />
                 )}
               </section>
             </>
