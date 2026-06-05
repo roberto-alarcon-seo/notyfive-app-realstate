@@ -269,12 +269,6 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
     }
   };
 
-  const canPublish =
-    !!campaign &&
-    !publishing &&
-    (objective === "LEAD_GENERATION" ||
-      (objective === "MESSAGES" && facebookPageId.trim().length >= 5));
-
   const missingPageId =
     objective === "MESSAGES" && facebookPageId.trim().length < 5;
 
