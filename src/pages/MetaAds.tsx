@@ -167,6 +167,68 @@ function ConnectedCard({
   const queryClient = useQueryClient();
   const [disconnecting, setDisconnecting] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [changingAccount, setChangingAccount] = useState(false);
+  const [changeAccountLoading, setChangeAccountLoading] = useState(false);
+  const [availableAccounts, setAvailableAccounts] = useState<AdAccount[]>([]);
+  const [changeAccountError, setChangeAccountError] = useState<string | null>(null);
+  const [switchingTo, setSwitchingTo] = useState<string | null>(null);
+
+  const handleOpenChangeAccount = async () => {
+    setChangeAccountLoading(true);
+    setChangeAccountError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "validate-meta-ads-credentials",
+        { body: { action: "list_accounts" } },
+      );
+      if (error) {
+        const msg = await extractEdgeFunctionError(error);
+        setChangeAccountError(msg);
+        return;
+      }
+      if (!data?.ad_accounts) {
+        setChangeAccountError(data?.error ?? "Error al cargar cuentas");
+        return;
+      }
+      setAvailableAccounts(data.ad_accounts);
+      setChangingAccount(true);
+    } catch (e) {
+      setChangeAccountError(
+        e instanceof Error ? e.message : "Error al cargar cuentas",
+      );
+    } finally {
+      setChangeAccountLoading(false);
+    }
+  };
+
+  const handleSelectNewAccount = async (accountId: string, accountName: string) => {
+    setSwitchingTo(accountId);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "validate-meta-ads-credentials",
+        {
+          body: {
+            action: "connect",
+            access_token: "__use_stored__",
+            ad_account_id: accountId,
+            ad_account_name: accountName,
+          },
+        },
+      );
+      if (error || !data?.success) {
+        const msg = error
+          ? await extractEdgeFunctionError(error)
+          : data?.error || "No se pudo cambiar la cuenta";
+        toast.error("No se pudo cambiar la cuenta", { description: msg });
+        return;
+      }
+      toast.success("Cuenta publicitaria actualizada");
+      setChangingAccount(false);
+      queryClient.invalidateQueries({ queryKey: ["meta-ads-connection"] });
+    } finally {
+      setSwitchingTo(null);
+    }
+  };
 
   const handleDisconnect = async () => {
     setDisconnecting(true);
@@ -219,6 +281,19 @@ function ConnectedCard({
 
         {canManage && (
           <div className="flex gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={handleOpenChangeAccount}
+              disabled={changeAccountLoading}
+            >
+              {changeAccountLoading && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Cambiar cuenta
+            </Button>
+            <Button variant="outline" onClick={() => setReconnecting(true)}>
+              Reconectar
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" disabled={disconnecting}>
@@ -242,10 +317,82 @@ function ConnectedCard({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            <Button onClick={() => setReconnecting(true)}>Reconectar</Button>
           </div>
         )}
+        {changeAccountError && (
+          <p className="text-sm text-destructive flex items-center gap-1 pt-2">
+            <AlertCircle className="h-3.5 w-3.5" /> {changeAccountError}
+          </p>
+        )}
       </CardContent>
+
+      <Dialog open={changingAccount} onOpenChange={setChangingAccount}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Cambiar cuenta publicitaria</DialogTitle>
+            <DialogDescription>
+              Selecciona la cuenta con la que quieres trabajar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {availableAccounts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No se encontraron cuentas publicitarias.
+              </p>
+            ) : (
+              availableAccounts.map((acc) => {
+                const disabled = acc.status !== 1;
+                const isCurrent = acc.id === connection.ad_account_id;
+                const isSwitching = switchingTo === acc.id;
+                return (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    disabled={disabled || isCurrent || !!switchingTo}
+                    onClick={() => handleSelectNewAccount(acc.id, acc.name)}
+                    className={cn(
+                      "w-full text-left rounded-md border p-3 transition-colors",
+                      "border-border hover:bg-accent",
+                      (disabled || isCurrent) &&
+                        "opacity-60 cursor-not-allowed hover:bg-transparent",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{acc.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono truncate">
+                          {acc.id}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {acc.currency} · {acc.timezone}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isCurrent && <Badge variant="secondary">Actual</Badge>}
+                        {disabled && !isCurrent && (
+                          <Badge variant="secondary">Deshabilitada</Badge>
+                        )}
+                        {isSwitching && (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setChangingAccount(false)}
+              disabled={!!switchingTo}
+            >
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
