@@ -41,6 +41,7 @@ type NavItem = {
   path: string;
   feature?: FeatureName;
   badgeKey?: "inbox" | "followups" | "atRisk";
+  tag?: "NEW" | "LIVE";
 };
 
 type NavGroup = {
@@ -129,7 +130,7 @@ export function IconSidebar() {
       { icon: Send, label: "Campañas", path: "/campaigns", feature: "campaigns" },
       { icon: Filter, label: "Segmentos", path: "/segments", feature: "segments" },
       { icon: Zap, label: "Automatizaciones", path: "/automations", feature: "automations_builder" },
-      { icon: MonitorPlay, label: "Meta Ads", path: "/meta-ads", feature: "meta_ads" },
+      { icon: MonitorPlay, label: "Meta Ads", path: "/meta-ads", feature: "meta_ads", tag: "NEW" },
       { icon: FileText, label: "Plantillas", path: "/templates", feature: "templates_library" },
     ]);
     if (marketingItems.length > 0) {
@@ -172,6 +173,18 @@ export function IconSidebar() {
         <item.icon className="w-4 h-4 shrink-0" />
         {!collapsed && (
           <span className="text-sm truncate flex-1 transition-opacity duration-200">{item.label}</span>
+        )}
+        {!collapsed && item.tag && (
+          <span
+            className={cn(
+              "text-[9px] font-semibold tracking-wide px-1.5 py-0.5 rounded-full ml-auto shrink-0",
+              item.tag === "NEW"
+                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                : "bg-rose-500/15 text-rose-400 border border-rose-500/30",
+            )}
+          >
+            {item.tag}
+          </span>
         )}
         {count > 0 && (
           <span
