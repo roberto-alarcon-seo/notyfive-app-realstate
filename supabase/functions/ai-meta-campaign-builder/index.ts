@@ -115,10 +115,12 @@ serve(async (req) => {
           .from("tenant_integrations")
           .select("phone_number")
           .eq("tenant_id", tenantId)
+          .eq("provider", "twilio")
+          .eq("status", "connected")
           .maybeSingle();
         whatsappNumber = integ?.phone_number ?? null;
         if (!whatsappNumber) {
-          return json({ error: "Configura tu número de WhatsApp en Integraciones antes de crear una campaña de Mensajes" }, 400);
+          return json({ error: "No se encontró número de WhatsApp configurado. Verifica tu integración de Twilio en Configuración." }, 400);
         }
       }
 
