@@ -170,9 +170,23 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
 
 {
   "name": "nombre de la campaña (incluye ciudad y tipo)",
-  "headline": "título del anuncio máximo 40 caracteres",
-  "primary_text": "texto principal máximo 125 caracteres, orientado a generar interés y acción",
-  "description": "descripción máximo 30 caracteres",
+  "copies": [
+    {
+      "headline": "versión directa e informativa, máx 40 caracteres",
+      "primary_text": "versión directa, máx 125 caracteres",
+      "description": "máx 30 caracteres"
+    },
+    {
+      "headline": "versión emocional/aspiracional, máx 40 caracteres",
+      "primary_text": "versión emocional, máx 125 caracteres",
+      "description": "máx 30 caracteres"
+    },
+    {
+      "headline": "versión urgente/escasez, máx 40 caracteres",
+      "primary_text": "versión con urgencia, máx 125 caracteres",
+      "description": "máx 30 caracteres"
+    }
+  ],
   "cta_type": "${ctaForObjective}",
   "age_min": 28,
   "age_max": 60,
@@ -187,6 +201,11 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
     { "type": "FULL_NAME" },
     { "type": "PHONE" },
     { "type": "EMAIL" }
+  ],
+  "recommendations": [
+    "recomendación 1 específica para esta propiedad y presupuesto",
+    "recomendación 2",
+    "recomendación 3"
   ]
 }`;
 
@@ -217,6 +236,25 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
         return json({ error: "La IA devolvió un formato no válido" }, 500);
       }
 
+      const copiesRaw = Array.isArray((parsed as any).copies)
+        ? ((parsed as any).copies as Array<Record<string, unknown>>)
+        : [];
+      const fallbackCopy = {
+        headline: String((parsed as any).headline ?? property.title),
+        primary_text: String((parsed as any).primary_text ?? ""),
+        description: (parsed as any).description ? String((parsed as any).description) : "",
+      };
+      const copies = (copiesRaw.length > 0 ? copiesRaw : [fallbackCopy]).map((c) => ({
+        headline: String(c.headline ?? fallbackCopy.headline).slice(0, 40),
+        primary_text: String(c.primary_text ?? fallbackCopy.primary_text).slice(0, 125),
+        description: c.description ? String(c.description).slice(0, 30) : "",
+      }));
+      while (copies.length < 3) copies.push(copies[copies.length - 1]);
+      const firstCopy = copies[0];
+      const recommendations = Array.isArray((parsed as any).recommendations)
+        ? ((parsed as any).recommendations as unknown[]).map((r) => String(r)).slice(0, 5)
+        : [];
+
       const images = (property.property_images ?? []) as Array<{
         file_url: string;
         is_cover: boolean;
@@ -233,9 +271,9 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
         whatsapp_phone_number: whatsappNumber,
         facebook_page_id: facebookPageId,
         name: String(parsed.name ?? `Campaña ${property.title}`).slice(0, 200),
-        headline: String(parsed.headline ?? property.title).slice(0, 40),
-        primary_text: String(parsed.primary_text ?? "").slice(0, 125),
-        description: parsed.description ? String(parsed.description).slice(0, 30) : null,
+        headline: firstCopy.headline,
+        primary_text: firstCopy.primary_text,
+        description: firstCopy.description || null,
         cta_type: (parsed.cta_type as string) ?? ctaForObjective,
         age_min: Number(parsed.age_min ?? 25),
         age_max: Number(parsed.age_max ?? 65),
@@ -261,7 +299,7 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
         .single();
       if (insertErr) return json({ error: insertErr.message }, 500);
 
-      return json({ campaign });
+      return json({ campaign, copies, recommendations });
     }
 
     // --- PUBLISH / PAUSE / RESUME -------------------------------------------
