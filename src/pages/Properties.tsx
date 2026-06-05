@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Plus, Search, Filter, X } from "lucide-react";
+import { Building2, Plus, Search, Filter, X, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useProperties, usePropertyZones, PropertyFilters } from "@/hooks/useProperties";
 import PropertyTable from "@/components/properties/PropertyTable";
+import PropertyGrid from "@/components/properties/PropertyGrid";
 import type { Property } from "@/hooks/useProperties";
 import { CampaignAIPanel } from "@/components/meta-ads/CampaignAIPanel";
 
@@ -39,6 +40,14 @@ export default function Properties() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<PropertyFilters>({});
   const [campaignProperty, setCampaignProperty] = useState<Property | null>(null);
+  const [view, setView] = useState<"grid" | "list">(
+    () => (localStorage.getItem("properties_view") as "grid" | "list") || "grid"
+  );
+
+  const setViewMode = (v: "grid" | "list") => {
+    setView(v);
+    localStorage.setItem("properties_view", v);
+  };
 
   const { data: properties, isLoading } = useProperties(filters);
   const { data: zones } = usePropertyZones();
@@ -104,6 +113,28 @@ export default function Properties() {
                 </Button>
               </CollapsibleTrigger>
             </Collapsible>
+            <div className="inline-flex rounded-md border bg-card p-0.5">
+              <Button
+                type="button"
+                variant={view === "grid" ? "secondary" : "ghost"}
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => setViewMode("grid")}
+                aria-label="Vista de tarjetas"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant={view === "list" ? "secondary" : "ghost"}
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => setViewMode("list")}
+                aria-label="Vista de lista"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           <Collapsible open={showFilters} onOpenChange={setShowFilters}>
@@ -283,12 +314,20 @@ export default function Properties() {
           </Collapsible>
         </div>
 
-        {/* Table */}
-        <PropertyTable
-          properties={properties || []}
-          isLoading={isLoading}
-          onCreateCampaign={(p) => setCampaignProperty(p)}
-        />
+        {/* Inventory */}
+        {view === "grid" ? (
+          <PropertyGrid
+            properties={properties || []}
+            isLoading={isLoading}
+            onCreateCampaign={(p) => setCampaignProperty(p)}
+          />
+        ) : (
+          <PropertyTable
+            properties={properties || []}
+            isLoading={isLoading}
+            onCreateCampaign={(p) => setCampaignProperty(p)}
+          />
+        )}
       </div>
       <CampaignAIPanel
         open={!!campaignProperty}
