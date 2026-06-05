@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
@@ -66,6 +66,34 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       </p>
       <p className="text-sm font-semibold mt-0.5">{value}</p>
     </div>
+  );
+}
+
+const AI_STEPS = [
+  "Analizando características de la propiedad...",
+  "Identificando audiencia ideal...",
+  "Creando 3 variantes de copy...",
+  "Calculando presupuesto óptimo...",
+  "Generando recomendaciones...",
+];
+
+function AnimatedLoadingText() {
+  const [idx, setIdx] = React.useState(0);
+  React.useEffect(() => {
+    const t = setInterval(
+      () => setIdx((i) => (i + 1) % AI_STEPS.length),
+      1800,
+    );
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <p
+      key={idx}
+      className="text-xs text-muted-foreground"
+      style={{ animation: "fadeIn 0.4s ease-out" }}
+    >
+      {AI_STEPS[idx]}
+    </p>
   );
 }
 
