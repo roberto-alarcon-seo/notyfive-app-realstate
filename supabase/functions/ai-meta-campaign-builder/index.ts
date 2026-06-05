@@ -151,61 +151,91 @@ serve(async (req) => {
         : `El objetivo es que el lead llene un formulario nativo de Meta con su nombre, teléfono y email para ser contactado por un asesor. El copy debe generar urgencia y destacar los beneficios de la propiedad.`;
       const ctaForObjective = objective === "MESSAGES" ? "WHATSAPP_MESSAGE" : "LEARN_MORE";
 
-      const prompt = `Eres un experto en publicidad inmobiliaria en Meta Ads.
-Genera la configuración completa para una campaña de captación de leads para la siguiente propiedad inmobiliaria en México.
+      const priceFormatted = property.price != null
+        ? Number(property.price).toLocaleString("es-MX")
+        : "N/A";
+      const suggestedBudget = Math.max(
+        15000,
+        Math.min(50000, Math.round((Number(property.price) || 1000000) / 100000) * 1000),
+      );
+      const prompt = `Eres un experto en publicidad inmobiliaria digital
+en México. Tu tarea es crear copies publicitarios para Meta Ads
+altamente específicos para esta propiedad exacta.
 
-OBJETIVO DE LA CAMPAÑA:
-${objectiveContext}
+OBJETIVO: ${objectiveContext}
 
-PROPIEDAD:
-- Título: ${property.title}
-- Tipo: ${property.property_type ?? "—"} en ${property.operation_type}
-- Precio: ${property.price} ${property.currency}
-- Características: ${property.bedrooms ?? "?"} recámaras, ${property.bathrooms ?? "?"} baños, ${property.sq_meters ?? "?"}m²
-- Ubicación: ${property.zone}${property.address ? `, ${property.address}` : ""}
-- Descripción: ${property.description ?? ""}
+DATOS COMPLETOS DE LA PROPIEDAD:
+- Nombre: ${property.title}
+- Tipo: ${property.property_type ?? "No especificado"}
+- Operación: ${property.operation_type}
+- Precio: $${priceFormatted} ${property.currency}
+- Recámaras: ${property.bedrooms ?? "N/A"}
+- Baños: ${property.bathrooms ?? "N/A"}
+- Superficie: ${property.sq_meters ?? "N/A"} m²
+- Zona/Colonia: ${property.zone ?? "N/A"}
+- Dirección: ${property.address ?? "No especificada"}
+- Descripción completa: ${property.description ?? "Sin descripción"}
 
-INSTRUCCIONES:
-Genera la configuración en formato JSON con esta estructura exacta. No incluyas explicaciones, solo el JSON:
+REGLAS PARA LOS COPIES:
+1. Usa datos REALES de la propiedad — nunca inventes características
+2. El headline DEBE mencionar algo específico: zona, precio, m² o
+   número de recámaras
+3. El texto principal debe crear deseo e incluir llamada a la acción
+4. Cada copy debe tener un enfoque distinto:
+   - Copy 1: Características y datos concretos (precio, m², zona)
+   - Copy 2: Estilo de vida y aspiración (qué se siente vivir ahí)
+   - Copy 3: Urgencia o escasez (oportunidad limitada, inversión)
+5. Máximo estricto: headline 40 chars, primary_text 125 chars,
+   description 30 chars
 
+INTERESES SUGERIDOS: elige los más relevantes según el tipo de
+propiedad y precio. Para propiedades de lujo (>$3M MXN) incluye
+intereses de inversión. Para propiedades medias incluye primera
+vivienda. Para rentas incluye búsqueda de departamento.
+
+Retorna ÚNICAMENTE este JSON sin texto adicional ni backticks:
 {
-  "name": "nombre de la campaña (incluye ciudad y tipo)",
+  "name": "nombre descriptivo con zona y tipo",
   "copies": [
     {
-      "headline": "versión directa e informativa, máx 40 caracteres",
-      "primary_text": "versión directa, máx 125 caracteres",
-      "description": "máx 30 caracteres"
+      "headline": "específico con dato real de la propiedad",
+      "primary_text": "texto que usa características reales",
+      "description": "corto y directo"
     },
     {
-      "headline": "versión emocional/aspiracional, máx 40 caracteres",
-      "primary_text": "versión emocional, máx 125 caracteres",
-      "description": "máx 30 caracteres"
+      "headline": "enfoque aspiracional con dato real",
+      "primary_text": "evoca el estilo de vida, menciona zona",
+      "description": "corto y directo"
     },
     {
-      "headline": "versión urgente/escasez, máx 40 caracteres",
-      "primary_text": "versión con urgencia, máx 125 caracteres",
-      "description": "máx 30 caracteres"
+      "headline": "urgencia con dato real del precio o zona",
+      "primary_text": "crea urgencia, menciona oportunidad única",
+      "description": "corto y directo"
     }
   ],
   "cta_type": "${ctaForObjective}",
   "age_min": 28,
   "age_max": 60,
   "genders": ["1", "2"],
-  "geo_locations": { "cities": [{ "key": "ciudad_key", "name": "${property.zone}" }], "countries": ["MX"] },
+  "geo_locations": {
+    "cities": [{ "key": "ciudad_key", "name": "${property.zone ?? "Ciudad de México"}" }],
+    "countries": ["MX"]
+  },
   "interests": [
     { "id": "6003107902433", "name": "Bienes raíces" },
-    { "id": "6002714398172", "name": "Compra de vivienda" }
+    { "id": "6002714398172", "name": "Compra de vivienda" },
+    { "id": "6003377666416", "name": "Inversión inmobiliaria" }
   ],
-  "daily_budget_cents": 25000,
+  "daily_budget_cents": ${suggestedBudget},
   "lead_form_fields": [
     { "type": "FULL_NAME" },
     { "type": "PHONE" },
     { "type": "EMAIL" }
   ],
   "recommendations": [
-    "recomendación 1 específica para esta propiedad y presupuesto",
-    "recomendación 2",
-    "recomendación 3"
+    "recomendación específica basada en el precio $${priceFormatted} y la zona ${property.zone ?? "N/A"}",
+    "recomendación sobre el tipo ${property.property_type ?? "propiedad"} en ${property.operation_type}",
+    "recomendación sobre presupuesto publicitario para este segmento de precio"
   ]
 }`;
 
@@ -218,7 +248,7 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [{ role: "user", content: prompt }],
-          max_tokens: 1000,
+          max_tokens: 2000,
         }),
       });
       if (aiRes.status === 429) return json({ error: "Límite de uso de IA alcanzado, intenta en unos minutos" }, 429);
@@ -239,17 +269,20 @@ Genera la configuración en formato JSON con esta estructura exacta. No incluyas
       const copiesRaw = Array.isArray((parsed as any).copies)
         ? ((parsed as any).copies as Array<Record<string, unknown>>)
         : [];
-      const fallbackCopy = {
-        headline: String((parsed as any).headline ?? property.title),
-        primary_text: String((parsed as any).primary_text ?? ""),
-        description: (parsed as any).description ? String((parsed as any).description) : "",
-      };
-      const copies = (copiesRaw.length > 0 ? copiesRaw : [fallbackCopy]).map((c) => ({
-        headline: String(c.headline ?? fallbackCopy.headline).slice(0, 40),
-        primary_text: String(c.primary_text ?? fallbackCopy.primary_text).slice(0, 125),
-        description: c.description ? String(c.description).slice(0, 30) : "",
-      }));
-      while (copies.length < 3) copies.push(copies[copies.length - 1]);
+      const validCopies = copiesRaw
+        .map((c) => ({
+          headline: String(c?.headline ?? "").slice(0, 40),
+          primary_text: String(c?.primary_text ?? "").slice(0, 125),
+          description: c?.description ? String(c.description).slice(0, 30) : "",
+        }))
+        .filter((c) => c.headline.length > 0 && c.primary_text.length > 0);
+      if (validCopies.length === 0) {
+        return json({ error: "La IA no generó copies válidos. Intenta de nuevo." }, 500);
+      }
+      while (validCopies.length < 3) {
+        validCopies.push(validCopies[validCopies.length - 1]);
+      }
+      const copies = validCopies;
       const firstCopy = copies[0];
       const recommendations = Array.isArray((parsed as any).recommendations)
         ? ((parsed as any).recommendations as unknown[]).map((r) => String(r)).slice(0, 5)
