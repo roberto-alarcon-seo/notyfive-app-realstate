@@ -90,6 +90,7 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
 
   // Reset when closing
   useEffect(() => {
@@ -111,6 +112,7 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
       setRecommendations([]);
       setPublishing(false);
       setSavingDraft(false);
+      setPreviewExpanded(false);
     }
   }, [open]);
 
@@ -271,6 +273,7 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
 
   const missingPageId =
     objective === "MESSAGES" && facebookPageId.trim().length < 5;
+  const canPublish = !!campaign && !missingPageId;
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
