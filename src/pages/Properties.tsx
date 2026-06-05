@@ -144,11 +144,11 @@ export default function Properties() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Zona</label>
                     <Select
-                      value={filters.zone || ""}
+                       value={filters.zone || "all"}
                       onValueChange={(v) =>
                         setFilters((prev) => ({
                           ...prev,
-                          zone: v || undefined,
+                           zone: v === "all" ? undefined : v,
                         }))
                       }
                     >
@@ -156,7 +156,7 @@ export default function Properties() {
                         <SelectValue placeholder="Todas las zonas" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todas las zonas</SelectItem>
+                         <SelectItem value="all">Todas las zonas</SelectItem>
                         {zones?.map((zone) => (
                           <SelectItem key={zone} value={zone}>
                             {zone}
@@ -169,11 +169,11 @@ export default function Properties() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Estatus</label>
                     <Select
-                      value={filters.status || ""}
+                       value={filters.status || "all"}
                       onValueChange={(v) =>
                         setFilters((prev) => ({
                           ...prev,
-                          status: v || undefined,
+                           status: v === "all" ? undefined : v,
                         }))
                       }
                     >
@@ -181,7 +181,7 @@ export default function Properties() {
                         <SelectValue placeholder="Todos los estatus" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos los estatus</SelectItem>
+                         <SelectItem value="all">Todos los estatus</SelectItem>
                         {STATUS_OPTIONS.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
@@ -194,11 +194,11 @@ export default function Properties() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Operación</label>
                     <Select
-                      value={filters.operation_type || ""}
+                       value={filters.operation_type || "all"}
                       onValueChange={(v) =>
                         setFilters((prev) => ({
                           ...prev,
-                          operation_type: v || undefined,
+                           operation_type: v === "all" ? undefined : v,
                         }))
                       }
                     >
@@ -206,7 +206,7 @@ export default function Properties() {
                         <SelectValue placeholder="Todas las operaciones" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todas las operaciones</SelectItem>
+                         <SelectItem value="all">Todas las operaciones</SelectItem>
                         {OPERATION_OPTIONS.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
