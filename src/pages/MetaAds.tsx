@@ -101,11 +101,7 @@ export default function MetaAds() {
             Gestión de campañas publicitarias
           </p>
         </div>
-        {isConnected && canManage && (
-          <Button onClick={() => setWizardOpen(true)}>
-            <Plus className="h-4 w-4" /> Nueva campaña
-          </Button>
-        )}
+        {/* El acceso principal a crear campañas es desde Propiedades. */}
       </header>
 
       <div className="flex-1 overflow-y-auto p-6">
@@ -130,6 +126,9 @@ export default function MetaAds() {
                   <div className="rounded-md border border-dashed border-border p-10 text-center space-y-3">
                     <p className="text-sm text-muted-foreground">
                       Aún no has creado campañas.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      También puedes crear campañas directamente desde tu inventario de propiedades.
                     </p>
                     {canManage && (
                       <Button onClick={() => setWizardOpen(true)}>

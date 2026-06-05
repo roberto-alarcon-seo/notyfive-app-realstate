@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { MoreHorizontal, Edit, Copy, Trash2, Power } from "lucide-react";
+import { MoreHorizontal, Edit, Copy, Trash2, Power, Megaphone } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -30,10 +30,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Property, usePropertyMutations } from "@/hooks/useProperties";
 import { useState } from "react";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PropertyTableProps {
   properties: Property[];
   isLoading: boolean;
+  onCreateCampaign?: (property: Property) => void;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -60,10 +63,16 @@ const formatPrice = (price: number, currency: string) => {
   }).format(price);
 };
 
-export default function PropertyTable({ properties, isLoading }: PropertyTableProps) {
+export default function PropertyTable({ properties, isLoading, onCreateCampaign }: PropertyTableProps) {
   const navigate = useNavigate();
   const { updateProperty, deleteProperty, duplicateProperty } = usePropertyMutations();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { enabled: metaAdsEnabled } = useFeatureFlag("meta_ads");
+  const { tenantRole, isSuperAdmin } = useAuth();
+  const canCreateCampaign =
+    metaAdsEnabled &&
+    !!onCreateCampaign &&
+    (isSuperAdmin || tenantRole === "administrador" || tenantRole === "manager");
 
   const handleToggleActive = (property: Property) => {
     updateProperty.mutate({ id: property.id, is_active: !property.is_active });
@@ -192,6 +201,14 @@ export default function PropertyTable({ properties, isLoading }: PropertyTablePr
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {canCreateCampaign && (
+                        <DropdownMenuItem
+                          onClick={() => onCreateCampaign?.(property)}
+                        >
+                          <Megaphone className="mr-2 h-4 w-4" />
+                          Campaña Meta Ads
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         onClick={() => navigate(`/properties/${property.id}`)}
                       >

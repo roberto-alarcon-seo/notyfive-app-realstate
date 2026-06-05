@@ -158,7 +158,7 @@ export function CampaignsList({
                   )}
                 </div>
                 {c.meta_campaign_id &&
-                  (c.status === "active" || c.status === "paused") &&
+                  c.status === "active" &&
                   insightsByCampaign &&
                   (() => {
                     const ins = insightsByCampaign[c.id];
@@ -168,12 +168,12 @@ export function CampaignsList({
                         ? ins.messages_started
                         : ins.leads;
                     const resultLabel =
-                      c.campaign_objective === "MESSAGES" ? "Conv" : "Leads";
+                      c.campaign_objective === "MESSAGES" ? "convs" : "leads";
                     return (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Impresiones: {ins.impressions.toLocaleString("es-MX")} · Clics:{" "}
-                        {ins.clicks.toLocaleString("es-MX")} · {resultLabel}: {result} · Gastado: $
-                        {ins.spend.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN
+                        {ins.impressions.toLocaleString("es-MX")} impresiones ·{" "}
+                        {result} {resultLabel} · $
+                        {ins.spend.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN gastado
                       </p>
                     );
                   })()}
