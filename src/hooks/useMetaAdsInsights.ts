@@ -76,7 +76,10 @@ export function useCampaignInsights(
   });
 }
 
-export function useSummaryInsights(dateRange: DateRange) {
+export function useSummaryInsights(
+  dateRange: DateRange,
+  enabled: boolean = true,
+) {
   return useQuery({
     queryKey: ["meta-ads-insights", "summary", dateRange],
     queryFn: async (): Promise<SummaryInsightsResponse> => {
@@ -91,9 +94,21 @@ export function useSummaryInsights(dateRange: DateRange) {
           },
         },
       );
-      if (error) throw error;
+      if (error) {
+        return {
+          campaigns: [],
+          totals: {
+            impressions: 0,
+            clicks: 0,
+            spend: 0,
+            leads: 0,
+            messages_started: 0,
+          },
+        };
+      }
       return data as SummaryInsightsResponse;
     },
+    enabled,
     staleTime: 5 * 60 * 1000,
   });
 }

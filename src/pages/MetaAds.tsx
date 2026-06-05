@@ -80,7 +80,7 @@ export default function MetaAds() {
   const [dateRange, setDateRange] = useState<DateRange>({ preset: "last_7d" });
 
   const isConnected = connection?.status === "connected";
-  const { data: summary } = useSummaryInsights(dateRange);
+  const { data: summary } = useSummaryInsights(dateRange, isConnected);
   const insightsByCampaign = (summary?.campaigns ?? []).reduce(
     (acc, s) => {
       acc[s.campaign_id] = s.insights;
