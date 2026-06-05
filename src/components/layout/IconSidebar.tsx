@@ -139,7 +139,6 @@ export function IconSidebar() {
 
     const supervisionItems = filterByFlag([
       { icon: Home, label: "Inventario", path: "/properties", feature: "inventory_management" },
-      { icon: Building2, label: "Asesores por propiedad", path: "/inventory-assignments" },
       { icon: ShieldCheck, label: "Supervisión de leads", path: "/admin-leads", badgeKey: "atRisk" },
     ]);
     if (supervisionItems.length > 0) {
