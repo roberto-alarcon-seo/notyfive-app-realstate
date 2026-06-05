@@ -182,8 +182,11 @@ REGLAS PARA LOS COPIES:
    - Copy 1: Características y datos concretos (precio, m², zona)
    - Copy 2: Estilo de vida y aspiración (qué se siente vivir ahí)
    - Copy 3: Urgencia o escasez (oportunidad limitada, inversión)
-5. Máximo estricto: headline 40 chars, primary_text 125 chars,
-   description 30 chars
+5. Límites de caracteres:
+   - headline: máximo 40 caracteres (título debajo de la imagen)
+   - primary_text: máximo 400 caracteres (texto encima de la imagen,
+     debe incluir características completas con emojis como bullets)
+   - description: máximo 30 caracteres
 
 REGLAS ADICIONALES DE FORMATO:
 - SIEMPRE incluye 1-2 emojis relevantes en cada copy
@@ -198,12 +201,18 @@ REGLAS ADICIONALES DE FORMATO:
 - Ejemplo de headline bueno: "🏠 Penthouse 210m² en Chico Reservado"
 - Ejemplo de headline malo: "Hermosa propiedad disponible"
 
-EJEMPLO DE COPY COMPLETO ESPERADO:
+EJEMPLO DE COPY COMPLETO ESPERADO PARA INMOBILIARIA:
 {
-  "headline": "🏠 ${property.bedrooms ?? "N"} Rec · ${property.sq_meters ?? "N"}m² en ${property.zone ?? "zona"}",
-  "primary_text": "📍 Exclusivo ${property.property_type ?? "inmueble"} en ${property.zone ?? "zona privilegiada"}. ${property.bedrooms ?? "N"} recámaras, ${property.bathrooms ?? "N"} baños, ${property.sq_meters ?? "N"}m² de diseño. Precio: $${priceFormatted} ${property.currency}. ¡Escríbenos ahora! 🔑",
+  "headline": "🏠 Penthouse 210m² · Chico Reservado",
+  "primary_text": "🌟 Penthouse Vista Galáctica — La joya de Chico Reservado\\n\\n📐 210 m² de diseño arquitectónico exclusivo\\n🛏 3 recámaras con vestidor en suite\\n🚿 4 baños completos de lujo\\n🌿 Terraza privada con vista panorámica\\n🏊 Acceso a amenidades de primer nivel\\n🚗 2 lugares de estacionamiento\\n\\n💰 Precio: $2,500,000,000 COP\\n📍 Chico Reservado, Bogotá\\n\\n¿Te interesa conocerlo? ¡Escríbenos ahora y agenda tu visita! 🔑",
   "description": "Agenda tu visita hoy"
 }
+
+REGLA CLAVE: El primary_text debe incluir TODAS las características
+importantes de la propiedad usando emojis como bullets visuales.
+Formato: emoji + característica, una por línea (usa \\n para saltos).
+Incluye SIEMPRE: m², recámaras, baños, amenidades destacadas, precio
+formateado y llamada a la acción.
 
 INTERESES SUGERIDOS: elige los más relevantes según el tipo de
 propiedad y precio. Para propiedades de lujo (>$3M MXN) incluye
@@ -265,7 +274,7 @@ Retorna ÚNICAMENTE este JSON sin texto adicional ni backticks:
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [{ role: "user", content: prompt }],
-          max_tokens: 2000,
+          max_tokens: 3000,
         }),
       });
       if (aiRes.status === 429) return json({ error: "Límite de uso de IA alcanzado, intenta en unos minutos" }, 429);
@@ -289,7 +298,7 @@ Retorna ÚNICAMENTE este JSON sin texto adicional ni backticks:
       const validCopies = copiesRaw
         .map((c) => ({
           headline: String(c?.headline ?? "").slice(0, 40),
-          primary_text: String(c?.primary_text ?? "").slice(0, 125),
+          primary_text: String(c?.primary_text ?? "").slice(0, 500),
           description: c?.description ? String(c.description).slice(0, 30) : "",
         }))
         .filter((c) => c.headline.length > 0 && c.primary_text.length > 0);
