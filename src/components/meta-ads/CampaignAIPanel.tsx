@@ -118,6 +118,7 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
   const [publishing, setPublishing] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [expandedCopyIdx, setExpandedCopyIdx] = useState<number | null>(null);
 
   // Reset when closing
   useEffect(() => {
@@ -240,7 +241,7 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
     );
     const payload: Record<string, unknown> = {
       headline: editedHeadline.slice(0, 40),
-      primary_text: editedText.slice(0, 125),
+      primary_text: editedText.slice(0, 500),
       daily_budget_cents: budget * 100,
       age_min: ageMin,
       age_max: ageMax,
@@ -473,9 +474,28 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
                       <p className="text-sm font-semibold leading-snug">
                         {copy.headline}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-3">
+                      <p
+                        className={cn(
+                          "text-xs text-muted-foreground mt-2 leading-relaxed whitespace-pre-line",
+                          expandedCopyIdx !== i && "line-clamp-3",
+                        )}
+                      >
                         {copy.primary_text}
                       </p>
+                      {copy.primary_text.length > 120 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedCopyIdx(
+                              expandedCopyIdx === i ? null : i,
+                            );
+                          }}
+                          className="text-[10px] text-primary mt-1 hover:underline"
+                        >
+                          {expandedCopyIdx === i ? "Ver menos" : "Ver completo"}
+                        </button>
+                      )}
                     </button>
                   ))}
 
@@ -506,16 +526,16 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
                           Texto principal
                         </Label>
                         <span className="text-[10px] text-muted-foreground">
-                          {editedText.length}/125
+                          {editedText.length}/500
                         </span>
                       </div>
                       <Textarea
                         id="copy-text"
                         value={editedText}
-                        maxLength={125}
+                        maxLength={500}
                         onChange={(e) => setEditedText(e.target.value)}
-                        rows={5}
-                        className="resize-none text-sm leading-relaxed"
+                        rows={7}
+                        className="resize-none text-sm leading-relaxed whitespace-pre-line"
                       />
                     </div>
                   </div>
