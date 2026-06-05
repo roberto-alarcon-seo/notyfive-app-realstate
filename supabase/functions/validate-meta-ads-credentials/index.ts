@@ -64,7 +64,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -72,14 +71,12 @@ serve(async (req) => {
     }
     const token = authHeader.replace("Bearer ", "");
 
-    const authClient = createClient(supabaseUrl, anonKey);
-    const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims) {
+    const admin = createClient(supabaseUrl, serviceKey);
+    const { data: { user }, error: authError } = await admin.auth.getUser(token);
+    if (authError || !user) {
       return json({ error: "Unauthorized" }, 401);
     }
-    const userId = claimsData.claims.sub as string;
-
-    const admin = createClient(supabaseUrl, serviceKey);
+    const userId = user.id;
 
     // Verify role + tenant
     const { data: profile } = await admin
