@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePartnerBranding } from "@/contexts/PartnerBrandingContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export function useSignOutRedirect() {
   const { signOut } = useAuth();
+  const { partner } = usePartnerBranding();
 
   return useCallback(async () => {
     try {
@@ -25,6 +25,7 @@ export function useSignOutRedirect() {
       }
     }
 
-    window.location.href = "https://auth.brokia24.com/login?signout=1";
-  }, [signOut]);
+    const fallback = "https://auth.brokia24.com/login?signout=1";
+    window.location.href = partner?.logoutRedirectUrl || fallback;
+  }, [signOut, partner?.logoutRedirectUrl]);
 }
