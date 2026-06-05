@@ -130,118 +130,130 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#07060d] relative overflow-hidden px-4">
-      {/* Ambient purple glow */}
-      <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-[#942CCC]/20 blur-[120px]" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[#4F2BCC]/20 blur-[120px]" />
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#050507] relative overflow-hidden px-4 selection:bg-[#942CCC]/30">
+      {/* Ambient glows */}
+      <div className="pointer-events-none fixed -top-32 -left-32 h-[40rem] w-[40rem] rounded-full bg-[#942CCC]/20 blur-[120px]" />
+      <div className="pointer-events-none fixed -bottom-32 -right-32 h-[40rem] w-[40rem] rounded-full bg-[#4F46E5]/15 blur-[120px]" />
+      <div
+        className="pointer-events-none fixed inset-0 opacity-[0.025]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+          backgroundSize: "32px 32px",
+        }}
+      />
 
-      {/* Card with gradient border */}
-      <div className="relative w-full max-w-md animate-fade-in">
-        <div className="rounded-2xl p-[1px] bg-gradient-to-b from-[#3b6fff] via-[#942CCC]/40 to-[#3b6fff]/30">
-          <div className="rounded-2xl bg-[#0c0a16] px-8 py-10 sm:px-10 sm:py-12">
-            {/* Logo */}
-            <div className="flex justify-center mb-6">
-              <img
-                src={partner.logoUrl}
-                alt={`${partner.name} Logo`}
-                className="h-12 w-auto object-contain"
-              />
+      {/* Card with luminous gradient border */}
+      <div className="relative w-full max-w-[440px] animate-fade-in">
+        <div className="absolute -inset-0.5 rounded-[30px] bg-gradient-to-tr from-[#942CCC]/50 via-transparent to-[#4F46E5]/40 blur-sm opacity-60" />
+
+        <div className="relative rounded-[28px] bg-[#0D0D12]/80 backdrop-blur-2xl border border-white/10 px-8 py-10 sm:px-10 sm:py-12 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
+          {/* Logo */}
+          <div className="flex justify-center mb-7">
+            <img
+              src={partner.logoUrl}
+              alt={`${partner.name} Logo`}
+              className="h-12 w-auto object-contain drop-shadow-[0_4px_20px_rgba(148,44,204,0.35)]"
+            />
+          </div>
+
+          {/* Title */}
+          <h1 className="text-center text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Bienvenido de vuelta
+          </h1>
+          <p className="text-center text-sm text-white/50 mt-2 mb-9">
+            Accede a tu consola y a la academia
+          </p>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
+            <div className="space-y-2">
+              <label
+                htmlFor="email"
+                className="block text-[11px] font-semibold text-white/40 uppercase tracking-[0.12em] ml-0.5"
+              >
+                Email
+              </label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 group-focus-within:text-[#b266ff] transition-colors" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="tu@correo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 pl-11 bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 hover:border-white/20 focus-visible:border-[#942CCC] focus-visible:ring-2 focus-visible:ring-[#942CCC]/30 focus-visible:ring-offset-0 rounded-xl transition-all"
+                  disabled={isLoading}
+                  autoComplete="email"
+                />
+              </div>
+              {errors.email && (
+                <p className="text-xs text-red-400">{errors.email}</p>
+              )}
             </div>
 
-            {/* Title */}
-            <h1 className="text-center text-3xl sm:text-4xl font-bold text-white tracking-tight">
-              Bienvenido de vuelta
-            </h1>
-            <p className="text-center text-sm text-white/60 mt-2 mb-8">
-              Accede a tu consola y a la academia
-            </p>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Email */}
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-white/80">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="correo@ejemplo.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 pl-10 bg-white/[0.06] border-white/10 text-white placeholder:text-white/30 hover:border-white/20 focus-visible:border-[#942CCC] focus-visible:ring-0 rounded-lg transition-colors"
-                    disabled={isLoading}
-                    autoComplete="email"
-                  />
-                </div>
-                {errors.email && (
-                  <p className="text-xs text-red-400">{errors.email}</p>
-                )}
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-white/80">
+            {/* Password */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center ml-0.5">
+                <label
+                  htmlFor="password"
+                  className="block text-[11px] font-semibold text-white/40 uppercase tracking-[0.12em]"
+                >
                   Contraseña
                 </label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 pl-10 pr-11 bg-white/[0.06] border-white/10 text-white placeholder:text-white/30 hover:border-white/20 focus-visible:border-[#942CCC] focus-visible:ring-0 rounded-lg transition-colors"
-                    disabled={isLoading}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors p-1"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-xs text-red-400">{errors.password}</p>
-                )}
-              </div>
-
-              {/* Forgot password */}
-              <div className="flex justify-end">
                 <Link
                   to="/auth/forgot-password"
-                  className="text-xs text-white/50 hover:text-white/80 transition-colors"
+                  className="text-[11px] font-medium text-[#b266ff] hover:text-[#d4a5ff] transition-colors"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 group-focus-within:text-[#b266ff] transition-colors" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 pl-11 pr-12 bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 hover:border-white/20 focus-visible:border-[#942CCC] focus-visible:ring-2 focus-visible:ring-[#942CCC]/30 focus-visible:ring-offset-0 rounded-xl transition-all"
+                  disabled={isLoading}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/80 transition-colors p-1"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-xs text-red-400">{errors.password}</p>
+              )}
+            </div>
 
-              {/* Submit */}
-              <Button
-                type="submit"
-                className="w-full h-12 rounded-lg bg-gradient-to-r from-[#b266ff] to-[#5b3bff] hover:opacity-95 transition-all font-semibold text-white text-base shadow-[0_8px_24px_-8px_rgba(148,44,204,0.6)] border-0"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Iniciando sesión...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Iniciar sesión
-                  </>
-                )}
-              </Button>
-            </form>
-          </div>
+            {/* Submit */}
+            <Button
+              type="submit"
+              className="relative w-full h-12 mt-2 rounded-xl bg-gradient-to-r from-[#942CCC] via-[#A855F7] to-[#4F46E5] hover:opacity-95 hover:shadow-[0_0_40px_-5px_rgba(148,44,204,0.6)] active:scale-[0.99] transition-all font-semibold text-white text-base shadow-[0_10px_30px_-10px_rgba(148,44,204,0.7)] border-0"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Iniciando sesión...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Iniciar sesión
+                </>
+              )}
+            </Button>
+          </form>
         </div>
       </div>
     </div>
