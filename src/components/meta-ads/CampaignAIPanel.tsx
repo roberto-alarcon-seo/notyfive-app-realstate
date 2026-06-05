@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Loader2,
   Sparkles,
@@ -66,6 +65,34 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       </p>
       <p className="text-sm font-semibold mt-0.5">{value}</p>
     </div>
+  );
+}
+
+const AI_STEPS = [
+  "Analizando características de la propiedad...",
+  "Identificando audiencia ideal...",
+  "Creando 3 variantes de copy...",
+  "Calculando presupuesto óptimo...",
+  "Generando recomendaciones...",
+];
+
+function AnimatedLoadingText() {
+  const [idx, setIdx] = React.useState(0);
+  React.useEffect(() => {
+    const t = setInterval(
+      () => setIdx((i) => (i + 1) % AI_STEPS.length),
+      1800,
+    );
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <p
+      key={idx}
+      className="text-xs text-muted-foreground"
+      style={{ animation: "fadeIn 0.4s ease-out" }}
+    >
+      {AI_STEPS[idx]}
+    </p>
   );
 }
 
@@ -279,10 +306,20 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-4xl overflow-y-auto p-0"
+        className="w-full sm:max-w-4xl p-0 flex flex-col h-full"
       >
+        <style>{`
+          @keyframes campaignAIBounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+            40% { transform: translateY(-8px); opacity: 1; }
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
         {/* Header */}
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border space-y-3">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border space-y-3 shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-2 min-w-0">
               <SheetTitle className="flex items-center gap-2">
@@ -385,293 +422,314 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
         </SheetHeader>
 
         {/* Body */}
-        <div className="p-6">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {generationError ? (
-            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-              {generationError}
+            <div className="p-6">
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+                {generationError}
+              </div>
             </div>
           ) : generating && !campaign ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-4">
-              <div className="relative">
-                <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-medium text-foreground">
-                  Generando tu campaña con IA
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Analizando la propiedad y creando copies personalizados...
-                </p>
-              </div>
-              <div className="flex gap-1.5 mt-2">
+            <div className="h-full flex flex-col items-center justify-center gap-6 px-6 py-16">
+              <div className="flex items-end gap-2 h-8">
                 {[0, 1, 2].map((i) => (
-                  <div
+                  <span
                     key={i}
-                    className="h-1.5 w-8 rounded-full bg-primary/30 animate-pulse"
-                    style={{ animationDelay: `${i * 0.2}s` }}
+                    className="h-3 w-3 rounded-full bg-primary inline-block"
+                    style={{
+                      animation:
+                        "campaignAIBounce 1.4s infinite ease-in-out both",
+                      animationDelay: `${i * 0.16}s`,
+                    }}
                   />
                 ))}
               </div>
+              <div className="text-center space-y-2 max-w-xs">
+                <p className="text-sm font-medium text-foreground">
+                  Generando tu campaña con IA
+                </p>
+                <AnimatedLoadingText />
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Column 1: Copies */}
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold">Copies generados</h3>
-                {!campaign ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                  </div>
-                ) : (
-                  <>
-                    {copies.map((copy, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => selectCopy(i)}
-                        className={cn(
-                          "w-full text-left border rounded-xl p-4 cursor-pointer transition-all",
-                          "hover:border-primary/50 hover:bg-primary/5",
-                          selectedCopyIndex === i &&
-                            "border-primary bg-primary/10 ring-1 ring-primary/20",
-                        )}
-                      >
-                        <p className="text-sm font-semibold leading-snug">
-                          {copy.headline}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-3">
-                          {copy.primary_text}
-                        </p>
-                      </button>
-                    ))}
-
-                    <div className="pt-4 mt-2 border-t-2 border-border space-y-3">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                        Editar copy seleccionado
-                      </p>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between">
-                          <Label htmlFor="copy-headline" className="text-xs">
-                            Título
-                          </Label>
-                          <span className="text-[10px] text-muted-foreground">
-                            {editedHeadline.length}/40
-                          </span>
-                        </div>
-                        <Input
-                          id="copy-headline"
-                          value={editedHeadline}
-                          maxLength={40}
-                          onChange={(e) => setEditedHeadline(e.target.value)}
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between">
-                          <Label htmlFor="copy-text" className="text-xs">
-                            Texto principal
-                          </Label>
-                          <span className="text-[10px] text-muted-foreground">
-                            {editedText.length}/125
-                          </span>
-                        </div>
-                        <Textarea
-                          id="copy-text"
-                          value={editedText}
-                          maxLength={125}
-                          onChange={(e) => setEditedText(e.target.value)}
-                          rows={5}
-                          className="resize-none text-sm leading-relaxed"
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-              </section>
-
-              {/* Column 2: Segmentation */}
-              <section className="space-y-4">
-                <h3 className="text-sm font-semibold">Segmentación</h3>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">Intereses</Label>
-                  {generating || interests.length === 0 ? (
-                    <Skeleton className="h-16 w-full" />
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {interests.map((interest) => {
-                        const active = activeInterestIds.includes(interest.id);
-                        return (
-                          <button
-                            key={interest.id}
-                            type="button"
-                            onClick={() => toggleInterest(interest.id)}
-                            className={cn(
-                              "px-2.5 py-1 rounded-full text-xs border cursor-pointer transition-all",
-                              active
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "text-muted-foreground border-border hover:bg-accent",
-                            )}
-                          >
-                            {interest.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">
-                    Edad: {ageMin} – {ageMax} años
-                  </Label>
-                  <div className="flex flex-col gap-2">
-                    <input
-                      type="range"
-                      min={18}
-                      max={50}
-                      value={ageMin}
-                      onChange={(e) => setAgeMin(Number(e.target.value))}
-                      className="w-full accent-primary"
-                    />
-                    <input
-                      type="range"
-                      min={40}
-                      max={70}
-                      value={ageMax}
-                      onChange={(e) => setAgeMax(Number(e.target.value))}
-                      className="w-full accent-primary"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">
-                    Presupuesto diario: ${budget} MXN
-                  </Label>
-                  <input
-                    type="range"
-                    min={100}
-                    max={1000}
-                    step={50}
-                    value={budget}
-                    onChange={(e) => setBudget(Number(e.target.value))}
-                    className="w-full accent-primary"
-                  />
-                  <p className="text-[11px] text-muted-foreground">
-                    Inversión semanal estimada: ${(budget * 7).toLocaleString("es-MX")} MXN
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mt-3">
-                  <MetricCard
-                    label="Alcance est."
-                    value={estimatedReach.toLocaleString("es-MX")}
-                  />
-                  <MetricCard label="Leads/sem" value={`~${estimatedLeads}`} />
-                  <MetricCard label="CPL MXN" value={`$${estimatedCPL}`} />
-                </div>
-              </section>
-
-              {/* Column 3: Preview + Launch */}
-              <section className="flex flex-col gap-4">
-                <h3 className="text-sm font-semibold">Vista previa</h3>
-
-                <div className="border border-border rounded-xl overflow-hidden bg-card">
-                  <div className="flex items-center gap-2 p-3 border-b border-border">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
-                      {(tenant?.name ?? "Tu").slice(0, 1).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium truncate">
-                        {tenant?.name ?? "Tu inmobiliaria"}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">Patrocinado</p>
-                    </div>
-                  </div>
-                  <div className="px-3 py-2">
-                    <p
+            <div className="grid grid-cols-1 lg:grid-cols-2 h-full lg:overflow-hidden">
+              {/* LEFT COLUMN — Configuration (scrollable) */}
+              <div className="lg:overflow-y-auto p-6 space-y-8">
+                {/* Section A: Copies */}
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold">Copies generados</h3>
+                  {copies.map((copy, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => selectCopy(i)}
                       className={cn(
-                        "text-xs leading-relaxed whitespace-pre-wrap",
-                        !previewExpanded && "line-clamp-3",
+                        "w-full text-left border rounded-xl p-4 cursor-pointer transition-all",
+                        "hover:border-primary/50 hover:bg-primary/5",
+                        selectedCopyIndex === i &&
+                          "border-primary bg-primary/10 ring-1 ring-primary/20",
                       )}
                     >
-                      {editedText || "Texto del anuncio…"}
+                      <p className="text-sm font-semibold leading-snug">
+                        {copy.headline}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-3">
+                        {copy.primary_text}
+                      </p>
+                    </button>
+                  ))}
+
+                  <div className="pt-4 mt-2 border-t-2 border-border space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Editar copy seleccionado
                     </p>
-                    {editedText && editedText.length > 80 && (
-                      <button
-                        type="button"
-                        onClick={() => setPreviewExpanded((v) => !v)}
-                        className="text-[10px] text-primary mt-1 hover:underline"
-                      >
-                        {previewExpanded ? "Ver menos" : "Ver más"}
-                      </button>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <Label htmlFor="copy-headline" className="text-xs">
+                          Título
+                        </Label>
+                        <span className="text-[10px] text-muted-foreground">
+                          {editedHeadline.length}/40
+                        </span>
+                      </div>
+                      <Input
+                        id="copy-headline"
+                        value={editedHeadline}
+                        maxLength={40}
+                        onChange={(e) => setEditedHeadline(e.target.value)}
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <Label htmlFor="copy-text" className="text-xs">
+                          Texto principal
+                        </Label>
+                        <span className="text-[10px] text-muted-foreground">
+                          {editedText.length}/125
+                        </span>
+                      </div>
+                      <Textarea
+                        id="copy-text"
+                        value={editedText}
+                        maxLength={125}
+                        onChange={(e) => setEditedText(e.target.value)}
+                        rows={5}
+                        className="resize-none text-sm leading-relaxed"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section B: Audience & budget */}
+                <section className="space-y-4">
+                  <h3 className="text-sm font-semibold">
+                    Audiencia y presupuesto
+                  </h3>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs">Intereses</Label>
+                    {interests.length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground">
+                        Sin intereses sugeridos.
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {interests.map((interest) => {
+                          const active = activeInterestIds.includes(
+                            interest.id,
+                          );
+                          return (
+                            <button
+                              key={interest.id}
+                              type="button"
+                              onClick={() => toggleInterest(interest.id)}
+                              className={cn(
+                                "px-2.5 py-1 rounded-full text-xs border cursor-pointer transition-all",
+                                active
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "text-muted-foreground border-border hover:bg-accent",
+                              )}
+                            >
+                              {interest.name}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
-                  {coverImageUrl ? (
-                    <img
-                      src={coverImageUrl}
-                      alt=""
-                      className="w-full aspect-video object-cover"
-                    />
-                  ) : (
-                    <div className="w-full aspect-video bg-muted flex items-center justify-center text-muted-foreground text-xs">
-                      Sin imagen
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Rango de edad</Label>
+                      <span className="text-xs text-muted-foreground">
+                        {ageMin} – {ageMax} años
+                      </span>
                     </div>
-                  )}
-                  <div className="flex items-center justify-between gap-3 p-3 bg-muted/40">
-                    <p className="text-sm font-semibold truncate">
-                      {editedHeadline || "Título del anuncio"}
-                    </p>
-                    <button
-                      type="button"
-                      className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground font-medium shrink-0"
-                    >
-                      {objective === "MESSAGES" ? "Enviar mensaje" : "Más información"}
-                    </button>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="range"
+                        min={18}
+                        max={50}
+                        value={ageMin}
+                        onChange={(e) => setAgeMin(Number(e.target.value))}
+                        className="w-full accent-primary"
+                      />
+                      <input
+                        type="range"
+                        min={40}
+                        max={70}
+                        value={ageMax}
+                        onChange={(e) => setAgeMax(Number(e.target.value))}
+                        className="w-full accent-primary"
+                      />
+                    </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Presupuesto diario</Label>
+                      <span className="text-xs text-muted-foreground">
+                        ${budget} MXN
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={100}
+                      max={1000}
+                      step={50}
+                      value={budget}
+                      onChange={(e) => setBudget(Number(e.target.value))}
+                      className="w-full accent-primary"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Inversión semanal estimada: $
+                      {(budget * 7).toLocaleString("es-MX")} MXN
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    <MetricCard
+                      label="Alcance est."
+                      value={estimatedReach.toLocaleString("es-MX")}
+                    />
+                    <MetricCard
+                      label="Leads/sem"
+                      value={`~${estimatedLeads}`}
+                    />
+                    <MetricCard label="CPL MXN" value={`$${estimatedCPL}`} />
+                  </div>
+                </section>
+              </div>
+
+              {/* RIGHT COLUMN — Preview + fixed launch footer */}
+              <div className="flex flex-col border-t lg:border-t-0 lg:border-l border-border lg:h-full lg:overflow-hidden">
+                <div className="flex-1 lg:overflow-y-auto p-6 space-y-4">
+                  <h3 className="text-sm font-semibold">Vista previa</h3>
+
+                  <div className="border border-border rounded-xl overflow-hidden bg-card">
+                    <div className="flex items-center gap-2 p-3 border-b border-border">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
+                        {(tenant?.name ?? "Tu").slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">
+                          {tenant?.name ?? "Tu inmobiliaria"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          Patrocinado
+                        </p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-2">
+                      <p
+                        className={cn(
+                          "text-xs leading-relaxed whitespace-pre-wrap",
+                          !previewExpanded && "line-clamp-3",
+                        )}
+                      >
+                        {editedText || "Texto del anuncio…"}
+                      </p>
+                      {editedText && editedText.length > 80 && (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewExpanded((v) => !v)}
+                          className="text-[10px] text-primary mt-1 hover:underline"
+                        >
+                          {previewExpanded ? "Ver menos" : "Ver más"}
+                        </button>
+                      )}
+                    </div>
+                    {coverImageUrl ? (
+                      <img
+                        src={coverImageUrl}
+                        alt=""
+                        className="w-full aspect-video object-cover"
+                      />
+                    ) : (
+                      <div className="w-full aspect-video bg-muted flex items-center justify-center text-muted-foreground text-xs">
+                        Sin imagen
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-3 p-3 bg-muted/40">
+                      <p className="text-sm font-semibold truncate">
+                        {editedHeadline || "Título del anuncio"}
+                      </p>
+                      <button
+                        type="button"
+                        className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground font-medium shrink-0"
+                      >
+                        {objective === "MESSAGES"
+                          ? "Enviar mensaje"
+                          : "Más información"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 text-xs text-primary hover:underline w-full justify-center py-1"
+                      >
+                        <Lightbulb className="h-3.5 w-3.5" />
+                        Ver recomendaciones IA (
+                        {(recommendations.length > 0
+                          ? recommendations
+                          : DEFAULT_RECOMMENDATIONS
+                        ).length}
+                        )
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="center"
+                      side="top"
+                      className="w-80"
+                    >
+                      <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                        <Lightbulb className="h-3.5 w-3.5 text-primary" />
+                        Recomendaciones IA
+                      </p>
+                      <ul className="space-y-2">
+                        {(recommendations.length > 0
+                          ? recommendations
+                          : DEFAULT_RECOMMENDATIONS
+                        ).map((rec, i) => (
+                          <li
+                            key={i}
+                            className="text-xs text-muted-foreground flex items-start gap-1.5"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                            <span>{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex items-center gap-2 text-xs text-primary hover:underline w-full justify-center py-1"
-                    >
-                      <Lightbulb className="h-3.5 w-3.5" />
-                      Ver recomendaciones IA (
-                      {(recommendations.length > 0
-                        ? recommendations
-                        : DEFAULT_RECOMMENDATIONS
-                      ).length}
-                      )
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="center" side="top" className="w-80">
-                    <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
-                      <Lightbulb className="h-3.5 w-3.5 text-primary" />
-                      Recomendaciones IA
-                    </p>
-                    <ul className="space-y-2">
-                      {(recommendations.length > 0
-                        ? recommendations
-                        : DEFAULT_RECOMMENDATIONS
-                      ).map((rec, i) => (
-                        <li
-                          key={i}
-                          className="text-xs text-muted-foreground flex items-start gap-1.5"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                          <span>{rec}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </PopoverContent>
-                </Popover>
-
-                <div className="mt-auto space-y-2">
+                {/* Fixed footer */}
+                <div className="border-t border-border p-4 space-y-2 shrink-0 bg-background">
                   {missingPageId && campaign && (
                     <p className="text-xs text-destructive text-center flex items-center justify-center gap-1">
                       <Settings2 className="h-3 w-3" />
@@ -720,7 +778,7 @@ export function CampaignAIPanel({ open, property, onClose }: CampaignAIPanelProp
                     )}
                   </Button>
                 </div>
-              </section>
+              </div>
             </div>
           )}
         </div>
