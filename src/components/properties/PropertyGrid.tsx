@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { MoreHorizontal, Edit, Copy, Trash2, Power, Megaphone, MapPin, Bed, Bath, Ruler } from "lucide-react";
+import { MoreHorizontal, Edit, Copy, Trash2, Power, Megaphone, MapPin, Bed, Bath, Ruler, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,8 +20,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Property, usePropertyMutations } from "@/hooks/useProperties";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffectiveTenantId } from "@/hooks/useEffectiveTenantId";
+import { AssignAgentsPopover } from "./AssignAgentsPopover";
 import { cn } from "@/lib/utils";
 
 interface PropertyGridProps {
@@ -54,12 +58,35 @@ export default function PropertyGrid({ properties, isLoading, onCreateCampaign }
   const navigate = useNavigate();
   const { updateProperty, deleteProperty, duplicateProperty } = usePropertyMutations();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [assignOpenId, setAssignOpenId] = useState<string | null>(null);
   const { enabled: metaAdsEnabled } = useFeatureFlag("meta_ads");
   const { tenantRole, isSuperAdmin } = useAuth();
+  const tenantId = useEffectiveTenantId();
   const canCreateCampaign =
     metaAdsEnabled &&
     !!onCreateCampaign &&
     (isSuperAdmin || tenantRole === "administrador" || tenantRole === "manager");
+  const canManage =
+    isSuperAdmin || tenantRole === "administrador" || tenantRole === "manager";
+
+  const { data: assignmentsMap } = useQuery({
+    queryKey: ["inventory-assignments-all", tenantId],
+    enabled: !!tenantId && canManage,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("property_assignments")
+        .select("property_id, user_id")
+        .eq("tenant_id", tenantId!);
+      if (error) throw error;
+      const map = new Map<string, string[]>();
+      (data ?? []).forEach((r: any) => {
+        if (!map.has(r.property_id)) map.set(r.property_id, []);
+        map.get(r.property_id)!.push(r.user_id);
+      });
+      return map;
+    },
+  });
 
   if (isLoading) {
     return (
@@ -93,6 +120,7 @@ export default function PropertyGrid({ properties, isLoading, onCreateCampaign }
         {properties.map((property) => {
           const op = OPERATION_LABELS[property.operation_type] || property.operation_type?.toUpperCase();
           const statusInfo = STATUS_BADGE[property.status] || STATUS_BADGE.inactive;
+          const assignedCount = assignmentsMap?.get(property.id)?.length ?? 0;
           return (
             <div
               key={property.id}
@@ -154,6 +182,17 @@ export default function PropertyGrid({ properties, isLoading, onCreateCampaign }
                         <DropdownMenuItem onClick={() => onCreateCampaign?.(property)}>
                           <Megaphone className="mr-2 h-4 w-4" />
                           Campaña Meta Ads
+                        </DropdownMenuItem>
+                      )}
+                      {canManage && (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            setAssignOpenId(property.id);
+                          }}
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Asignar asesores
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={() => navigate(`/properties/${property.id}`)}>
@@ -220,6 +259,33 @@ export default function PropertyGrid({ properties, isLoading, onCreateCampaign }
                     </div>
                   )}
                 </div>
+
+                {canManage && tenantId && (
+                  <div onClick={(e) => e.stopPropagation()} className="pt-2">
+                    <AssignAgentsPopover
+                      propertyId={property.id}
+                      tenantId={tenantId}
+                      open={assignOpenId === property.id}
+                      onOpenChange={(o) =>
+                        setAssignOpenId(o ? property.id : null)
+                      }
+                      trigger={
+                        <button
+                          type="button"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors w-full"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          <span>
+                            {assignedCount === 0
+                              ? "Asignar asesor"
+                              : `${assignedCount} asesor${assignedCount !== 1 ? "es" : ""} asignado${assignedCount !== 1 ? "s" : ""}`}
+                          </span>
+                        </button>
+                      }
+                    />
+                  </div>
+                )}
               </div>
             </div>
           );
